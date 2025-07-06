@@ -84,7 +84,7 @@ fi
 
 # 1.5 GitHub Actions Status Check
 latest_commit=$(git rev-parse HEAD)
-for workflow in "ci.yml" "publish.yml"; do
+for workflow in "ci.yml" "version-check.yml"; do
   echo "Checking $workflow..."
   if ! gh run list --workflow=$workflow --limit=1 --json status,conclusion,headSha 2>/dev/null | jq -e '.[0].status == "completed" and .[0].conclusion == "success" and .[0].headSha == "'$latest_commit'"' > /dev/null; then
     echo "Warning: Could not verify $workflow status. Please check manually at https://github.com/$(git config --get remote.origin.url | sed 's/.*github.com[:/]\(.*\)\.git/\1/')/actions"

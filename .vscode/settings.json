@@ -6,6 +6,11 @@
   "deno.suggest.imports.hosts": {
     "https://deno.land": true
   },
+  // GitHub Copilot Agent Mode 有効化
+  "chat.agent.enabled": true,
+	// 自動実行モード (YOLO モード)
+	"chat.tools.autoApprove": true,
+
   "typescript.preferences.includePackageJsonAutoImports": "off",
   "typescript.suggest.autoImports": false,
   "typescript.suggest.completeFunctionCalls": false,

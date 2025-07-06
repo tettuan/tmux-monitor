@@ -1,0 +1,93 @@
+name: Version Consistency Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v2.4.0
+
+      - name: Check if tags exist
+        id: check_tags
+        run: |
+          if git tag -l | grep -q "^v"; then
+            echo "tags_exist=true" >> $GITHUB_OUTPUT
+            TAG_VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
+            echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "tags_exist=false" >> $GITHUB_OUTPUT
+            echo "No tags found, skipping version checks"
+          fi
+
+      - name: Check deno.json version matches latest tag
+        if: steps.check_tags.outputs.tags_exist == 'true'
+        run: |
+          deno run --allow-read - <<'EOF'
+          const denoJson = JSON.parse(await Deno.readTextFile("deno.json"));
+          let denoVersion = denoJson.version;
+          let tagVersion = "${{ steps.check_tags.outputs.tag_version }}";
+          // Remove leading "v" if present in either version string
+          denoVersion = denoVersion.replace(/^v/, "");
+          tagVersion = tagVersion.replace(/^v/, "");
+          if (denoVersion !== tagVersion) {
+            console.error(`Version mismatch!\n deno.json: ${denoVersion}\n git tag: ${tagVersion}`);
+            Deno.exit(1);
+          } else {
+            console.log(`deno.json and git tag version match: ${denoVersion}`);
+          }
+          EOF
+
+      - name: Check src/version.ts VERSION matches deno.json and tag
+        if: steps.check_tags.outputs.tags_exist == 'true'
+        run: |
+          deno run --allow-read - <<'EOF'
+          const denoJson = JSON.parse(await Deno.readTextFile("deno.json"));
+          const denoVersion = denoJson.version.replace(/^v/, "");
+          const tagVersion = "${{ steps.check_tags.outputs.tag_version }}".replace(/^v/, "");
+          const versionTs = await Deno.readTextFile("src/version.ts");
+          const match = versionTs.match(/export const VERSION = \"([^\"]+)\"/);
+          if (!match) {
+            console.error("VERSION constant not found in src/version.ts");
+            Deno.exit(1);
+          }
+          const versionConst = match[1].replace(/^v/, "");
+          if (denoVersion !== versionConst || tagVersion !== versionConst) {
+            console.error(`Version mismatch!\n deno.json: ${denoVersion}\n src/version.ts: ${versionConst}\n git tag: ${tagVersion}`);
+            Deno.exit(1);
+          } else {
+            console.log(`All versions match: ${denoVersion}`);
+          }
+          EOF
+
+      - name: Check src/version.ts VERSION matches deno.json (no tags)
+        if: steps.check_tags.outputs.tags_exist == 'false'
+        run: |
+          deno run --allow-read - <<'EOF'
+          const denoJson = JSON.parse(await Deno.readTextFile("deno.json"));
+          const denoVersion = denoJson.version.replace(/^v/, "");
+          const versionTs = await Deno.readTextFile("src/version.ts");
+          const match = versionTs.match(/export const VERSION = \"([^\"]+)\"/);
+          if (!match) {
+            console.error("VERSION constant not found in src/version.ts");
+            Deno.exit(1);
+          }
+          const versionConst = match[1].replace(/^v/, "");
+          if (denoVersion !== versionConst) {
+            console.error(`Version mismatch!\n deno.json: ${denoVersion}\n src/version.ts: ${versionConst}`);
+            Deno.exit(1);
+          } else {
+            console.log(`deno.json and src/version.ts versions match: ${denoVersion}`);
+          }
+          EOF
