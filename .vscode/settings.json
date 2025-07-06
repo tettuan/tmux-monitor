@@ -1,0 +1,30 @@
+{
+  "deno.enable": true,
+  "deno.lint": true,
+  "deno.unstable": [],
+  "deno.suggest.imports.autoDiscover": true,
+  "deno.suggest.imports.hosts": {
+    "https://deno.land": true
+  },
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  "typescript.suggest.autoImports": false,
+  "typescript.suggest.completeFunctionCalls": false,
+  "typescript.suggest.names": true,
+  "typescript.suggest.paths": true,
+  "javascript.suggest.completeFunctionCalls": false,
+  "javascript.suggest.names": true,
+  "javascript.suggest.paths": true,
+  "editor.defaultFormatter": "denoland.vscode-deno",
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  }
+}

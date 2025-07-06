@@ -1,0 +1,69 @@
+{
+  "name": "@tmux-monitor/core",
+  "version": "1.0.0",
+  "description": "A comprehensive tmux monitoring tool with totality principles",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/tmux-monitor.git"
+  },
+  "exports": {
+    ".": "./mod.ts",
+    "./main": "./main.ts"
+  },
+  "tasks": {
+    "start": "deno run --allow-all main.ts",
+    "dev": "deno run --allow-all --watch main.ts",
+    "test": "deno test --allow-all",
+    "fmt": "deno fmt",
+    "lint": "deno lint",
+    "check": "deno check mod.ts main.ts",
+    "publish": "deno publish --allow-dirty",
+    "ci": "./scripts/local_ci.sh",
+    "coverage": "deno test --allow-all --coverage=coverage/ && deno coverage coverage/ --lcov --output=coverage/lcov.info",
+    "bump": "./scripts/bump_version.sh",
+    "bump:patch": "./scripts/bump_version.sh --patch",
+    "bump:minor": "./scripts/bump_version.sh --minor",
+    "bump:major": "./scripts/bump_version.sh --major"
+  },
+  "compilerOptions": {
+    "lib": ["deno.window"],
+    "strict": true
+  },
+  "fmt": {
+    "files": {
+      "include": ["src/", "tests/", "*.ts"],
+      "exclude": ["node_modules/", "dist/"]
+    }
+  },
+  "lint": {
+    "files": {
+      "include": ["src/", "tests/", "*.ts"],
+      "exclude": ["node_modules/", "dist/"]
+    }
+  },
+  "test": {
+    "include": ["tests/"],
+    "exclude": ["node_modules/", "dist/"]
+  },
+  "publish": {
+    "include": [
+      "mod.ts",
+      "main.ts",
+      "src/",
+      "LICENSE"
+    ],
+    "exclude": [
+      "**/*_test.ts",
+      "tests/",
+      "scripts/",
+      "docs/",
+      ".github/",
+      ".vscode/",
+      ".*",
+      "CLAUDE.md",
+      "README.md",
+      "coverage/"
+    ]
+  }
+}

@@ -1,0 +1,169 @@
+name: Publish to JSR
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  publish:
+    name: Publish to JSR
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v2.4.0
+          
+      - name: Prepare publish directory
+        run: |
+          # Create a clean directory for publishing
+          mkdir -p publish
+          
+          # Copy only the files we want to publish
+          cp main.ts publish/
+          cp mod.ts publish/
+          cp -r src/ publish/
+          cp LICENSE publish/
+          
+          # Create a clean README for JSR (without development-specific content)
+          cat > publish/README.md << 'EOF'
+          # Tmux Monitor
+          
+          A comprehensive tmux monitoring tool built with Deno and totality principles.
+          
+          ## Features
+          
+          - **Totality Principles**: Type-safe design with exhaustive error handling
+          - **tmux Integration**: Monitor tmux sessions, panes, and their status
+          - **Flexible Usage**: Use as a library or standalone application
+          
+          ## Installation
+          
+          ```typescript
+          // Import the entire library
+          import { createMonitorApp, runMonitoring } from "jsr:@tmux-monitor/core";
+          
+          // Or import specific modules
+          import { Logger, CommandExecutor } from "jsr:@tmux-monitor/core";
+          ```
+          
+          ## Usage
+          
+          ### As a Library
+          
+          ```typescript
+          import { createMonitorApp, runMonitoring, createLogger } from "jsr:@tmux-monitor/core";
+          
+          // Simple usage
+          await runMonitoring();
+          
+          // Advanced usage
+          const app = createMonitorApp();
+          await app.run();
+          
+          // Use individual components
+          const logger = createLogger();
+          logger.info("Starting monitoring...");
+          ```
+          
+          ## Prerequisites
+          
+          - Deno 2.4.0 or higher
+          - tmux installed on your system
+          
+          ## License
+          
+          MIT License - see LICENSE file for details.
+          EOF
+          
+      - name: Create JSR configuration
+        run: |
+          cd publish
+          cat > deno.json << 'EOF'
+          {
+            "name": "@tmux-monitor/core",
+            "version": "${{ github.event.inputs.version || github.ref_name }}",
+            "description": "A comprehensive tmux monitoring tool with totality principles",
+            "license": "MIT",
+            "repository": {
+              "type": "git",
+              "url": "git+https://github.com/${{ github.repository }}.git"
+            },
+            "exports": {
+              ".": "./mod.ts",
+              "./main": "./main.ts"
+            },
+            "compilerOptions": {
+              "lib": ["deno.window"],
+              "strict": true
+            },
+            "publish": {
+              "include": [
+                "mod.ts",
+                "main.ts",
+                "src/",
+                "README.md",
+                "LICENSE"
+              ]
+            }
+          }
+          EOF
+          
+      - name: Validate TypeScript
+        run: |
+          cd publish
+          deno check mod.ts main.ts
+          
+      - name: Run tests (if any exist in src/)
+        run: |
+          cd publish
+          # Only run tests if they exist and are not excluded
+          if find src/ -name "*_test.ts" -type f | head -1 | grep -q .; then
+            echo "Found test files in src/, running tests..."
+            deno test --allow-all src/
+          else
+            echo "No test files found in src/ directory"
+          fi
+          
+      - name: Publish to JSR
+        run: |
+          cd publish
+          deno publish --allow-dirty
+        env:
+          DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
+          
+      - name: Create release summary
+        run: |
+          echo "## 🚀 Published to JSR" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Package**: \`@tmux-monitor/core\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: \`${{ github.event.inputs.version || github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files included:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`main.ts\` - Main application entry point" >> $GITHUB_STEP_SUMMARY
+          echo "- \`mod.ts\` - Library export module" >> $GITHUB_STEP_SUMMARY
+          echo "- \`src/\` - Source code directory" >> $GITHUB_STEP_SUMMARY
+          echo "- \`LICENSE\` - License file" >> $GITHUB_STEP_SUMMARY
+          echo "- \`README.md\` - Documentation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Usage:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`typescript" >> $GITHUB_STEP_SUMMARY
+          echo "import { createMonitorApp } from \"jsr:@tmux-monitor/core\";" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

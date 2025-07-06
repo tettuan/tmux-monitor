@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "deno: run",
+			"type": "shell",
+			"command": "deno",
+			"args": [
+				"run",
+				"--allow-all",
+				"main.ts"
+			],
+			"group": "build",
+			"problemMatcher": [
+				"$deno"
+			]
+		}
+	]
+}
