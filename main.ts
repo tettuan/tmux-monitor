@@ -1,10 +1,10 @@
 #!/usr/bin/env deno run --allow-run --allow-net
 
 /**
- * tmux Monitor Tool - Reconstructed with Totality Principles
+ * tmux Monitor Tool - CLI Entry Point
  *
- * Monitor tmux session pane status and perform state management
- * Design Policy: Object-Oriented with SOLID Principles + Totality Principles
+ * This is the command-line interface entry point for the tmux monitoring tool.
+ * For library usage, import from the main module exports in mod.ts.
  *
  * Features:
  *   - Discovers the most active tmux session automatically
@@ -17,72 +17,36 @@
  *   - Instruction file option for sending startup commands to main pane
  *   - Automatic termination after 4 hours of continuous operation
  *
- * Usage:
- *   # Single monitoring cycle
- *   deno run --allow-run --allow-net scripts/monitor.ts
+ * CLI Usage:
+ *   # Direct execution from JSR
+ *   deno run --allow-all @aidevtool/tmux-monitor
  *
  *   # Continuous monitoring mode
- *   deno run --allow-run --allow-net scripts/monitor.ts --continuous
- *   deno run --allow-run --allow-net scripts/monitor.ts -c
+ *   deno run --allow-all @aidevtool/tmux-monitor --continuous
+ *   deno run --allow-all @aidevtool/tmux-monitor -c
  *
- *   # Scheduled execution (wait until specified time, then start normal monitoring)
- *   deno run --allow-run --allow-net scripts/monitor.ts --time=4:00
- *   deno run --allow-run --allow-net scripts/monitor.ts -t 14:30
+ *   # Scheduled execution
+ *   deno run --allow-all @aidevtool/tmux-monitor --time=14:30
+ *   deno run --allow-all @aidevtool/tmux-monitor -t 14:30
  *
- *   # Scheduled + continuous mode (waits until scheduled time, then runs continuous monitoring)
- *   deno run --allow-run --allow-net scripts/monitor.ts -c --time=4:00
- *   deno run --allow-run --allow-net scripts/monitor.ts -c -t 4:00
- *
- *   # Instruction file option (sends instruction file to main pane at startup)
- *   deno run --allow-run --allow-net scripts/monitor.ts --instruction=draft/2025/06/20250629-14-fix-tests.ja.md
- *   deno run --allow-run --allow-net scripts/monitor.ts -i draft/2025/06/20250629-14-fix-tests.ja.md
+ *   # With instruction file
+ *   deno run --allow-all @aidevtool/tmux-monitor --instruction=./file.md
+ *   deno run --allow-all @aidevtool/tmux-monitor -i ./file.md
  *
  *   # Combined options
- *   deno run --allow-run --allow-net scripts/monitor.ts -c --time=4:00 --instruction=draft/file.md
+ *   deno run --allow-all @aidevtool/tmux-monitor -c --time=14:30 --instruction=./file.md
  *
- * Following totality principles:
- * - Replace optional properties with discriminated unions
- * - Use Result types for error handling instead of exceptions
- * - Apply smart constructors for value validation
- * - Eliminate impossible states through type design
- * - All imports are properly typed and structured
- * - Error handling is exhaustive and type-safe
+ * Library Usage:
+ *   Import from "@aidevtool/tmux-monitor/lib" for full library functionality.
+ *
+ * This entry point follows totality principles with exhaustive error handling.
  */
 
 // =============================================================================
-// Imports from the src module directory
+// Imports from the src module directory - CLI entry point minimal imports
 // =============================================================================
 
-import { createError, type Result, type ValidationError } from "./src/types.ts";
-import { TIMING } from "./src/config.ts";
-import {
-  MonitoringOptions,
-  Pane,
-  PaneDetail,
-  ValidatedTime,
-  type WorkerStatus,
-  WorkerStatusParser,
-} from "./src/models.ts";
-import {
-  CommandExecutor,
-  KeyboardInterruptHandler,
-  Logger,
-  RuntimeTracker,
-  TimeManager,
-} from "./src/services.ts";
-import { ArgumentParser } from "./src/arguments.ts";
-import {
-  PaneDataProcessor,
-  PaneManager,
-  PaneStatusManager,
-  StatusAnalyzer,
-} from "./src/panes.ts";
-import { MessageGenerator, PaneCommunicator } from "./src/communication.ts";
-import { PaneDisplayer } from "./src/display.ts";
-import { CIManager } from "./src/ci.ts";
-import { TmuxSession } from "./src/session.ts";
-import { MonitoringEngine } from "./src/engine.ts";
-import { DIContainer } from "./src/container.ts";
+import { Logger } from "./src/services.ts";
 import { Application } from "./src/application.ts";
 
 // =============================================================================
@@ -128,49 +92,24 @@ if (import.meta.main) {
 }
 
 // =============================================================================
-// Export for potential reuse
+// Export for CLI entry point - minimal exports for JSR
 // =============================================================================
 
+// Only export essential types for CLI usage
 export type {
-  // Core types
   Result,
   ValidationError,
-  // Smart constructors and models
-  WorkerStatus,
-};
+} from "./src/types.ts";
 
 export {
+  // Core application for CLI
   Application,
-  // Business logic
-  ArgumentParser,
-  CIManager,
-  // Services
-  CommandExecutor,
-  // Helper functions
-  createError,
-  DIContainer,
-  KeyboardInterruptHandler,
-  Logger,
-  MessageGenerator,
-  MonitoringEngine,
-  MonitoringOptions,
-  // Smart constructors and models
-  Pane,
-  PaneCommunicator,
-  PaneDataProcessor,
-  PaneDetail,
-  PaneDisplayer,
-  PaneManager,
-  PaneStatusManager,
-  RuntimeTracker,
-  StatusAnalyzer,
-  TimeManager,
-  // Configuration
-  TIMING,
-  TmuxSession,
-  ValidatedTime,
-  WorkerStatusParser,
-};
+} from "./src/application.ts";
 
-// Export cancellation token classes
-export { CancellationToken, globalCancellationToken } from "./src/cancellation.ts";
+export {
+  // Essential logger for CLI usage
+  Logger,
+} from "./src/services.ts";
+
+// Export version information
+export { VERSION, getVersion, getVersionInfo } from "./src/version.ts";

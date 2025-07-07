@@ -15,7 +15,7 @@
  *
  * ## Quick Start
  * ```typescript
- * import { runMonitoring, createMonitorApp } from "@aidevtool/tmux-monitor";
+ * import { runMonitoring, createMonitorApp } from "@aidevtool/tmux-monitor/lib";
  * 
  * // Simple usage
  * await runMonitoring();
@@ -32,55 +32,103 @@
  */
 
 // =============================================================================
-// Core Library Exports
+// Core Library Exports - Library usage optimized
 // =============================================================================
 
 export type {
   // Core types
   Result,
   ValidationError,
+} from "./src/types.ts";
+
+export type {
   // Smart constructors and models
   WorkerStatus,
-} from "./main.ts";
+} from "./src/models.ts";
 
 export {
-  Application,
   // Business logic
   ArgumentParser,
+} from "./src/arguments.ts";
+
+export {
+  // Core application
+  Application,
+} from "./src/application.ts";
+
+export {
+  // CI management
   CIManager,
-  // Services
-  CommandExecutor,
-  // Helper functions
-  createError,
-  DIContainer,
-  KeyboardInterruptHandler,
-  Logger,
+} from "./src/ci.ts";
+
+export {
+  // Communication
   MessageGenerator,
-  MonitoringEngine,
-  MonitoringOptions,
-  // Smart constructors and models
-  Pane,
   PaneCommunicator,
-  PaneDataProcessor,
-  PaneDetail,
-  PaneDisplayer,
-  PaneManager,
-  PaneStatusManager,
-  RuntimeTracker,
-  StatusAnalyzer,
-  TimeManager,
+} from "./src/communication.ts";
+
+export {
   // Configuration
   TIMING,
-  TmuxSession,
+} from "./src/config.ts";
+
+export {
+  // Container
+  DIContainer,
+} from "./src/container.ts";
+
+export {
+  // Display
+  PaneDisplayer,
+} from "./src/display.ts";
+
+export {
+  // Engine
+  MonitoringEngine,
+} from "./src/engine.ts";
+
+export {
+  // Models
+  MonitoringOptions,
+  Pane,
+  PaneDetail,
   ValidatedTime,
   WorkerStatusParser,
-} from "./main.ts";
+} from "./src/models.ts";
+
+export {
+  // Panes
+  PaneDataProcessor,
+  PaneManager,
+  PaneStatusManager,
+  StatusAnalyzer,
+} from "./src/panes.ts";
+
+export {
+  // Services
+  CommandExecutor,
+  KeyboardInterruptHandler,
+  Logger,
+  RuntimeTracker,
+  TimeManager,
+} from "./src/services.ts";
+
+export {
+  // Session
+  TmuxSession,
+} from "./src/session.ts";
+
+export {
+  // Types helper
+  createError,
+} from "./src/types.ts";
 
 // Export cancellation token classes
 export { CancellationToken, globalCancellationToken } from "./src/cancellation.ts";
 
-// Import types for function signatures
-import { Application, CommandExecutor, Logger } from "./main.ts";
+// Import classes for convenience functions
+import { Application } from "./src/application.ts";
+import { CommandExecutor, Logger } from "./src/services.ts";
 
 // =============================================================================
 // Direct Module Exports for Advanced Usage
