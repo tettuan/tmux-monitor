@@ -31,10 +31,10 @@ Deno.test("CIManager - create", () => {
   assertExists(manager);
 });
 
-Deno.test("CIManager - detectCIEnvironment CI環境なし", async () => {
+Deno.test("CIManager - detectCIEnvironment no CI environment", async () => {
   const manager = CIManager.create(new MockCommandExecutor(), new MockLogger());
 
-  // CI環境変数をクリアして保存
+  // Clear and save CI environment variables
   const originalVars = new Map<string, string>();
   const ciIndicators = [
     "CI",
@@ -64,17 +64,17 @@ Deno.test("CIManager - detectCIEnvironment CI環境なし", async () => {
       assertEquals(result.data, false);
     }
   } finally {
-    // 元の環境変数を復元
+    // Restore original environment variables
     for (const [key, value] of originalVars) {
       Deno.env.set(key, value);
     }
   }
 });
 
-Deno.test("CIManager - detectCIEnvironment CI環境あり", async () => {
+Deno.test("CIManager - detectCIEnvironment CI environment present", async () => {
   const manager = CIManager.create(new MockCommandExecutor(), new MockLogger());
 
-  // CI環境変数を設定
+  // Set CI environment variable
   Deno.env.set("CI", "true");
 
   const result = await manager.detectCIEnvironment();
@@ -84,14 +84,14 @@ Deno.test("CIManager - detectCIEnvironment CI環境あり", async () => {
     assertEquals(result.data, true);
   }
 
-  // 環境変数をクリア
+  // Clear environment variable
   Deno.env.delete("CI");
 });
 
 Deno.test("CIManager - detectCIEnvironment GitHub Actions", async () => {
   const manager = CIManager.create(new MockCommandExecutor(), new MockLogger());
 
-  // GitHub Actions環境変数を設定
+  // Set GitHub Actions environment variable
   Deno.env.set("GITHUB_ACTIONS", "true");
 
   const result = await manager.detectCIEnvironment();
@@ -101,14 +101,14 @@ Deno.test("CIManager - detectCIEnvironment GitHub Actions", async () => {
     assertEquals(result.data, true);
   }
 
-  // 環境変数をクリア
+  // Clear environment variable
   Deno.env.delete("GITHUB_ACTIONS");
 });
 
-Deno.test("CIManager - detectCIEnvironment 複数のCI環境変数", async () => {
+Deno.test("CIManager - detectCIEnvironment multiple CI environment variables", async () => {
   const manager = CIManager.create(new MockCommandExecutor(), new MockLogger());
 
-  // 複数のCI環境変数を設定
+  // Set multiple CI environment variables
   Deno.env.set("CI", "true");
   Deno.env.set("GITLAB_CI", "true");
 
@@ -119,7 +119,7 @@ Deno.test("CIManager - detectCIEnvironment 複数のCI環境変数", async () =>
     assertEquals(result.data, true);
   }
 
-  // 環境変数をクリア
+  // Clear environment variables
   Deno.env.delete("CI");
   Deno.env.delete("GITLAB_CI");
 });
@@ -132,7 +132,7 @@ Deno.test("CIManager - handleCIMonitoring", async () => {
   assertEquals(result.ok, true);
 });
 
-Deno.test("CIManager - CI環境検出の主要なプロバイダー", async () => {
+Deno.test("CIManager - major CI environment provider detection", async () => {
   const manager = CIManager.create(new MockCommandExecutor(), new MockLogger());
 
   const ciProviders = [
@@ -148,7 +148,7 @@ Deno.test("CIManager - CI環境検出の主要なプロバイダー", async () =
   ];
 
   for (const provider of ciProviders) {
-    // 環境変数を設定
+    // Set environment variable
     Deno.env.set(provider, "true");
 
     const result = await manager.detectCIEnvironment();
@@ -158,7 +158,7 @@ Deno.test("CIManager - CI環境検出の主要なプロバイダー", async () =
       assertEquals(result.data, true);
     }
 
-    // 環境変数をクリア
+    // Clear environment variable
     Deno.env.delete(provider);
   }
 });

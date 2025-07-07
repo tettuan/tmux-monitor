@@ -12,12 +12,12 @@ class MockLogger {
   warn = (msg: string) => console.warn(`WARN: ${msg}`);
 }
 
-Deno.test("PaneManager - インスタンス作成", () => {
+Deno.test("PaneManager - instance creation", () => {
   const manager = new PaneManager(new MockLogger());
   assertExists(manager);
 });
 
-Deno.test("PaneManager - separate 正常系", () => {
+Deno.test("PaneManager - separate normal case", () => {
   const manager = new PaneManager(new MockLogger());
 
   const activePane = Pane.create("%1", true, "bash", "main");
@@ -33,7 +33,7 @@ Deno.test("PaneManager - separate 正常系", () => {
   }
 });
 
-Deno.test("PaneManager - separate 空のペイン配列", () => {
+Deno.test("PaneManager - separate empty pane array", () => {
   const manager = new PaneManager(new MockLogger());
 
   const result = manager.separate([]);
@@ -41,7 +41,7 @@ Deno.test("PaneManager - separate 空のペイン配列", () => {
   assertEquals(result.ok, false);
 });
 
-Deno.test("PaneManager - separate アクティブなペインなし", () => {
+Deno.test("PaneManager - separate no active panes", () => {
   const manager = new PaneManager(new MockLogger());
 
   const pane1 = Pane.create("%1", false, "bash", "main");
@@ -56,7 +56,7 @@ Deno.test("PaneManager - separate アクティブなペインなし", () => {
   }
 });
 
-Deno.test("StatusAnalyzer - isNodeCommand 正常系", () => {
+Deno.test("StatusAnalyzer - isNodeCommand normal case", () => {
   const analyzer = new StatusAnalyzer(new MockLogger());
 
   assertEquals(analyzer.isNodeCommand("node"), true);
@@ -67,15 +67,15 @@ Deno.test("StatusAnalyzer - isNodeCommand 正常系", () => {
   assertEquals(analyzer.isNodeCommand("vim"), false);
 });
 
-Deno.test("StatusAnalyzer - isNodeCommand エッジケース", () => {
+Deno.test("StatusAnalyzer - isNodeCommand edge cases", () => {
   const analyzer = new StatusAnalyzer(new MockLogger());
 
   assertEquals(analyzer.isNodeCommand(""), false);
   assertEquals(analyzer.isNodeCommand("  "), false);
-  assertEquals(analyzer.isNodeCommand("NODE"), true); // 大文字小文字を無視
+  assertEquals(analyzer.isNodeCommand("NODE"), true); // case insensitive
 });
 
-Deno.test("PaneStatusManager - updateStatus 新しいペイン", () => {
+Deno.test("PaneStatusManager - updateStatus new pane", () => {
   const manager = new PaneStatusManager();
   const status = WorkerStatusParser.parse("WORKING");
 
@@ -83,27 +83,27 @@ Deno.test("PaneStatusManager - updateStatus 新しいペイン", () => {
   assertEquals(changed, true);
 });
 
-Deno.test("PaneStatusManager - updateStatus ステータス変更", () => {
+Deno.test("PaneStatusManager - updateStatus status change", () => {
   const manager = new PaneStatusManager();
   const workingStatus = WorkerStatusParser.parse("WORKING");
   const doneStatus = WorkerStatusParser.parse("DONE");
 
-  // 最初のステータス設定
+  // Initial status setting
   manager.updateStatus("%1", workingStatus);
 
-  // ステータス変更
+  // Status change
   const changed = manager.updateStatus("%1", doneStatus);
   assertEquals(changed, true);
 });
 
-Deno.test("PaneStatusManager - updateStatus 変更なし", () => {
+Deno.test("PaneStatusManager - updateStatus no change", () => {
   const manager = new PaneStatusManager();
   const status = WorkerStatusParser.parse("WORKING");
 
-  // 最初のステータス設定
+  // Initial status setting
   manager.updateStatus("%1", status);
 
-  // 同じステータス設定
+  // Same status setting
   const changed = manager.updateStatus("%1", status);
   assertEquals(changed, false);
 });
@@ -113,24 +113,24 @@ Deno.test("PaneStatusManager - getChangedPanes", () => {
   const workingStatus = WorkerStatusParser.parse("WORKING");
   const doneStatus = WorkerStatusParser.parse("DONE");
 
-  // ステータス設定（新しいペイン）
+  // Status setting (new panes)
   manager.updateStatus("%1", workingStatus);
   manager.updateStatus("%2", workingStatus);
 
-  // 新しいペインは変更されたとは見なされない
+  // New panes are not considered as changed
   let changedPanes = manager.getChangedPanes();
   assertEquals(changedPanes.length, 0);
 
-  // ステータス変更
+  // Status change
   manager.updateStatus("%1", doneStatus);
 
-  // 今度は変更されたペインが1つ
+  // Now there is one changed pane
   changedPanes = manager.getChangedPanes();
   assertEquals(changedPanes.length, 1);
   assertEquals(changedPanes[0].paneId, "%1");
 });
 
-Deno.test("WorkerStatusParser - parse 正常系", () => {
+Deno.test("WorkerStatusParser - parse normal case", () => {
   const idleStatus = WorkerStatusParser.parse("IDLE");
   assertEquals(idleStatus.kind, "IDLE");
 

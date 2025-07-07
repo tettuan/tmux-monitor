@@ -197,15 +197,15 @@ Deno.test("TimeManager.sleep - short duration", async () => {
 Deno.test("TimeManager.formatTimeForDisplay - valid date", () => {
   const timeManager = new TimeManager();
 
-  // UTC時刻で固定の時刻を作成（2025-01-01 05:30:00 UTC = 2025-01-01 14:30:00 JST）
+  // Create fixed time in UTC (2025-01-01 05:30:00 UTC = 2025-01-01 14:30:00 JST)
   const date = new Date("2025-01-01T05:30:00.000Z");
   const formatted = timeManager.formatTimeForDisplay(date);
 
-  // このメソッドは常にAsia/Tokyoタイムゾーンで表示するため、
-  // UTC 05:30 → JST 14:30 に変換されるはず
+  // This method always displays in Asia/Tokyo timezone,
+  // so UTC 05:30 should be converted to JST 14:30
   console.log("Formatted output:", JSON.stringify(formatted));
 
-  // 期待される値：2025/01/01 14:30（JST）
+  // Expected value: 2025/01/01 14:30 (JST)
   assertEquals(
     formatted,
     "2025/01/01 14:30",

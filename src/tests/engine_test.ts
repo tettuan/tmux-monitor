@@ -18,13 +18,13 @@ class MockLogger {
 }
 
 // Test basic functionality without full MonitoringEngine construction
-Deno.test("MonitoringEngine - 基本的なクラスの存在確認", () => {
-  // MonitoringEngineがインポートできることを確認
+Deno.test("MonitoringEngine - Basic class existence verification", () => {
+  // Verify that MonitoringEngine can be imported
   assertExists(MonitoringEngine);
 });
 
 // Test static methods and utilities
-Deno.test("Mock classes - 基本的な動作確認", () => {
+Deno.test("Mock classes - Basic operation verification", () => {
   const logger = new MockLogger();
   const timeManager = new MockTimeManager();
   const communicator = new MockCommunicator();
@@ -35,7 +35,7 @@ Deno.test("Mock classes - 基本的な動作確認", () => {
 });
 
 // Test async mock operations
-Deno.test("Mock classes - 非同期操作確認", async () => {
+Deno.test("Mock classes - Async operation verification", async () => {
   const communicator = new MockCommunicator();
   const result = await communicator.sendInstructionFile();
 

@@ -55,7 +55,7 @@ Deno.test("TmuxSession - create", () => {
   assertExists(session);
 });
 
-Deno.test("TmuxSession - findMostActiveSession 正常系", async () => {
+Deno.test("TmuxSession - findMostActiveSession normal case", async () => {
   const session = TmuxSession.create(
     new MockCommandExecutor(),
     new MockLogger(),
@@ -65,11 +65,11 @@ Deno.test("TmuxSession - findMostActiveSession 正常系", async () => {
 
   assertEquals(result.ok, true);
   if (result.ok) {
-    assertEquals(result.data, "test-session"); // アタッチされたセッションが優先される
+    assertEquals(result.data, "test-session"); // attached session takes priority
   }
 });
 
-Deno.test("TmuxSession - findMostActiveSession セッションなし", async () => {
+Deno.test("TmuxSession - findMostActiveSession no sessions", async () => {
   const mockExecutor = {
     execute: () => Promise.resolve({ ok: true as const, data: "" }),
     executeTmuxCommand: () => Promise.resolve({ ok: true as const, data: "" }),
@@ -84,7 +84,7 @@ Deno.test("TmuxSession - findMostActiveSession セッションなし", async () 
   assertEquals(result.ok, false);
 });
 
-Deno.test("TmuxSession - findMostActiveSession コマンド失敗", async () => {
+Deno.test("TmuxSession - findMostActiveSession command failure", async () => {
   const mockExecutor = {
     execute: () =>
       Promise.resolve({
@@ -117,7 +117,7 @@ Deno.test("TmuxSession - findMostActiveSession コマンド失敗", async () => 
   assertEquals(result.ok, false);
 });
 
-Deno.test("TmuxSession - getAllPanes 正常系", async () => {
+Deno.test("TmuxSession - getAllPanes normal case", async () => {
   const session = TmuxSession.create(
     new MockCommandExecutor(),
     new MockLogger(),
@@ -133,7 +133,7 @@ Deno.test("TmuxSession - getAllPanes 正常系", async () => {
   }
 });
 
-Deno.test("TmuxSession - getAllPanes コマンド失敗", async () => {
+Deno.test("TmuxSession - getAllPanes command failure", async () => {
   const mockExecutor = {
     execute: () =>
       Promise.resolve({
@@ -166,7 +166,7 @@ Deno.test("TmuxSession - getAllPanes コマンド失敗", async () => {
   assertEquals(result.ok, false);
 });
 
-Deno.test("TmuxSession - getAllPanes 不正なデータ", async () => {
+Deno.test("TmuxSession - getAllPanes invalid data", async () => {
   const mockExecutor = {
     execute: () => Promise.resolve({ ok: true as const, data: "invalid:data" }),
     executeTmuxCommand: () =>
@@ -181,6 +181,6 @@ Deno.test("TmuxSession - getAllPanes 不正なデータ", async () => {
 
   assertEquals(result.ok, true);
   if (result.ok) {
-    assertEquals(result.data.length, 0); // 不正なデータは除外される
+    assertEquals(result.data.length, 0); // Invalid data is excluded
   }
 });

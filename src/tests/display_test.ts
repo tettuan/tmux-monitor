@@ -44,52 +44,52 @@ Deno.test("PaneDisplayer - create", () => {
   assertExists(displayer);
 });
 
-Deno.test("PaneDisplayer - displayPaneList 正常系", () => {
+Deno.test("PaneDisplayer - displayPaneList normal case", () => {
   const displayer = PaneDisplayer.create(new MockLogger());
   const panes = [
     createMockPaneDetail("%1", true, "main", "bash"),
     createMockPaneDetail("%2", false, "editor", "vim"),
   ];
 
-  // エラーなく実行できることを確認
+  // Verify it can execute without error
   displayer.displayPaneList(panes);
 });
 
-Deno.test("PaneDisplayer - displayPaneList 空のリスト", () => {
+Deno.test("PaneDisplayer - displayPaneList empty list", () => {
   const displayer = PaneDisplayer.create(new MockLogger());
 
-  // エラーなく実行できることを確認
+  // Verify it can execute without error
   displayer.displayPaneList([]);
 });
 
-Deno.test("PaneDisplayer - displayMainAndTargetPanes 正常系", () => {
+Deno.test("PaneDisplayer - displayMainAndTargetPanes normal case", () => {
   const displayer = PaneDisplayer.create(new MockLogger());
   const mainPanes = [createMockPaneDetail("%1", true, "main", "bash")];
   const targetPanes = [createMockPaneDetail("%2", false, "editor", "vim")];
 
-  // エラーなく実行できることを確認
+  // Verify it can execute without error
   displayer.displayMainAndTargetPanes(mainPanes, targetPanes);
 });
 
-Deno.test("PaneDisplayer - displayMainAndTargetPanes 空のリスト", () => {
+Deno.test("PaneDisplayer - displayMainAndTargetPanes empty list", () => {
   const displayer = PaneDisplayer.create(new MockLogger());
 
-  // エラーなく実行できることを確認
+  // Verify it can execute without error
   displayer.displayMainAndTargetPanes([], []);
 });
 
-Deno.test("PaneDisplayer - displayMainAndTargetPanes メインペインのみ", () => {
+Deno.test("PaneDisplayer - displayMainAndTargetPanes main panes only", () => {
   const displayer = PaneDisplayer.create(new MockLogger());
   const mainPanes = [createMockPaneDetail("%1", true, "main", "bash")];
 
-  // エラーなく実行できることを確認
+  // Verify it can execute without error
   displayer.displayMainAndTargetPanes(mainPanes, []);
 });
 
-Deno.test("PaneDisplayer - displayMainAndTargetPanes ターゲットペインのみ", () => {
+Deno.test("PaneDisplayer - displayMainAndTargetPanes target panes only", () => {
   const displayer = PaneDisplayer.create(new MockLogger());
   const targetPanes = [createMockPaneDetail("%2", false, "editor", "vim")];
 
-  // エラーなく実行できることを確認
+  // Verify it can execute without error
   displayer.displayMainAndTargetPanes([], targetPanes);
 });

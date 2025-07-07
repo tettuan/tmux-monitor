@@ -60,7 +60,7 @@ function createMockPaneDetail(
   throw new Error("Failed to create mock pane detail");
 }
 
-Deno.test("MessageGenerator - generateStatusMessage 正常系", () => {
+Deno.test("MessageGenerator - generateStatusMessage normal case", () => {
   const activePane = createMockPaneDetail("%1", true, "main", "bash");
   const inactivePane = createMockPaneDetail("%2", false, "editor", "vim");
 
@@ -81,14 +81,14 @@ Deno.test("MessageGenerator - generateStatusMessage 正常系", () => {
   assertEquals(message.includes("Status: WORKING"), true);
 });
 
-Deno.test("MessageGenerator - generateStatusMessage 空のペイン", () => {
+Deno.test("MessageGenerator - generateStatusMessage empty panes", () => {
   const message = MessageGenerator.generateStatusMessage([], [], []);
 
   assertEquals(message.includes("Active Panes (0)"), true);
   assertEquals(message.includes("Inactive Panes (0)"), true);
 });
 
-Deno.test("MessageGenerator - generatePaneListMessage 正常系", () => {
+Deno.test("MessageGenerator - generatePaneListMessage normal case", () => {
   const pane1 = createMockPaneDetail("%1", true, "main", "bash");
   const pane2 = createMockPaneDetail("%2", false, "editor", "vim");
 
@@ -104,7 +104,7 @@ Deno.test("MessageGenerator - generatePaneListMessage 正常系", () => {
   assertEquals(message.includes("Size: 80x24"), true);
 });
 
-Deno.test("MessageGenerator - generatePaneListMessage 空のペイン", () => {
+Deno.test("MessageGenerator - generatePaneListMessage empty panes", () => {
   const message = MessageGenerator.generatePaneListMessage([]);
 
   assertEquals(message.includes("Complete Pane List"), true);
@@ -119,7 +119,7 @@ Deno.test("PaneCommunicator - create", () => {
   assertExists(communicator);
 });
 
-Deno.test("PaneCommunicator - sendStatusUpdateToPane 正常系", async () => {
+Deno.test("PaneCommunicator - sendStatusUpdateToPane normal case", async () => {
   const communicator = PaneCommunicator.create(
     new MockCommandExecutor(),
     new MockLogger(),
@@ -130,7 +130,7 @@ Deno.test("PaneCommunicator - sendStatusUpdateToPane 正常系", async () => {
   assertEquals(result.ok, true);
 });
 
-Deno.test("PaneCommunicator - sendStatusUpdateToPane コマンド失敗", async () => {
+Deno.test("PaneCommunicator - sendStatusUpdateToPane command failure", async () => {
   const mockExecutor = {
     execute: () => Promise.resolve({ ok: false, error: "Command failed" }),
   };
@@ -142,7 +142,7 @@ Deno.test("PaneCommunicator - sendStatusUpdateToPane コマンド失敗", async 
   assertEquals(result.ok, false);
 });
 
-Deno.test("PaneCommunicator - sendToPane 正常系", async () => {
+Deno.test("PaneCommunicator - sendToPane normal case", async () => {
   const communicator = PaneCommunicator.create(
     new MockCommandExecutor(),
     new MockLogger(),
@@ -153,7 +153,7 @@ Deno.test("PaneCommunicator - sendToPane 正常系", async () => {
   assertEquals(result.ok, true);
 });
 
-Deno.test("PaneCommunicator - sendToPane 空メッセージ", async () => {
+Deno.test("PaneCommunicator - sendToPane empty message", async () => {
   const communicator = PaneCommunicator.create(
     new MockCommandExecutor(),
     new MockLogger(),
@@ -164,7 +164,7 @@ Deno.test("PaneCommunicator - sendToPane 空メッセージ", async () => {
   assertEquals(result.ok, true);
 });
 
-Deno.test("PaneCommunicator - sendInstructionFile ファイルが存在しない", async () => {
+Deno.test("PaneCommunicator - sendInstructionFile file not found", async () => {
   const communicator = PaneCommunicator.create(
     new MockCommandExecutor(),
     new MockLogger(),
@@ -178,18 +178,18 @@ Deno.test("PaneCommunicator - sendInstructionFile ファイルが存在しない
   assertEquals(result.ok, false);
 });
 
-// DateTimeのテストのために実際の時刻を確認する
-Deno.test("MessageGenerator - タイムスタンプ付きメッセージ", () => {
+// Check actual timestamp for DateTime testing
+Deno.test("MessageGenerator - message with timestamp", () => {
   const beforeTime = new Date().getTime();
   const message = MessageGenerator.generateStatusMessage([], [], []);
   const afterTime = new Date().getTime();
 
-  // メッセージにタイムスタンプが含まれていることを確認
+  // Verify that the message contains a timestamp
   assertEquals(message.includes("Pane Status Report"), true);
   assertEquals(message.includes("["), true);
   assertEquals(message.includes("]"), true);
 
-  // 実際の時刻がメッセージに含まれていることを簡単に確認
+  // Simple verification that actual time is included in the message
   const timestampMatch = message.match(
     /\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)\]/,
   );
