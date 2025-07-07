@@ -171,3 +171,6 @@ export {
   ValidatedTime,
   WorkerStatusParser,
 };
+
+// Export cancellation token classes
+export { CancellationToken, globalCancellationToken } from "./src/cancellation.ts";

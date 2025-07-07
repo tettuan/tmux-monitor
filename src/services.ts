@@ -1,5 +1,5 @@
 import { createError, type Result, type ValidationError } from "./types.ts";
-import type { TIMING } from "./config.ts";
+import { globalCancellationToken } from "./cancellation.ts";
 
 // =============================================================================
 // Core Infrastructure Services
@@ -120,7 +120,7 @@ export class TimeManager {
   async waitUntilScheduledTime(
     scheduledTime: Date,
     logger: Logger,
-    keyboardHandler: KeyboardInterruptHandler,
+    _keyboardHandler: KeyboardInterruptHandler,
   ): Promise<Result<void, ValidationError & { message: string }>> {
     const now = new Date();
     const msUntilScheduled = scheduledTime.getTime() - now.getTime();
@@ -140,9 +140,7 @@ export class TimeManager {
       } minutes. Press any key to cancel and exit.`,
     );
 
-    const interrupted = await keyboardHandler.waitWithKeyboardInterrupt(
-      msUntilScheduled,
-    );
+    const interrupted = await globalCancellationToken.delay(msUntilScheduled);
     if (interrupted) {
       return {
         ok: false,
@@ -158,100 +156,135 @@ export class TimeManager {
 }
 
 export class KeyboardInterruptHandler {
-  private cancellationRequested = false;
+  private isSetup = false;
+  private keyListenerPromise: Promise<void> | null = null;
 
   setup(): void {
-    if (Deno.stdin.isTerminal()) {
-      Deno.stdin.setRaw(true);
+    if (this.isSetup) {
+      return;
+    }
 
-      // Set up a background listener for keyboard input
-      const readKeyboardInput = async () => {
-        const buffer = new Uint8Array(1);
-        try {
-          while (!this.cancellationRequested) {
-            const bytesRead = await Deno.stdin.read(buffer);
-            if (bytesRead === null) break;
+    this.isSetup = true;
+    
+    try {
+      // Handle Ctrl+C using Deno's signal API
+      Deno.addSignalListener("SIGINT", () => {
+        console.log(`\n[DEBUG] KeyboardInterruptHandler.setup(): Ctrl+C detected - stopping monitoring...`);
+        globalCancellationToken.cancel("Ctrl+C signal received");
+        
+        // Force immediate exit on Ctrl+C
+        this.cleanup();
+        console.log(`[INFO] Monitoring stopped by Ctrl+C. Exiting...`);
+        Deno.exit(0);
+      });
 
-            // Any key press triggers cancellation
-            if (bytesRead > 0) {
-              this.cancellationRequested = true;
-              break;
-            }
-          }
-        } catch (_error) {
-          // Ignore errors during cleanup
-        }
-      };
-
-      // Start the background keyboard listener
-      readKeyboardInput();
+      // Setup raw stdin for any key press
+      if (Deno.stdin.isTerminal()) {
+        Deno.stdin.setRaw(true);
+        // Start the key listener in the background
+        this.keyListenerPromise = this.startKeyListener();
+      }
+    } catch (_error) {
+      console.error("Failed to setup keyboard handler:", _error);
     }
   }
 
+  private async startKeyListener(): Promise<void> {
+    const buffer = new Uint8Array(1024); // Larger buffer for better key detection
+    
+    console.log(`[DEBUG] KeyboardInterruptHandler.startKeyListener(): Starting key listener`);
+    
+    try {
+      while (this.isSetup && !globalCancellationToken.isCancelled()) {
+        try {
+          const bytesRead = await Deno.stdin.read(buffer);
+          
+          if (bytesRead === null) {
+            // EOF, wait a bit and continue
+            await new Promise(resolve => setTimeout(resolve, 50));
+            continue;
+          }
+
+          if (bytesRead === 0) {
+            // No data, wait a bit and continue
+            await new Promise(resolve => setTimeout(resolve, 50));
+            continue;
+          }
+
+          // Any key press triggers cancellation
+          if (bytesRead > 0) {
+            console.log(`\n[DEBUG] KeyboardInterruptHandler.startKeyListener(): Key press detected (${bytesRead} bytes) - stopping monitoring...`);
+            globalCancellationToken.cancel("Key press detected");
+            
+            // Force immediate exit
+            console.log(`[DEBUG] KeyboardInterruptHandler.startKeyListener(): Force exiting application...`);
+            this.cleanup();
+            console.log(`[INFO] Monitoring stopped by user input. Exiting...`);
+            Deno.exit(0);
+          }
+        } catch (readError) {
+          // Handle read errors gracefully
+          console.log(`[DEBUG] KeyboardInterruptHandler.startKeyListener(): Read error: ${readError}`);
+          if (this.isSetup && !globalCancellationToken.isCancelled()) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } else {
+            break;
+          }
+        }
+      }
+    } catch (_error) {
+      // Ignore errors during cleanup
+      if (this.isSetup && !globalCancellationToken.isCancelled()) {
+        console.log(`\n[DEBUG] KeyboardInterruptHandler.startKeyListener(): Keyboard input interrupted - stopping monitoring...`);
+        globalCancellationToken.cancel("Keyboard input interrupted");
+      }
+    }
+    
+    console.log(`[DEBUG] KeyboardInterruptHandler.startKeyListener(): Key listener exited (isSetup: ${this.isSetup}, cancelled: ${globalCancellationToken.isCancelled()})`);
+  }
+
   cleanup(): void {
+    if (!this.isSetup) {
+      return;
+    }
+
+    console.log(`[DEBUG] KeyboardInterruptHandler.cleanup(): Starting cleanup`);
+    this.isSetup = false;
+
+    // Reset terminal
     if (Deno.stdin.isTerminal()) {
       try {
         Deno.stdin.setRaw(false);
+        console.log(`[DEBUG] KeyboardInterruptHandler.cleanup(): Terminal reset to normal mode`);
       } catch (_error) {
         // Ignore errors during cleanup
       }
     }
+
+    // Wait for key listener to finish
+    if (this.keyListenerPromise) {
+      console.log(`[DEBUG] KeyboardInterruptHandler.cleanup(): Waiting for key listener to finish`);
+      // The key listener will exit naturally when isSetup becomes false
+    }
+
+    console.log(`[DEBUG] KeyboardInterruptHandler.cleanup(): Cleanup completed`);
   }
 
   isCancellationRequested(): boolean {
-    return this.cancellationRequested;
+    return globalCancellationToken.isCancelled();
   }
 
   async waitWithKeyboardInterrupt(ms: number): Promise<boolean> {
-    const stdin = Deno.stdin;
-    stdin.setRaw(true);
-
-    const timeoutPromise = new Promise<boolean>((resolve) => {
-      setTimeout(() => resolve(false), ms);
-    });
-
-    const keyPressPromise = new Promise<boolean>((resolve) => {
-      const buffer = new Uint8Array(1);
-      stdin.read(buffer).then(() => {
-        resolve(true);
-      }).catch(() => {
-        resolve(false);
-      });
-    });
-
-    try {
-      const interrupted = await Promise.race([timeoutPromise, keyPressPromise]);
-      stdin.setRaw(false);
-
-      if (interrupted) {
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      stdin.setRaw(false);
-      return false;
-    }
+    // Use the global cancellation token's delay method
+    return await globalCancellationToken.delay(ms);
   }
 
   async sleepWithCancellation(
     ms: number,
-    timeManager: TimeManager,
+    _timeManager: TimeManager,
   ): Promise<boolean> {
-    const startTime = Date.now();
-    const checkInterval = 100; // Check every 100ms
-
-    while (Date.now() - startTime < ms) {
-      if (this.isCancellationRequested()) {
-        return true; // Cancelled
-      }
-
-      await timeManager.sleep(
-        Math.min(checkInterval, ms - (Date.now() - startTime)),
-      );
-    }
-
-    return false; // Not cancelled
+    console.log(`[DEBUG] sleepWithCancellation: Starting ${ms}ms sleep`);
+    return await globalCancellationToken.delay(ms);
   }
 }
 

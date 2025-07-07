@@ -6,6 +6,7 @@ import type { PaneManager } from "./panes.ts";
 import { MessageGenerator, type PaneCommunicator } from "./communication.ts";
 import type { PaneDisplayer } from "./display.ts";
 import type { CIManager } from "./ci.ts";
+import { globalCancellationToken } from "./cancellation.ts";
 
 /**
  * Monitoring Engine Class - Single Responsibility: Core Monitoring Logic
@@ -104,6 +105,7 @@ export class MonitoringEngine {
   }
 
   async sendEnterToAllPanesCycle(): Promise<void> {
+    console.log(`[DEBUG] sendEnterToAllPanesCycle: Starting`);
     this.logger.info("Starting 30-second ENTER sending cycle to all panes...");
 
     const targetPanes = this.paneManager.getTargetPanes();
@@ -112,7 +114,16 @@ export class MonitoringEngine {
     // Send ENTER to all panes (including main pane)
     const allPanes = mainPane ? [mainPane, ...targetPanes] : targetPanes;
 
-    for (const pane of allPanes) {
+    for (let i = 0; i < allPanes.length; i++) {
+      const pane = allPanes[i];
+      
+      // Check for cancellation before each pane
+      if (globalCancellationToken.isCancelled()) {
+        console.log(`[DEBUG] sendEnterToAllPanesCycle: Cancellation detected before pane ${i + 1}/${allPanes.length}`);
+        return;
+      }
+      
+      console.log(`[DEBUG] sendEnterToAllPanesCycle: Sending ENTER to pane ${i + 1}/${allPanes.length} (${pane.id})`);
       const result = await this.communicator.sendToPane(pane.id, "");
       if (!result.ok) {
         this.logger.warn(
@@ -121,6 +132,7 @@ export class MonitoringEngine {
       }
     }
 
+    console.log(`[DEBUG] sendEnterToAllPanesCycle: Completed successfully`);
     this.logger.info(`ENTER sent to ${allPanes.length} panes`);
   }
 
@@ -361,7 +373,13 @@ export class MonitoringEngine {
       }
 
       // Check for cancellation before starting
-      if (this.keyboardHandler.isCancellationRequested()) {
+      if (globalCancellationToken.isCancelled()) {
+        this.logger.info("[DEBUG] MonitoringEngine.monitor(): Cancellation detected at start - exiting...");
+        return;
+      }
+
+      // Check for cancellation before starting
+      if (globalCancellationToken.isCancelled()) {
         this.logger.info("Monitoring cancelled by user input. Exiting...");
         return;
       }
@@ -394,7 +412,7 @@ export class MonitoringEngine {
       );
 
       // Check for cancellation
-      if (this.keyboardHandler.isCancellationRequested()) {
+      if (globalCancellationToken.isCancelled()) {
         this.logger.info("Monitoring cancelled by user input. Exiting...");
         return;
       }
@@ -409,7 +427,7 @@ export class MonitoringEngine {
       await this.processAllPanes();
 
       // Check for cancellation
-      if (this.keyboardHandler.isCancellationRequested()) {
+      if (globalCancellationToken.isCancelled()) {
         this.logger.info("Monitoring cancelled by user input. Exiting...");
         return;
       }
@@ -447,7 +465,7 @@ export class MonitoringEngine {
       await this.reportToMainPane();
 
       // Check for cancellation
-      if (this.keyboardHandler.isCancellationRequested()) {
+      if (globalCancellationToken.isCancelled()) {
         this.logger.info("Monitoring cancelled by user input. Exiting...");
         return;
       }
@@ -461,25 +479,32 @@ export class MonitoringEngine {
 
       let interrupted = false;
       for (let i = 0; i < monitoringCycles; i++) {
+        console.log(`[DEBUG] Monitoring cycle ${i + 1}/${monitoringCycles} - checking cancellation`);
         // Check for cancellation
-        if (this.keyboardHandler.isCancellationRequested()) {
+        if (globalCancellationToken.isCancelled()) {
+          console.log(`[DEBUG] Cancellation detected in monitoring cycle ${i + 1}`);
           this.logger.info("Monitoring cancelled by user input. Exiting...");
           interrupted = true;
           break;
         }
 
         // Send ENTER to all panes (every 30 seconds)
+        console.log(`[DEBUG] Starting sendEnterToAllPanesCycle for cycle ${i + 1}`);
         await this.sendEnterToAllPanesCycle();
+        console.log(`[DEBUG] Completed sendEnterToAllPanesCycle for cycle ${i + 1}`);
 
         // Wait 30 seconds with cancellation check
+        console.log(`[DEBUG] Starting 30-second sleep with cancellation check for cycle ${i + 1}`);
         interrupted = await this.keyboardHandler.sleepWithCancellation(
           TIMING.ENTER_SEND_CYCLE_DELAY,
           this.timeManager,
         );
         if (interrupted) {
+          console.log(`[DEBUG] Sleep interrupted by cancellation in cycle ${i + 1}`);
           this.logger.info("Monitoring cancelled by user input. Exiting...");
           break;
         }
+        console.log(`[DEBUG] Completed 30-second sleep for cycle ${i + 1}`);
       }
 
       if (interrupted) {
@@ -490,7 +515,7 @@ export class MonitoringEngine {
       await this.checkAndClearDoneAndIdlePanes();
 
       // Check for cancellation
-      if (this.keyboardHandler.isCancellationRequested()) {
+      if (globalCancellationToken.isCancelled()) {
         this.logger.info("Monitoring cancelled by user input. Exiting...");
         return;
       }
@@ -501,7 +526,7 @@ export class MonitoringEngine {
       );
       for (let i = 0; i < monitoringCycles; i++) {
         // Check for cancellation
-        if (this.keyboardHandler.isCancellationRequested()) {
+        if (globalCancellationToken.isCancelled()) {
           this.logger.info("Monitoring cancelled by user input. Exiting...");
           interrupted = true;
           break;
@@ -540,14 +565,20 @@ export class MonitoringEngine {
   }
 
   async startContinuousMonitoring(): Promise<void> {
+    console.log(`[DEBUG] startContinuousMonitoring: Starting continuous mode`);
     this.logger.info(
       "Starting continuous monitoring mode (Press any key to stop, auto-stop after 4 hours)",
     );
 
+    let cycleCount = 0;
     while (true) {
+      cycleCount++;
+      console.log(`[DEBUG] startContinuousMonitoring: Starting cycle ${cycleCount}`);
+      
       // Check for 4-hour runtime limit
       const limitCheck = this.runtimeTracker.hasExceededLimit();
       if (!limitCheck.ok) {
+        console.log(`[DEBUG] startContinuousMonitoring: Runtime limit exceeded after ${cycleCount} cycles`);
         this.logger.info(
           "Automatic termination due to 4-hour runtime limit. Exiting...",
         );
@@ -555,17 +586,21 @@ export class MonitoringEngine {
       }
 
       // Check for cancellation
-      if (this.keyboardHandler.isCancellationRequested()) {
+      if (globalCancellationToken.isCancelled()) {
+        console.log(`[DEBUG] startContinuousMonitoring: Cancellation detected before cycle ${cycleCount}`);
         this.logger.info(
           "Continuous monitoring cancelled by user input. Exiting...",
         );
         break;
       }
 
+      console.log(`[DEBUG] startContinuousMonitoring: Starting monitor() for cycle ${cycleCount}`);
       await this.monitor();
+      console.log(`[DEBUG] startContinuousMonitoring: Completed monitor() for cycle ${cycleCount}`);
 
       // Check for cancellation after monitor cycle
-      if (this.keyboardHandler.isCancellationRequested()) {
+      if (globalCancellationToken.isCancelled()) {
+        console.log(`[DEBUG] startContinuousMonitoring: Cancellation detected after cycle ${cycleCount}`);
         this.logger.info(
           "Continuous monitoring cancelled by user input. Exiting...",
         );

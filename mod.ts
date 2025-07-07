@@ -55,6 +55,9 @@ export {
   WorkerStatusParser,
 } from "./main.ts";
 
+// Export cancellation token classes
+export { CancellationToken, globalCancellationToken } from "./src/cancellation.ts";
+
 // Import types for function signatures
 import { Application, CommandExecutor, Logger } from "./main.ts";
 
@@ -68,6 +71,7 @@ export * as Config from "./src/config.ts";
 export * as Models from "./src/models.ts";
 export * as Services from "./src/services.ts";
 export * as Arguments from "./src/arguments.ts";
+export * as Cancellation from "./src/cancellation.ts";
 export * as Panes from "./src/panes.ts";
 export * as Communication from "./src/communication.ts";
 export * as Display from "./src/display.ts";

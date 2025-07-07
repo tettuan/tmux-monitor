@@ -2,6 +2,7 @@ import type { Logger } from "./services.ts";
 import type { ArgumentParser } from "./arguments.ts";
 import type { KeyboardHandler, RuntimeTracker, TimeManager } from "./types.ts";
 import { DIContainer } from "./container.ts";
+import { globalCancellationToken } from "./cancellation.ts";
 
 /**
  * Main Application Class - Single Responsibility: Application Orchestration
@@ -62,9 +63,17 @@ export class Application {
         await monitor.monitor();
       }
     } finally {
+      // Log cancellation state for debugging
+      if (globalCancellationToken.isCancelled()) {
+        logger.info(`Monitoring stopped due to: ${globalCancellationToken.getReason()}`);
+      } else {
+        logger.info("Monitoring completed normally.");
+      }
+      
       // Clean up keyboard interrupt handler
+      console.log(`[DEBUG] Application.run(): Starting cleanup`);
       keyboardHandler.cleanup();
-      logger.info("Monitoring stopped.");
+      console.log(`[DEBUG] Application.run(): Cleanup completed`);
     }
   }
 }
