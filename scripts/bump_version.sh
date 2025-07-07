@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# Automated Version Management Script for tmux-monitor (Deno/JSR)
+# Automated Version Management Script for @aidevtool/tmux-monitor (Deno/JSR)
 #
 # Purpose:
 #   - Ensures version consistency between deno.json and src/version.ts
@@ -9,16 +9,24 @@
 #   - Performs pre-release checks (git status, local CI, GitHub Actions)
 #   - Manages GitHub tags and JSR version synchronization
 #   - Automatically commits, tags, and pushes version changes
+#   - Prepares for JSR publication as @aidevtool/tmux-monitor
 #
 # Usage:
 #   ./scripts/bump_version.sh [--major|--minor|--patch]
 #   (default: --patch)
 #
+# Prerequisites:
+#   - jq (for JSON processing)
+#   - curl (for JSR API calls)
+#   - gh CLI (optional, for GitHub Actions verification)
+#   - Clean git working directory
+#   - All tests passing locally
+#
 # Categories:
 #   1. Status Checks
 #      - Local Git Status Check
 #      - Version Sync Check
-#      - GitHub Actions Status Check
+#      - GitHub Actions Status Check (optional)
 #      - JSR Version Check
 #      - GitHub Tags Cleanup and Version Sync
 #   2. Local CI
@@ -39,7 +47,7 @@ set -euo pipefail
 # Constants
 DENO_JSON="deno.json"
 VERSION_TS="src/version.ts"
-JSR_META_URL="https://jsr.io/@tmux-monitor/core/meta.json"
+JSR_META_URL="https://jsr.io/@aidevtool/tmux-monitor/meta.json"
 
 # Helper Functions
 get_deno_version() {
@@ -84,13 +92,21 @@ fi
 
 # 1.5 GitHub Actions Status Check
 latest_commit=$(git rev-parse HEAD)
-for workflow in "ci.yml" "version-check.yml"; do
-  echo "Checking $workflow..."
-  if ! gh run list --workflow=$workflow --limit=1 --json status,conclusion,headSha 2>/dev/null | jq -e '.[0].status == "completed" and .[0].conclusion == "success" and .[0].headSha == "'$latest_commit'"' > /dev/null; then
-    echo "Warning: Could not verify $workflow status. Please check manually at https://github.com/$(git config --get remote.origin.url | sed 's/.*github.com[:/]\(.*\)\.git/\1/')/actions"
-    echo "Continuing with version bump..."
-  fi
-done
+echo "Checking GitHub Actions status for commit: ${latest_commit:0:8}..."
+if command -v gh >/dev/null 2>&1; then
+  for workflow in "ci.yml" "publish.yml"; do
+    echo "Checking $workflow..."
+    if ! gh run list --workflow=$workflow --limit=1 --json status,conclusion,headSha 2>/dev/null | jq -e '.[0].status == "completed" and .[0].conclusion == "success" and .[0].headSha == "'$latest_commit'"' > /dev/null; then
+      echo "Warning: Could not verify $workflow status. Please check manually at https://github.com/$(git config --get remote.origin.url | sed 's/.*github.com[:/]\(.*\)\.git/\1/')/actions"
+      echo "Continuing with version bump..."
+    else
+      echo "✓ $workflow passed for latest commit"
+    fi
+  done
+else
+  echo "Warning: GitHub CLI (gh) not found. Skipping GitHub Actions status check."
+  echo "Please verify manually that all workflows are passing before release."
+fi
 
 # 1.6 JSR Version Check
 latest_jsr_version=$(curl -s "$JSR_META_URL" 2>/dev/null | jq -r '.versions | keys | .[]' | sort -V | tail -n 1 2>/dev/null || echo "0.0.0")
@@ -148,10 +164,12 @@ fi
 
 # 2.2 JSR Pre-publish Check
 echo "Running JSR pre-publish check..."
-if ! deno publish --dry-run --allow-dirty --no-check > /dev/null 2>&1; then
+if ! deno publish --dry-run --allow-dirty > /dev/null 2>&1; then
   echo "Error: JSR pre-publish check failed. Please fix any issues before bumping version."
+  echo "Run 'deno publish --dry-run' manually to see detailed error messages."
   exit 1
 fi
+echo "✓ JSR pre-publish check passed"
 
 echo "✓ Local CI passed"
 
@@ -185,7 +203,11 @@ echo "Bumping version from $current_version -> $new_version"
 # 3.2 Version Update (Atomic)
 tmp_deno="${DENO_JSON}.tmp"
 tmp_ts="${VERSION_TS}.tmp"
+
+# Update deno.json version
 jq --arg v "$new_version" '.version = $v' "$DENO_JSON" > "$tmp_deno"
+
+# Update src/version.ts with proper formatting
 cat > "$tmp_ts" <<EOF
 // This file is auto-generated. Do not edit manually.
 // The version is synchronized with deno.json.
@@ -195,10 +217,38 @@ cat > "$tmp_ts" <<EOF
  * @module
  */
 export const VERSION = "$new_version";
+
+/**
+ * Returns the current version string.
+ * @returns The version string
+ */
+export function getVersion(): string {
+  return VERSION;
+}
+
+/**
+ * Returns version information object.
+ * @returns Object containing version details
+ */
+export function getVersionInfo(): {
+  version: string;
+  name: string;
+  description: string;
+} {
+  return {
+    version: VERSION,
+    name: "@aidevtool/tmux-monitor",
+    description: "A comprehensive tmux monitoring tool designed for command-line usage",
+  };
+}
 EOF
+
+# Atomically replace files
 mv "$tmp_deno" "$DENO_JSON"
 mv "$tmp_ts" "$VERSION_TS"
-deno fmt "$VERSION_TS"
+
+# Format the TypeScript file
+deno fmt "$VERSION_TS" > /dev/null 2>&1
 
 # 3.3 Version Verification
 if [[ "$(get_deno_version)" != "$new_version" ]] || [[ "$(get_ts_version)" != "$new_version" ]]; then
@@ -215,7 +265,11 @@ echo -e "\nPerforming Git Operations..."
 
 # 4.1 Git Commit
 git add "$DENO_JSON" "$VERSION_TS"
-git commit -m "chore: bump version to $new_version"
+git commit -m "chore: bump version to $new_version
+
+- Update version in deno.json and src/version.ts
+- Maintain version consistency across project files
+- Ready for JSR publication as @aidevtool/tmux-monitor@$new_version"
 
 # 4.2 Git Tag
 git tag "v$new_version"
@@ -226,4 +280,11 @@ git push origin "v$new_version"
 
 echo "✓ Git operations completed"
 
-echo "\nVersion bumped to $new_version, committed, tagged, and pushed.\n" 
+echo -e "\n🎉 Version bump completed successfully!"
+echo "Version bumped to $new_version, committed, tagged, and pushed."
+echo "JSR package: @aidevtool/tmux-monitor@$new_version"
+echo -e "\nNext steps:"
+echo "  1. Wait for GitHub Actions to complete"
+echo "  2. Publish to JSR: deno publish"
+echo "  3. Verify publication: https://jsr.io/@aidevtool/tmux-monitor"
+echo "" 
