@@ -193,45 +193,21 @@ Deno.test("TimeManager.sleep - short duration", async () => {
 
 Deno.test("TimeManager.formatTimeForDisplay - valid date", () => {
   const timeManager = new TimeManager();
-  const date = new Date(2025, 0, 1, 14, 30, 0); // January 1, 2025, 14:30:00
+
+  // UTC時刻で固定の時刻を作成（2025-01-01 05:30:00 UTC = 2025-01-01 14:30:00 JST）
+  const date = new Date("2025-01-01T05:30:00.000Z");
   const formatted = timeManager.formatTimeForDisplay(date);
 
-  // Should be in Japanese format - more robust test
+  // このメソッドは常にAsia/Tokyoタイムゾーンで表示するため、
+  // UTC 05:30 → JST 14:30 に変換されるはず
   console.log("Formatted output:", JSON.stringify(formatted));
 
-  // Test that it contains basic time components
-  // The exact format may vary by environment, but should contain these elements
-  const hasYear = formatted.includes("2025");
-  const hasMinute = formatted.includes("30");
-
-  // For timezone-aware testing, we need to check what the actual JST time should be
-  // Since the method formats to Asia/Tokyo timezone, the hour might be different
-  // Let's check if it's a valid time format and contains expected components
-  const timeRegex = /(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2})/;
-  const match = formatted.match(timeRegex);
-
-  assertEquals(hasYear, true, `Expected year 2025 in: ${formatted}`);
-  assertEquals(hasMinute, true, `Expected minute 30 in: ${formatted}`);
+  // 期待される値：2025/01/01 14:30（JST）
   assertEquals(
-    match !== null,
-    true,
-    `Expected time format YYYY/MM/DD HH:MM in: ${formatted}`,
+    formatted,
+    "2025/01/01 14:30",
+    `Expected "2025/01/01 14:30" but got: ${formatted}`,
   );
-
-  if (match) {
-    const [, year, month, day, hour, minute] = match;
-    assertEquals(year, "2025", "Expected year 2025");
-    assertEquals(month, "01", "Expected month 01");
-    assertEquals(day, "01", "Expected day 01");
-    assertEquals(minute, "30", "Expected minute 30");
-    // Hour can vary due to timezone conversion, so we just check it's valid
-    const hourNum = parseInt(hour, 10);
-    assertEquals(
-      hourNum >= 0 && hourNum <= 23,
-      true,
-      `Expected valid hour (0-23), got ${hour}`,
-    );
-  }
 });
 
 // =============================================================================
