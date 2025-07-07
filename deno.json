@@ -20,7 +20,11 @@
   },
   "exports": {
     ".": "./mod.ts",
-    "./main": "./main.ts"
+    "./main": "./main.ts",
+    "./cli": "./main.ts"
+  },
+  "bin": {
+    "tmux-monitor": "./main.ts"
   },
   "tasks": {
     "start": "deno run --allow-all main.ts",
@@ -59,7 +63,7 @@
       "main.ts",
       "src/",
       "LICENSE",
-      "docs/README.md"
+      "README.md"
     ],
     "exclude": [
       "**/*_test.ts",
@@ -69,7 +73,7 @@
       ".vscode/",
       ".*",
       "CLAUDE.md",
-      "README.md",
+      "docs/",
       "coverage/"
     ]
   }

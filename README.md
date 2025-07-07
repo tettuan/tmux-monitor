@@ -81,6 +81,67 @@ deno run --allow-all jsr:@tmux-monitor/core/main --time=14:30
 deno run --allow-all jsr:@tmux-monitor/core/main --instruction=./instructions.txt
 ```
 
+### CLI Installation (Alternative)
+
+```bash
+# Install globally using deno install
+deno install --allow-all -n tmux-monitor jsr:@tmux-monitor/core/main
+
+# Then run directly
+tmux-monitor
+tmux-monitor --continuous
+tmux-monitor --time=14:30
+```
+
+### NPX-style Usage
+
+```bash
+# One-time execution
+deno run --allow-all jsr:@tmux-monitor/core/main
+
+# With arguments
+deno run --allow-all jsr:@tmux-monitor/core/main --continuous --time=14:30
+```
+
+## JSR CLI Usage
+
+### Direct Execution
+
+```bash
+# Run directly from JSR (recommended for one-time use)
+deno run --allow-all jsr:@tmux-monitor/core/main
+
+# With options
+deno run --allow-all jsr:@tmux-monitor/core/main --continuous
+deno run --allow-all jsr:@tmux-monitor/core/main --time=14:30
+deno run --allow-all jsr:@tmux-monitor/core/main --instruction=./instructions.txt
+```
+
+### Global Installation
+
+```bash
+# Install as global command
+deno install --allow-all -n tmux-monitor jsr:@tmux-monitor/core/main
+
+# Then use directly
+tmux-monitor
+tmux-monitor --continuous
+tmux-monitor --time=14:30
+```
+
+### Available CLI Options
+
+- `--continuous` or `-c`: Run in continuous monitoring mode
+- `--time=HH:MM` or `-t HH:MM`: Schedule monitoring start time
+- `--instruction=PATH` or `-i PATH`: Load instruction file
+
+### Permissions Required
+
+The CLI requires the following Deno permissions:
+- `--allow-run`: Execute tmux commands
+- `--allow-net`: Network access for potential future features
+- `--allow-read`: Read instruction files (when specified)
+
 ## API Reference
 
 ### Core Functions

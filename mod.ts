@@ -182,3 +182,34 @@ export function createLogger(): Logger {
 export function createCommandExecutor(): CommandExecutor {
   return new CommandExecutor();
 }
+
+// =============================================================================
+// CLI Entry Point Information
+// =============================================================================
+
+/**
+ * Information about CLI usage when importing from JSR.
+ * 
+ * @example
+ * ```bash
+ * # Run CLI directly from JSR
+ * deno run --allow-all jsr:@tmux-monitor/core/main
+ * 
+ * # Install globally
+ * deno install --allow-all -n tmux-monitor jsr:@tmux-monitor/core/main
+ * 
+ * # Run with options
+ * deno run --allow-all jsr:@tmux-monitor/core/main --continuous --time=14:30
+ * ```
+ */
+export const CLI_INFO = {
+  entryPoint: "jsr:@tmux-monitor/core/main",
+  installCommand: "deno install --allow-all -n tmux-monitor jsr:@tmux-monitor/core/main",
+  runCommand: "deno run --allow-all jsr:@tmux-monitor/core/main",
+  examples: [
+    "deno run --allow-all jsr:@tmux-monitor/core/main",
+    "deno run --allow-all jsr:@tmux-monitor/core/main --continuous",
+    "deno run --allow-all jsr:@tmux-monitor/core/main --time=14:30",
+    "deno run --allow-all jsr:@tmux-monitor/core/main --instruction=./file.txt",
+  ],
+} as const;
