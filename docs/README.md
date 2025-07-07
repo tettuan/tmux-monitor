@@ -6,8 +6,12 @@ A comprehensive tmux monitoring tool built with Deno and totality principles.
 
 - **Totality Principles**: Type-safe design with exhaustive error handling
 - **tmux Integration**: Monitor tmux sessions, panes, and their status
+- **Real-time Monitoring**: Live status updates with configurable intervals
+- **Keyboard Interrupts**: Immediate cancellation with any key press or Ctrl+C
 - **Flexible Usage**: Use as a library or standalone application
 - **JSR Ready**: Published on JSR (JavaScript Registry) for easy import
+- **TypeScript Support**: Full TypeScript definitions and type safety
+- **CI/CD Integration**: Built-in CI environment detection and handling
 
 ## Installation
 
@@ -15,10 +19,10 @@ A comprehensive tmux monitoring tool built with Deno and totality principles.
 
 ```typescript
 // Import the entire library
-import { createMonitorApp, runMonitoring } from "jsr:@tmux-monitor/core";
+import { createMonitorApp, runMonitoring } from "jsr:@your-org/tmux-monitor";
 
 // Or import specific modules
-import { CommandExecutor, Logger } from "jsr:@tmux-monitor/core";
+import { CommandExecutor, Logger, CancellationToken } from "jsr:@your-org/tmux-monitor";
 ```
 
 ### From Source
@@ -27,6 +31,47 @@ import { CommandExecutor, Logger } from "jsr:@tmux-monitor/core";
 # Clone the repository
 git clone https://github.com/your-username/tmux-monitor.git
 cd tmux-monitor
+
+# Install dependencies and run
+deno task start
+```
+
+## Quick Start
+
+### Simple Usage
+
+```typescript
+import { runMonitoring } from "jsr:@your-org/tmux-monitor";
+
+// Start monitoring with default configuration
+await runMonitoring();
+```
+
+### Advanced Usage
+
+```typescript
+import { 
+  createMonitorApp, 
+  createLogger, 
+  createCommandExecutor,
+  CancellationToken 
+} from "jsr:@your-org/tmux-monitor";
+
+// Create and configure application
+const app = createMonitorApp();
+const logger = createLogger();
+const executor = createCommandExecutor();
+
+// Run with custom configuration
+await app.run();
+
+// Use command executor directly
+const result = await executor.executeTmuxCommand("tmux list-sessions");
+if (result.ok) {
+  logger.info(`Found sessions: ${result.data}`);
+} else {
+  logger.error("Failed to list sessions", result.error);
+}
 ```
 
 ## Usage

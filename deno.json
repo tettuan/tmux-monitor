@@ -1,8 +1,19 @@
 {
   "name": "@tmux-monitor/core",
   "version": "1.0.0",
-  "description": "A comprehensive tmux monitoring tool with totality principles",
+  "description": "A comprehensive tmux monitoring tool with totality principles, real-time monitoring, and keyboard interrupt handling",
   "license": "MIT",
+  "author": "tmux-monitor",
+  "keywords": [
+    "tmux",
+    "monitor",
+    "terminal",
+    "session",
+    "pane",
+    "typescript",
+    "deno",
+    "cli"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/your-username/tmux-monitor.git"
@@ -47,13 +58,13 @@
       "mod.ts",
       "main.ts",
       "src/",
-      "LICENSE"
+      "LICENSE",
+      "docs/README.md"
     ],
     "exclude": [
       "**/*_test.ts",
       "tests/",
       "scripts/",
-      "docs/",
       ".github/",
       ".vscode/",
       ".*",

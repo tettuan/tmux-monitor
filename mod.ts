@@ -1,8 +1,29 @@
 /**
  * @fileoverview tmux Monitor Tool - JSR Export Module
  *
- * This module provides a comprehensive tmux monitoring solution with totality principles.
- * It can be used as a library or as a standalone application.
+ * A comprehensive tmux monitoring solution with totality principles.
+ * Provides real-time monitoring, status tracking, and automated management of tmux sessions.
+ *
+ * ## Features
+ * - Real-time tmux pane monitoring
+ * - Automated status reporting
+ * - Keyboard interrupt handling
+ * - Continuous monitoring mode
+ * - Scheduled execution
+ * - CI/CD integration
+ * - TypeScript support with comprehensive type safety
+ *
+ * ## Quick Start
+ * ```typescript
+ * import { runMonitoring, createMonitorApp } from "@your-org/tmux-monitor";
+ * 
+ * // Simple usage
+ * await runMonitoring();
+ * 
+ * // Advanced usage
+ * const app = createMonitorApp();
+ * await app.run();
+ * ```
  *
  * @module tmux-monitor
  * @version 1.0.0
@@ -89,16 +110,35 @@ export { VERSION } from "./src/version.ts";
 // =============================================================================
 
 /**
- * Create a new tmux monitor application instance
+ * Creates a new tmux monitor application instance.
+ * 
+ * The Application class orchestrates the entire monitoring process,
+ * including argument parsing, keyboard handling, and runtime management.
+ * 
  * @returns A new Application instance ready to run
+ * @example
+ * ```typescript
+ * const app = createMonitorApp();
+ * await app.run();
+ * ```
  */
 export function createMonitorApp(): Application {
   return new Application();
 }
 
 /**
- * Run tmux monitoring with default configuration
+ * Runs tmux monitoring with default configuration.
+ * 
+ * This is the simplest way to start monitoring tmux sessions.
+ * Uses default settings and automatically handles cleanup.
+ * 
  * @returns Promise that resolves when monitoring completes
+ * @throws {Error} If tmux is not available or monitoring fails
+ * @example
+ * ```typescript
+ * // Start monitoring with defaults
+ * await runMonitoring();
+ * ```
  */
 export async function runMonitoring(): Promise<void> {
   const app = new Application();
@@ -106,16 +146,38 @@ export async function runMonitoring(): Promise<void> {
 }
 
 /**
- * Create a logger instance for external use
+ * Creates a logger instance for external use.
+ * 
+ * The Logger provides structured logging with different levels
+ * (info, warn, error) and consistent formatting.
+ * 
  * @returns A new Logger instance
+ * @example
+ * ```typescript
+ * const logger = createLogger();
+ * logger.info("Application started");
+ * logger.error("An error occurred", error);
+ * ```
  */
 export function createLogger(): Logger {
   return new Logger();
 }
 
 /**
- * Create a command executor for external use
+ * Creates a command executor for external use.
+ * 
+ * The CommandExecutor handles system command execution with
+ * proper error handling and result formatting.
+ * 
  * @returns A new CommandExecutor instance
+ * @example
+ * ```typescript
+ * const executor = createCommandExecutor();
+ * const result = await executor.executeTmuxCommand("tmux list-sessions");
+ * if (result.ok) {
+ *   console.log(result.data);
+ * }
+ * ```
  */
 export function createCommandExecutor(): CommandExecutor {
   return new CommandExecutor();

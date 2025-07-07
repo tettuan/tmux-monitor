@@ -1,6 +1,35 @@
 /**
- * Global Cancellation Token - Shared across all modules
- * Provides a centralized way to manage cancellation state
+ * Global Cancellation Token - Provides centralized cancellation management.
+ * 
+ * The CancellationToken class offers a robust cancellation mechanism that can be
+ * shared across all modules. It supports delay operations with cancellation,
+ * reason tracking, and timestamp recording.
+ * 
+ * ## Features
+ * - Centralized cancellation state management
+ * - Reason and timestamp tracking
+ * - Delay operations with cancellation support
+ * - Debug logging for cancellation events
+ * - Race condition handling for async operations
+ * 
+ * @example
+ * ```typescript
+ * const token = new CancellationToken();
+ * 
+ * // Request cancellation
+ * token.cancel("User requested stop");
+ * 
+ * // Check cancellation status
+ * if (token.isCancelled()) {
+ *   console.log("Operation was cancelled:", token.getReason());
+ * }
+ * 
+ * // Use with delays
+ * const interrupted = await token.delay(5000);
+ * if (interrupted) {
+ *   console.log("Delay was interrupted");
+ * }
+ * ```
  */
 export class CancellationToken {
   private cancelled = false;
@@ -8,7 +37,16 @@ export class CancellationToken {
   private timestamp: number | null = null;
 
   /**
-   * Request cancellation with a reason
+   * Requests cancellation with a specific reason.
+   * 
+   * Once cancelled, the token cannot be cancelled again with a different reason.
+   * The first cancellation reason and timestamp are preserved.
+   * 
+   * @param reason - The reason for cancellation
+   * @example
+   * ```typescript
+   * token.cancel("User pressed Ctrl+C");
+   * ```
    */
   cancel(reason: string): void {
     if (this.cancelled) {
@@ -24,7 +62,15 @@ export class CancellationToken {
   }
 
   /**
-   * Check if cancellation has been requested
+   * Checks if cancellation has been requested.
+   * 
+   * @returns True if cancellation has been requested, false otherwise
+   * @example
+   * ```typescript
+   * if (token.isCancelled()) {
+   *   console.log("Operation should stop");
+   * }
+   * ```
    */
   isCancelled(): boolean {
     if (this.cancelled) {

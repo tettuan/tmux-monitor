@@ -5,16 +5,54 @@ import { DIContainer } from "./container.ts";
 import { globalCancellationToken } from "./cancellation.ts";
 
 /**
- * Main Application Class - Single Responsibility: Application Orchestration
+ * Main Application Class - Orchestrates the entire tmux monitoring process.
+ * 
+ * This class serves as the entry point for the tmux monitoring application,
+ * coordinating all components including argument parsing, keyboard handling,
+ * session management, and monitoring execution.
+ * 
+ * ## Responsibilities
+ * - Initialize dependency injection container
+ * - Parse command-line arguments
+ * - Set up keyboard interrupt handling
+ * - Coordinate scheduled vs immediate execution
+ * - Handle cleanup and graceful shutdown
+ * 
+ * @example
+ * ```typescript
+ * const app = new Application();
+ * await app.run();
+ * ```
  */
 export class Application {
   private container: DIContainer;
 
+  /**
+   * Creates a new Application instance.
+   * Initializes the dependency injection container with all required services.
+   */
   constructor() {
     this.container = DIContainer.getInstance();
     this.container.initialize();
   }
 
+  /**
+   * Runs the tmux monitoring application.
+   * 
+   * This is the main entry point that orchestrates the entire monitoring process:
+   * 1. Parses command-line arguments
+   * 2. Sets up keyboard interrupt handling
+   * 3. Handles scheduled execution if specified
+   * 4. Executes monitoring (continuous or single run)
+   * 5. Performs cleanup
+   * 
+   * @throws {Error} If critical services fail to initialize
+   * @example
+   * ```typescript
+   * const app = new Application();
+   * await app.run();
+   * ```
+   */
   async run(): Promise<void> {
     const logger = this.container.get<Logger>("logger");
     const argumentParser = this.container.get<ArgumentParser>("argumentParser");

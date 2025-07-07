@@ -5,7 +5,35 @@ import { globalCancellationToken } from "./cancellation.ts";
 // Core Infrastructure Services
 // =============================================================================
 
+/**
+ * Executes system commands with proper error handling and result formatting.
+ * 
+ * This class provides a safe interface for executing system commands,
+ * particularly tmux commands, with comprehensive error handling and
+ * structured result types.
+ * 
+ * @example
+ * ```typescript
+ * const executor = new CommandExecutor();
+ * const result = await executor.executeTmuxCommand("tmux list-sessions");
+ * if (result.ok) {
+ *   console.log("Sessions:", result.data);
+ * } else {
+ *   console.error("Error:", result.error.message);
+ * }
+ * ```
+ */
 export class CommandExecutor {
+  /**
+   * Executes a command with the given arguments.
+   * 
+   * @param args - Array of command arguments, where args[0] is the command name
+   * @returns Promise resolving to a Result containing stdout or error information
+   * @example
+   * ```typescript
+   * const result = await executor.execute(["ls", "-la"]);
+   * ```
+   */
   async execute(
     args: string[],
   ): Promise<Result<string, ValidationError & { message: string }>> {
@@ -48,6 +76,16 @@ export class CommandExecutor {
     }
   }
 
+  /**
+   * Executes a tmux command through bash shell.
+   * 
+   * @param command - The complete tmux command string to execute
+   * @returns Promise resolving to a Result containing command output or error
+   * @example
+   * ```typescript
+   * const result = await executor.executeTmuxCommand("tmux list-sessions");
+   * ```
+   */
   async executeTmuxCommand(
     command: string,
   ): Promise<Result<string, ValidationError & { message: string }>> {
@@ -87,20 +125,63 @@ export class CommandExecutor {
   }
 }
 
+/**
+ * Provides structured logging with different levels and consistent formatting.
+ * 
+ * The Logger class offers a simple interface for application logging with
+ * different severity levels (info, warn, error) and structured output format.
+ * 
+ * @example
+ * ```typescript
+ * const logger = new Logger();
+ * logger.info("Application started");
+ * logger.warn("Configuration file not found, using defaults");
+ * logger.error("Failed to connect to tmux", error);
+ * ```
+ */
 export class Logger {
+  /**
+   * Logs an informational message.
+   * 
+   * @param message - The message to log
+   */
   info(message: string): void {
     console.log(`[INFO] ${message}`);
   }
 
+  /**
+   * Logs a warning message.
+   * 
+   * @param message - The warning message to log
+   */
   warn(message: string): void {
     console.warn(`[WARN] ${message}`);
   }
 
+  /**
+   * Logs an error message with optional error object.
+   * 
+   * @param message - The error message to log
+   * @param error - Optional error object for additional context
+   */
   error(message: string, error?: unknown): void {
     console.error(`[ERROR] ${message}`, error || "");
   }
 }
 
+/**
+ * Manages time-related operations including delays, formatting, and scheduling.
+ * 
+ * The TimeManager class provides utilities for time manipulation, scheduling,
+ * and time formatting with proper timezone handling.
+ * 
+ * @example
+ * ```typescript
+ * const timeManager = new TimeManager();
+ * await timeManager.sleep(1000); // Wait 1 second
+ * const formatted = timeManager.formatTimeForDisplay(new Date());
+ * ```
+ */
 export class TimeManager {
   async sleep(ms: number): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, ms));
@@ -155,6 +236,29 @@ export class TimeManager {
   }
 }
 
+/**
+ * Handles keyboard interrupt detection and cancellation management.
+ * 
+ * This class provides comprehensive keyboard interrupt handling, including
+ * both Ctrl+C signal detection and any key press detection. It integrates
+ * with the global cancellation system to provide immediate application exit.
+ * 
+ * ## Features
+ * - Detects Ctrl+C (SIGINT) signals
+ * - Monitors for any key press in raw terminal mode
+ * - Integrates with global cancellation token
+ * - Provides immediate application exit on interrupt
+ * - Handles terminal cleanup properly
+ * 
+ * @example
+ * ```typescript
+ * const handler = new KeyboardInterruptHandler();
+ * handler.setup(); // Start monitoring for interrupts
+ * 
+ * // Later, cleanup
+ * handler.cleanup();
+ * ```
+ */
 export class KeyboardInterruptHandler {
   private isSetup = false;
   private keyListenerPromise: Promise<void> | null = null;
@@ -288,6 +392,21 @@ export class KeyboardInterruptHandler {
   }
 }
 
+/**
+ * Tracks application runtime and enforces maximum runtime limits.
+ * 
+ * The RuntimeTracker class monitors how long the application has been running
+ * and can enforce maximum runtime limits to prevent runaway processes.
+ * 
+ * @example
+ * ```typescript
+ * const tracker = new RuntimeTracker(3600000); // 1 hour limit
+ * const limitCheck = tracker.hasExceededLimit();
+ * if (!limitCheck.ok) {
+ *   console.log("Runtime limit exceeded!");
+ * }
+ * ```
+ */
 export class RuntimeTracker {
   private startTime: number;
   private maxRuntime: number;
