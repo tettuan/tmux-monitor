@@ -1,0 +1,76 @@
+{
+  "scriptId": "334",
+  "url": "file:///Users/tettuan/github/tmux-monitor/src/tests/display_test.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 2486, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 202, "endOffset": 338, "count": 7 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "info",
+      "ranges": [{ "startOffset": 209, "endOffset": 243, "count": 16 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "error",
+      "ranges": [{ "startOffset": 255, "endOffset": 292, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "warn",
+      "ranges": [{ "startOffset": 303, "endOffset": 338, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createMockPaneDetail",
+      "ranges": [
+        { "startOffset": 369, "endOffset": 707, "count": 6 },
+        { "startOffset": 564, "endOffset": 569, "count": 3 },
+        { "startOffset": 570, "endOffset": 575, "count": 3 },
+        { "startOffset": 649, "endOffset": 706, "count": 0 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 744, "endOffset": 838, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 890, "endOffset": 1146, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 1200, "endOffset": 1321, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 1383, "endOffset": 1698, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 1762, "endOffset": 1897, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 1964, "endOffset": 2186, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 2255, "endOffset": 2483, "count": 1 }],
+      "isBlockCoverage": true
+    }
+  ]
+}

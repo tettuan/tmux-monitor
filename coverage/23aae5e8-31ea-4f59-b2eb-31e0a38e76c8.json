@@ -1,0 +1,56 @@
+{
+  "scriptId": "367",
+  "url": "file:///Users/tettuan/github/tmux-monitor/src/cancellation.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 4886, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 998, "endOffset": 1052, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "cancel",
+      "ranges": [{ "startOffset": 1406, "endOffset": 1820, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isCancelled",
+      "ranges": [{ "startOffset": 2083, "endOffset": 2284, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getReason",
+      "ranges": [{ "startOffset": 2330, "endOffset": 2371, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getTimestamp",
+      "ranges": [{ "startOffset": 2420, "endOffset": 2467, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "reset",
+      "ranges": [{ "startOffset": 2537, "endOffset": 2780, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "throwIfCancelled",
+      "ranges": [{ "startOffset": 2840, "endOffset": 2958, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "delay",
+      "ranges": [{ "startOffset": 3020, "endOffset": 3791, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "race",
+      "ranges": [{ "startOffset": 3858, "endOffset": 4773, "count": 0 }],
+      "isBlockCoverage": false
+    }
+  ]
+}

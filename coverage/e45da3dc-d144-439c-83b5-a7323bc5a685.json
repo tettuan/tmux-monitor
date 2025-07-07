@@ -1,0 +1,11 @@
+{
+  "scriptId": "366",
+  "url": "file:///Users/tettuan/github/tmux-monitor/src/config.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 532, "count": 1 }],
+      "isBlockCoverage": true
+    }
+  ]
+}

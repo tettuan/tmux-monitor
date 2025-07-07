@@ -1,0 +1,180 @@
+{
+  "scriptId": "336",
+  "url": "file:///Users/tettuan/github/tmux-monitor/src/panes.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 11321, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 392, "endOffset": 407, "count": 0 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "PaneDataProcessor",
+      "ranges": [{ "startOffset": 411, "endOffset": 488, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "parsePaneInfo",
+      "ranges": [{ "startOffset": 491, "endOffset": 1232, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getPaneDetail",
+      "ranges": [{ "startOffset": 1235, "endOffset": 3963, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "countSessionOccurrences",
+      "ranges": [{ "startOffset": 3966, "endOffset": 4192, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "findMostFrequentSession",
+      "ranges": [{ "startOffset": 4195, "endOffset": 4491, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 4526, "endOffset": 4532, "count": 2 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "StatusAnalyzer",
+      "ranges": [{ "startOffset": 4536, "endOffset": 4586, "count": 2 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "isNodeCommand",
+      "ranges": [
+        { "startOffset": 4589, "endOffset": 5909, "count": 9 },
+        { "startOffset": 4692, "endOffset": 4722, "count": 8 },
+        { "startOffset": 4724, "endOffset": 4751, "count": 1 },
+        { "startOffset": 4751, "endOffset": 4914, "count": 8 },
+        { "startOffset": 4914, "endOffset": 4941, "count": 1 },
+        { "startOffset": 4941, "endOffset": 5780, "count": 7 },
+        { "startOffset": 5780, "endOffset": 5905, "count": 0 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [
+        { "startOffset": 5615, "endOffset": 5771, "count": 63 },
+        { "startOffset": 5673, "endOffset": 5717, "count": 58 },
+        { "startOffset": 5718, "endOffset": 5762, "count": 58 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "extractStatusFromTitle",
+      "ranges": [{ "startOffset": 5912, "endOffset": 6310, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "determineStatus",
+      "ranges": [{ "startOffset": 6313, "endOffset": 8882, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 8914, "endOffset": 8941, "count": 4 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "PaneManager",
+      "ranges": [{ "startOffset": 8945, "endOffset": 9042, "count": 4 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "separate",
+      "ranges": [
+        { "startOffset": 9045, "endOffset": 9626, "count": 3 },
+        { "startOffset": 9097, "endOffset": 9290, "count": 1 },
+        { "startOffset": 9290, "endOffset": 9350, "count": 2 },
+        { "startOffset": 9350, "endOffset": 9357, "count": 1 },
+        { "startOffset": 9467, "endOffset": 9471, "count": 1 },
+        { "startOffset": 9472, "endOffset": 9481, "count": 1 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 9325, "endOffset": 9348, "count": 3 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 9392, "endOffset": 9416, "count": 4 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 9539, "endOffset": 9548, "count": 3 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "getMainPane",
+      "ranges": [{ "startOffset": 9629, "endOffset": 9674, "count": 2 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "getTargetPanes",
+      "ranges": [{ "startOffset": 9677, "endOffset": 9722, "count": 3 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "getTargetPaneIds",
+      "ranges": [{ "startOffset": 9725, "endOffset": 9787, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 9825, "endOffset": 9846, "count": 4 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "updateStatus",
+      "ranges": [
+        { "startOffset": 9850, "endOffset": 10328, "count": 8 },
+        { "startOffset": 9952, "endOffset": 10074, "count": 5 },
+        { "startOffset": 10074, "endOffset": 10141, "count": 3 },
+        { "startOffset": 10141, "endOffset": 10293, "count": 2 },
+        { "startOffset": 10293, "endOffset": 10327, "count": 1 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "getChangedPanes",
+      "ranges": [
+        { "startOffset": 10331, "endOffset": 10594, "count": 2 },
+        { "startOffset": 10432, "endOffset": 10571, "count": 4 },
+        { "startOffset": 10473, "endOffset": 10565, "count": 1 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "clearChangeFlags",
+      "ranges": [{ "startOffset": 10597, "endOffset": 10762, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getDonePanes",
+      "ranges": [{ "startOffset": 10765, "endOffset": 10972, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getDoneAndIdlePanes",
+      "ranges": [{ "startOffset": 10975, "endOffset": 11221, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getStatus",
+      "ranges": [{ "startOffset": 11224, "endOffset": 11318, "count": 0 }],
+      "isBlockCoverage": false
+    }
+  ]
+}

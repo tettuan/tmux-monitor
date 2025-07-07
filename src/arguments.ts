@@ -1,4 +1,4 @@
-import type { createError, Result, ValidationError } from "./types.ts";
+import type { Result, ValidationError } from "./types.ts";
 import { MonitoringOptions, ValidatedTime } from "./models.ts";
 import type { Logger, TimeManager } from "./services.ts";
 

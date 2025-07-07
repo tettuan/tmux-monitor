@@ -1,0 +1,65 @@
+{
+  "scriptId": "336",
+  "url": "file:///Users/tettuan/github/tmux-monitor/src/session.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 3210, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 212, "endOffset": 237, "count": 7 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "TmuxSession",
+      "ranges": [{ "startOffset": 241, "endOffset": 352, "count": 7 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "create",
+      "ranges": [{ "startOffset": 362, "endOffset": 452, "count": 7 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "findMostActiveSession",
+      "ranges": [
+        { "startOffset": 455, "endOffset": 1930, "count": 3 },
+        { "startOffset": 723, "endOffset": 934, "count": 1 },
+        { "startOffset": 934, "endOffset": 1055, "count": 2 },
+        { "startOffset": 1055, "endOffset": 1259, "count": 1 },
+        { "startOffset": 1259, "endOffset": 1639, "count": 2 },
+        { "startOffset": 1365, "endOffset": 1369, "count": 0 },
+        { "startOffset": 1418, "endOffset": 1422, "count": 1 },
+        { "startOffset": 1570, "endOffset": 1633, "count": 1 },
+        { "startOffset": 1639, "endOffset": 1662, "count": 1 },
+        { "startOffset": 1662, "endOffset": 1866, "count": 0 },
+        { "startOffset": 1866, "endOffset": 1929, "count": 1 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 995, "endOffset": 1021, "count": 3 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "getAllPanes",
+      "ranges": [
+        { "startOffset": 1933, "endOffset": 3207, "count": 3 },
+        { "startOffset": 2378, "endOffset": 2578, "count": 1 },
+        { "startOffset": 2578, "endOffset": 3149, "count": 2 },
+        { "startOffset": 2777, "endOffset": 3143, "count": 1 },
+        { "startOffset": 3057, "endOffset": 3135, "count": 0 },
+        { "startOffset": 3149, "endOffset": 3206, "count": 2 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 2628, "endOffset": 2654, "count": 2 }],
+      "isBlockCoverage": true
+    }
+  ]
+}

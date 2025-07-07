@@ -56,10 +56,13 @@ export class MessageGenerator {
  */
 export class PaneCommunicator {
   private constructor(
+    // deno-lint-ignore no-explicit-any
     private commandExecutor: any,
+    // deno-lint-ignore no-explicit-any
     private logger: any,
   ) {}
 
+  // deno-lint-ignore no-explicit-any
   static create(commandExecutor: any, logger: any): PaneCommunicator {
     return new PaneCommunicator(commandExecutor, logger);
   }
@@ -128,7 +131,7 @@ export class PaneCommunicator {
     // Check if file exists
     try {
       await Deno.stat(filePath);
-    } catch (error) {
+    } catch (_error) {
       return {
         ok: false,
         error: createError({ kind: "FileNotFound", path: filePath }),

@@ -45,7 +45,7 @@ export class PaneDataProcessor {
 
   async getPaneDetail(
     paneId: string,
-    logger: Logger,
+    _logger: Logger,
   ): Promise<Result<PaneDetail, ValidationError & { message: string }>> {
     const commandResult = await this.commandExecutor.executeTmuxCommand(
       `tmux display -p -t "${paneId}" -F 'Session: #{session_name}
@@ -95,11 +95,12 @@ Start Command: #{pane_start_command}'`,
         case "Session":
           rawData.sessionName = value;
           break;
-        case "Window":
+        case "Window": {
           const windowParts = value.split(" ");
           rawData.windowIndex = windowParts[0];
           rawData.windowName = windowParts.slice(1).join(" ");
           break;
+        }
         case "Pane ID":
           rawData.paneId = value;
           break;

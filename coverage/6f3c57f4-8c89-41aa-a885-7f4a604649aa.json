@@ -1,0 +1,125 @@
+{
+  "scriptId": "334",
+  "url": "file:///Users/tettuan/github/tmux-monitor/src/tests/session_test.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 4380, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 189, "endOffset": 915, "count": 3 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "execute",
+      "ranges": [
+        { "startOffset": 199, "endOffset": 794, "count": 2 },
+        { "startOffset": 255, "endOffset": 576, "count": 1 },
+        { "startOffset": 576, "endOffset": 793, "count": 0 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "executeTmuxCommand",
+      "ranges": [{ "startOffset": 819, "endOffset": 915, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 955, "endOffset": 1091, "count": 7 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "info",
+      "ranges": [{ "startOffset": 962, "endOffset": 996, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "error",
+      "ranges": [{ "startOffset": 1008, "endOffset": 1045, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "warn",
+      "ranges": [{ "startOffset": 1056, "endOffset": 1091, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 1129, "endOffset": 1244, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 1300, "endOffset": 1577, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 1637, "endOffset": 2010, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "execute",
+      "ranges": [{ "startOffset": 1687, "endOffset": 1752, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "executeTmuxCommand",
+      "ranges": [{ "startOffset": 1778, "endOffset": 1843, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 2069, "endOffset": 2728, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "execute",
+      "ranges": [{ "startOffset": 2119, "endOffset": 2327, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "executeTmuxCommand",
+      "ranges": [{ "startOffset": 2353, "endOffset": 2561, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 2774, "endOffset": 3136, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 3185, "endOffset": 3848, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "execute",
+      "ranges": [{ "startOffset": 3235, "endOffset": 3443, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "executeTmuxCommand",
+      "ranges": [{ "startOffset": 3469, "endOffset": 3677, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 3897, "endOffset": 4377, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "execute",
+      "ranges": [{ "startOffset": 3947, "endOffset": 4024, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "executeTmuxCommand",
+      "ranges": [{ "startOffset": 4050, "endOffset": 4127, "count": 0 }],
+      "isBlockCoverage": false
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "scriptId": "378",
+  "url": "file:///Users/tettuan/github/tmux-monitor/src/types.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 1500, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "createError",
+      "ranges": [{ "startOffset": 296, "endOffset": 396, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getDefaultMessage",
+      "ranges": [{ "startOffset": 431, "endOffset": 1498, "count": 0 }],
+      "isBlockCoverage": false
+    }
+  ]
+}

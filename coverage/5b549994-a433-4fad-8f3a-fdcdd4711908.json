@@ -1,0 +1,36 @@
+{
+  "scriptId": "373",
+  "url": "file:///Users/tettuan/github/tmux-monitor/src/display.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 1033, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 105, "endOffset": 111, "count": 0 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "PaneDisplayer",
+      "ranges": [{ "startOffset": 115, "endOffset": 165, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "create",
+      "ranges": [{ "startOffset": 175, "endOffset": 233, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "displayPaneList",
+      "ranges": [{ "startOffset": 236, "endOffset": 552, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "displayMainAndTargetPanes",
+      "ranges": [{ "startOffset": 555, "endOffset": 1030, "count": 0 }],
+      "isBlockCoverage": false
+    }
+  ]
+}

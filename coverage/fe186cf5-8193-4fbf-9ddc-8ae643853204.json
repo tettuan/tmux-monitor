@@ -1,0 +1,114 @@
+{
+  "scriptId": "334",
+  "url": "file:///Users/tettuan/github/tmux-monitor/src/tests/communication_test.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 5414, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 243, "endOffset": 379, "count": 6 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "info",
+      "ranges": [{ "startOffset": 250, "endOffset": 284, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "error",
+      "ranges": [{ "startOffset": 296, "endOffset": 333, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "warn",
+      "ranges": [{ "startOffset": 344, "endOffset": 379, "count": 0 }],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 437, "endOffset": 699, "count": 5 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "execute",
+      "ranges": [
+        { "startOffset": 447, "endOffset": 699, "count": 3 },
+        { "startOffset": 610, "endOffset": 698, "count": 0 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "createMockPaneDetail",
+      "ranges": [
+        { "startOffset": 730, "endOffset": 1068, "count": 4 },
+        { "startOffset": 925, "endOffset": 930, "count": 2 },
+        { "startOffset": 931, "endOffset": 936, "count": 2 },
+        { "startOffset": 1010, "endOffset": 1067, "count": 0 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 1127, "endOffset": 1794, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 1857, "endOffset": 2056, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 2119, "endOffset": 2804, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 2869, "endOffset": 3044, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 3086, "endOffset": 3216, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 3278, "endOffset": 3483, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 3548, "endOffset": 3866, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "execute",
+      "ranges": [{ "startOffset": 3598, "endOffset": 3679, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 3916, "endOffset": 4125, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 4178, "endOffset": 4375, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 4441, "endOffset": 4669, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 4749, "endOffset": 5411, "count": 1 }],
+      "isBlockCoverage": true
+    }
+  ]
+}

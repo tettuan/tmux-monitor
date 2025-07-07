@@ -5,7 +5,6 @@ import {
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { ArgumentParser } from "../arguments.ts";
 import { Logger, TimeManager } from "../services.ts";
-import type { MonitoringOptions, ValidatedTime } from "../models.ts";
 
 // =============================================================================
 // Mock classes for testing
@@ -29,7 +28,7 @@ class MockLogger extends Logger {
 
 function setupMockArgs(args: string[]): void {
   // Store original args
-  const originalArgs = Deno.args;
+  const _originalArgs = Deno.args;
 
   // Mock Deno.args
   Object.defineProperty(Deno, "args", {

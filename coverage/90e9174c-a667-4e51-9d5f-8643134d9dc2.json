@@ -1,0 +1,26 @@
+{
+  "scriptId": "336",
+  "url": "file:///Users/tettuan/github/tmux-monitor/src/application.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 3492, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 759, "endOffset": 768, "count": 3 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "Application",
+      "ranges": [{ "startOffset": 903, "endOffset": 1002, "count": 3 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "run",
+      "ranges": [{ "startOffset": 1523, "endOffset": 3489, "count": 0 }],
+      "isBlockCoverage": false
+    }
+  ]
+}

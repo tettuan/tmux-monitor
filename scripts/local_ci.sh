@@ -50,32 +50,7 @@ echo -e "${BLUE}Deno version:${NC} $DENO_VERSION"
 echo ""
 
 # =============================================================================
-# Step 1: Check formatting
-# =============================================================================
-print_step "Checking code formatting..."
-if deno fmt --check; then
-    print_success "Code formatting is correct"
-else
-    print_error "Code formatting issues found"
-    echo "Run 'deno fmt' to fix formatting issues"
-    exit 1
-fi
-echo ""
-
-# =============================================================================
-# Step 2: Run linter
-# =============================================================================
-print_step "Running linter..."
-if deno lint; then
-    print_success "No linting issues found"
-else
-    print_error "Linting issues found"
-    exit 1
-fi
-echo ""
-
-# =============================================================================
-# Step 3: Type check
+# Step 1: Type check
 # =============================================================================
 print_step "Running type check..."
 if deno check mod.ts main.ts; then
@@ -87,13 +62,38 @@ fi
 echo ""
 
 # =============================================================================
-# Step 4: Run tests
+# Step 2: Run tests
 # =============================================================================
 print_step "Running tests..."
 if deno test --allow-all --coverage=coverage/; then
     print_success "All tests passed"
 else
     print_error "Some tests failed"
+    exit 1
+fi
+echo ""
+
+# =============================================================================
+# Step 3: Run linter
+# =============================================================================
+print_step "Running linter..."
+if deno lint; then
+    print_success "No linting issues found"
+else
+    print_error "Linting issues found"
+    exit 1
+fi
+echo ""
+
+# =============================================================================
+# Step 4: Check formatting
+# =============================================================================
+print_step "Checking code formatting..."
+if deno fmt --check; then
+    print_success "Code formatting is correct"
+else
+    print_error "Code formatting issues found"
+    echo "Run 'deno fmt' to fix formatting issues"
     exit 1
 fi
 echo ""

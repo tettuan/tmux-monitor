@@ -1,0 +1,29 @@
+{
+  "scriptId": "365",
+  "url": "file:///Users/tettuan/github/tmux-monitor/src/arguments.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 1813, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [{ "startOffset": 294, "endOffset": 315, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "ArgumentParser",
+      "ranges": [{ "startOffset": 319, "endOffset": 418, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "parse",
+      "ranges": [
+        { "startOffset": 421, "endOffset": 1810, "count": 1 },
+        { "startOffset": 619, "endOffset": 1583, "count": 0 }
+      ],
+      "isBlockCoverage": true
+    }
+  ]
+}

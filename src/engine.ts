@@ -1,6 +1,5 @@
-import type { createError, Result, ValidationError } from "./types.ts";
 import { TIMING } from "./config.ts";
-import { type MonitoringOptions, Pane } from "./models.ts";
+import { Pane } from "./models.ts";
 import type { TmuxSession } from "./session.ts";
 import type { PaneManager } from "./panes.ts";
 import { MessageGenerator, type PaneCommunicator } from "./communication.ts";
@@ -20,14 +19,21 @@ export class MonitoringEngine {
     private paneManager: PaneManager,
     private communicator: PaneCommunicator,
     private displayer: PaneDisplayer,
+    // deno-lint-ignore no-explicit-any
     private statusManager: any,
     private ciManager: CIManager,
+    // deno-lint-ignore no-explicit-any
     private timeManager: any,
+    // deno-lint-ignore no-explicit-any
     private runtimeTracker: any,
+    // deno-lint-ignore no-explicit-any
     private keyboardHandler: any,
+    // deno-lint-ignore no-explicit-any
     private paneDataProcessor: any,
+    // deno-lint-ignore no-explicit-any
     private statusAnalyzer: any,
     private messageGenerator: MessageGenerator,
+    // deno-lint-ignore no-explicit-any
     private logger: any,
     scheduledTime?: Date | null,
     instructionFile?: string | null,
@@ -289,6 +295,7 @@ export class MonitoringEngine {
     const activePanes = mainPane ? [mainPane] : [];
 
     // Get current status for each pane
+    // deno-lint-ignore no-explicit-any
     const statusResults: Array<{ pane: any; status: string }> = [];
     for (const pane of targetPanes) {
       const status = this.statusManager.getStatus(pane.id) || "UNKNOWN";
