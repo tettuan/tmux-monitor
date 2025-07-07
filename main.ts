@@ -1,52 +1,72 @@
-#!/usr/bin/env deno run --allow-run --allow-net
+#!/usr/bin/env deno run --allow-run --allow-read
 
 /**
- * tmux Monitor Tool - CLI Entry Point
+ * @aidevtool/tmux-monitor - CLI Entry Point
  *
- * This is the primary CLI interface for the tmux monitoring tool.
- * Designed for direct execution from JSR with minimal library exports.
+ * A comprehensive tmux monitoring tool designed for command-line usage with
+ * real-time monitoring and keyboard interrupt handling.
  *
- * Features:
- *   - Discovers the most active tmux session automatically
- *   - Separates main pane (active) from target panes (inactive)
- *   - Sends status update instructions to target panes
- *   - Reports pane status to main pane
- *   - Displays comprehensive pane list
- *   - Supports both single-run and continuous monitoring modes
- *   - Scheduled execution with keyboard interrupt capability
- *   - Instruction file option for sending startup commands to main pane
- *   - Automatic termination after 4 hours of continuous operation
+ * ## Features
+ * - 🖥️ **Real-time Monitoring**: Live tmux session and pane status updates
+ * - ⚡ **Immediate Cancellation**: Any key press or Ctrl+C stops monitoring instantly
+ * - 📅 **Scheduled Execution**: Run monitoring at specific times
+ * - 🔄 **Continuous Mode**: Long-running monitoring with configurable cycles
+ * - 🚀 **CI/CD Integration**: Built-in CI environment detection
+ * - 📝 **Instruction Files**: Send startup commands to main pane
+ * - 🛠️ **Cross-platform**: Works on macOS, Linux, and Windows (with WSL)
  *
- * CLI Usage:
- *   # Direct execution from JSR (recommended)
- *   deno run --allow-all @aidevtool/tmux-monitor
+ * ## How It Works
+ * 1. **Session Discovery**: Automatically finds the most active tmux session
+ * 2. **Pane Classification**: Separates main pane (active) from target panes (inactive)
+ * 3. **Status Updates**: Sends status update instructions to target panes
+ * 4. **Monitoring**: Reports pane status back to main pane
+ * 5. **Display**: Shows comprehensive pane list with real-time updates
  *
- *   # Global installation
- *   deno install --allow-all -n tmux-monitor @aidevtool/tmux-monitor
- *   tmux-monitor
+ * ## CLI Usage (Recommended - Minimum Permissions)
  *
- *   # Continuous monitoring mode
- *   deno run --allow-all @aidevtool/tmux-monitor --continuous
- *   deno run --allow-all @aidevtool/tmux-monitor -c
+ * ### Direct Execution from JSR
+ * ```bash
+ * # Basic monitoring (minimum permissions)
+ * deno run --allow-run jsr:@aidevtool/tmux-monitor
  *
- *   # Scheduled execution
- *   deno run --allow-all @aidevtool/tmux-monitor --time=14:30
- *   deno run --allow-all @aidevtool/tmux-monitor -t 14:30
+ * # Continuous monitoring
+ * deno run --allow-run jsr:@aidevtool/tmux-monitor --continuous
  *
- *   # With instruction file
- *   deno run --allow-all @aidevtool/tmux-monitor --instruction=./file.md
- *   deno run --allow-all @aidevtool/tmux-monitor -i ./file.md
+ * # Scheduled execution
+ * deno run --allow-run jsr:@aidevtool/tmux-monitor --time=14:30
  *
- *   # Kill all tmux panes (safety: SIGTERM first, then SIGKILL)
- *   deno run --allow-all @aidevtool/tmux-monitor --kill-all-panes
+ * # With instruction file (requires read permission)
+ * deno run --allow-run --allow-read jsr:@aidevtool/tmux-monitor --instruction=./startup.txt
+ * ```
  *
- *   # Combined options
- *   deno run --allow-all @aidevtool/tmux-monitor -c --time=14:30 --instruction=./file.md
+ * ### Global Installation
+ * ```bash
+ * # Install with specific permissions (recommended)
+ * deno install --allow-run --allow-read -n tmux-monitor jsr:@aidevtool/tmux-monitor
  *
- * Library Usage:
- *   Import from "@aidevtool/tmux-monitor/lib" for full library functionality.
+ * # Then use anywhere
+ * tmux-monitor
+ * tmux-monitor --continuous
+ * tmux-monitor --time=14:30
+ * tmux-monitor --instruction=./startup.txt
+ * ```
+ *
+ * ## CLI Options
+ * - `--continuous` or `-c`: Run in continuous monitoring mode
+ * - `--time=HH:MM` or `-t HH:MM`: Schedule monitoring start time
+ * - `--instruction=PATH` or `-i PATH`: Load instruction file with startup commands
+ * - `--kill-all-panes`: Safely terminate all tmux panes (SIGTERM first, then SIGKILL)
+ *
+ * ## Required Permissions
+ * - `--allow-run`: Execute tmux commands (essential)
+ * - `--allow-read`: Read instruction files (only when `--instruction` flag is used)
+ *
+ * ## Library Usage
+ * Import from "@aidevtool/tmux-monitor/lib" for full library functionality.
  *
  * This entry point follows totality principles with exhaustive error handling.
+ *
+ * @module
  */
 
 // =============================================================================
