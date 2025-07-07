@@ -1,11 +1,14 @@
-import { assertEquals, assertExists } from "https://deno.land/std@0.208.0/assert/mod.ts";
-import { 
-  Pane, 
-  PaneDetail, 
-  WorkerStatus, 
-  WorkerStatusParser, 
-  MonitoringOptions, 
-  ValidatedTime 
+import {
+  assertEquals,
+  type assertExists,
+} from "https://deno.land/std@0.208.0/assert/mod.ts";
+import {
+  MonitoringOptions,
+  Pane,
+  PaneDetail,
+  ValidatedTime,
+  type WorkerStatus,
+  WorkerStatusParser,
 } from "../models.ts";
 
 // =============================================================================
@@ -15,7 +18,7 @@ import {
 Deno.test("Pane.create - active pane with command and title", () => {
   const result = Pane.create("1", true, "bash", "test-pane");
   assertEquals(result.ok, true);
-  
+
   if (result.ok) {
     assertEquals(result.data.id, "1");
     assertEquals(result.data.isActive(), true);
@@ -27,7 +30,7 @@ Deno.test("Pane.create - active pane with command and title", () => {
 Deno.test("Pane.create - inactive pane with command and title", () => {
   const result = Pane.create("2", false, "vim", "edit-pane");
   assertEquals(result.ok, true);
-  
+
   if (result.ok) {
     assertEquals(result.data.id, "2");
     assertEquals(result.data.isActive(), false);
@@ -39,7 +42,7 @@ Deno.test("Pane.create - inactive pane with command and title", () => {
 Deno.test("Pane.create - active pane with defaults", () => {
   const result = Pane.create("3", true);
   assertEquals(result.ok, true);
-  
+
   if (result.ok) {
     assertEquals(result.data.id, "3");
     assertEquals(result.data.isActive(), true);
@@ -51,7 +54,7 @@ Deno.test("Pane.create - active pane with defaults", () => {
 Deno.test("Pane.create - unknown pane", () => {
   const result = Pane.create("4", false);
   assertEquals(result.ok, true);
-  
+
   if (result.ok) {
     assertEquals(result.data.id, "4");
     assertEquals(result.data.isActive(), false);
@@ -63,7 +66,7 @@ Deno.test("Pane.create - unknown pane", () => {
 Deno.test("Pane.create - empty id should fail", () => {
   const result = Pane.create("", true);
   assertEquals(result.ok, false);
-  
+
   if (!result.ok) {
     assertEquals(result.error.kind, "EmptyInput");
   }
@@ -72,7 +75,7 @@ Deno.test("Pane.create - empty id should fail", () => {
 Deno.test("Pane.create - whitespace id should fail", () => {
   const result = Pane.create("   ", true);
   assertEquals(result.ok, false);
-  
+
   if (!result.ok) {
     assertEquals(result.error.kind, "EmptyInput");
   }
@@ -98,11 +101,11 @@ Deno.test("PaneDetail.create - valid pane detail", () => {
     "0",
     "80",
     "24",
-    "bash"
+    "bash",
   );
-  
+
   assertEquals(result.ok, true);
-  
+
   if (result.ok) {
     assertEquals(result.data.sessionName, "session1");
     assertEquals(result.data.windowIndex, "0");
@@ -138,11 +141,11 @@ Deno.test("PaneDetail.create - empty session name should fail", () => {
     "0",
     "80",
     "24",
-    "bash"
+    "bash",
   );
-  
+
   assertEquals(result.ok, false);
-  
+
   if (!result.ok) {
     assertEquals(result.error.kind, "EmptyInput");
   }
@@ -164,11 +167,11 @@ Deno.test("PaneDetail.create - empty pane id should fail", () => {
     "0",
     "80",
     "24",
-    "bash"
+    "bash",
   );
-  
+
   assertEquals(result.ok, false);
-  
+
   if (!result.ok) {
     assertEquals(result.error.kind, "EmptyInput");
   }
@@ -190,11 +193,11 @@ Deno.test("PaneDetail.create - empty active status should fail", () => {
     "0",
     "80",
     "24",
-    "bash"
+    "bash",
   );
-  
+
   assertEquals(result.ok, false);
-  
+
   if (!result.ok) {
     assertEquals(result.error.kind, "EmptyInput");
   }
@@ -252,7 +255,10 @@ Deno.test("WorkerStatusParser.toString - all statuses", () => {
   assertEquals(WorkerStatusParser.toString({ kind: "WORKING" }), "WORKING");
   assertEquals(WorkerStatusParser.toString({ kind: "BLOCKED" }), "BLOCKED");
   assertEquals(WorkerStatusParser.toString({ kind: "DONE" }), "DONE");
-  assertEquals(WorkerStatusParser.toString({ kind: "TERMINATED" }), "TERMINATED");
+  assertEquals(
+    WorkerStatusParser.toString({ kind: "TERMINATED" }),
+    "TERMINATED",
+  );
   assertEquals(WorkerStatusParser.toString({ kind: "UNKNOWN" }), "UNKNOWN");
 });
 
@@ -275,7 +281,7 @@ Deno.test("WorkerStatusParser.isEqual - different statuses", () => {
 Deno.test("ValidatedTime.create - valid time", () => {
   const result = ValidatedTime.create("14:30");
   assertEquals(result.ok, true);
-  
+
   if (result.ok) {
     const date = result.data.getDate();
     assertEquals(date.getHours(), 14);
@@ -286,7 +292,7 @@ Deno.test("ValidatedTime.create - valid time", () => {
 Deno.test("ValidatedTime.create - single digit hour", () => {
   const result = ValidatedTime.create("9:15");
   assertEquals(result.ok, true);
-  
+
   if (result.ok) {
     const date = result.data.getDate();
     assertEquals(date.getHours(), 9);
@@ -297,7 +303,7 @@ Deno.test("ValidatedTime.create - single digit hour", () => {
 Deno.test("ValidatedTime.create - midnight", () => {
   const result = ValidatedTime.create("0:00");
   assertEquals(result.ok, true);
-  
+
   if (result.ok) {
     const date = result.data.getDate();
     assertEquals(date.getHours(), 0);
@@ -308,7 +314,7 @@ Deno.test("ValidatedTime.create - midnight", () => {
 Deno.test("ValidatedTime.create - 23:59", () => {
   const result = ValidatedTime.create("23:59");
   assertEquals(result.ok, true);
-  
+
   if (result.ok) {
     const date = result.data.getDate();
     assertEquals(date.getHours(), 23);
@@ -319,7 +325,7 @@ Deno.test("ValidatedTime.create - 23:59", () => {
 Deno.test("ValidatedTime.create - empty string", () => {
   const result = ValidatedTime.create("");
   assertEquals(result.ok, false);
-  
+
   if (!result.ok) {
     assertEquals(result.error.kind, "EmptyInput");
   }
@@ -328,7 +334,7 @@ Deno.test("ValidatedTime.create - empty string", () => {
 Deno.test("ValidatedTime.create - whitespace", () => {
   const result = ValidatedTime.create("   ");
   assertEquals(result.ok, false);
-  
+
   if (!result.ok) {
     assertEquals(result.error.kind, "EmptyInput");
   }
@@ -337,7 +343,7 @@ Deno.test("ValidatedTime.create - whitespace", () => {
 Deno.test("ValidatedTime.create - invalid format", () => {
   const result = ValidatedTime.create("invalid");
   assertEquals(result.ok, false);
-  
+
   if (!result.ok) {
     assertEquals(result.error.kind, "InvalidTimeFormat");
   }
@@ -346,7 +352,7 @@ Deno.test("ValidatedTime.create - invalid format", () => {
 Deno.test("ValidatedTime.create - invalid hour", () => {
   const result = ValidatedTime.create("25:30");
   assertEquals(result.ok, false);
-  
+
   if (!result.ok) {
     assertEquals(result.error.kind, "InvalidTimeFormat");
   }
@@ -355,7 +361,7 @@ Deno.test("ValidatedTime.create - invalid hour", () => {
 Deno.test("ValidatedTime.create - invalid minute", () => {
   const result = ValidatedTime.create("12:60");
   assertEquals(result.ok, false);
-  
+
   if (!result.ok) {
     assertEquals(result.error.kind, "InvalidTimeFormat");
   }
@@ -364,7 +370,7 @@ Deno.test("ValidatedTime.create - invalid minute", () => {
 Deno.test("ValidatedTime.create - negative hour", () => {
   const result = ValidatedTime.create("-1:30");
   assertEquals(result.ok, false);
-  
+
   if (!result.ok) {
     assertEquals(result.error.kind, "InvalidTimeFormat");
   }

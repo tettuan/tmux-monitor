@@ -1,7 +1,18 @@
-import { MonitoringOptions } from "./models.ts";
-import { Logger, CommandExecutor, TimeManager, KeyboardInterruptHandler, RuntimeTracker } from "./services.ts";
+import type { MonitoringOptions } from "./models.ts";
+import {
+  CommandExecutor,
+  KeyboardInterruptHandler,
+  Logger,
+  RuntimeTracker,
+  TimeManager,
+} from "./services.ts";
 import { ArgumentParser } from "./arguments.ts";
-import { PaneDataProcessor, StatusAnalyzer, PaneManager, PaneStatusManager } from "./panes.ts";
+import {
+  PaneDataProcessor,
+  PaneManager,
+  PaneStatusManager,
+  StatusAnalyzer,
+} from "./panes.ts";
 import { MessageGenerator, PaneCommunicator } from "./communication.ts";
 import { PaneDisplayer } from "./display.ts";
 import { CIManager } from "./ci.ts";
@@ -13,7 +24,7 @@ import { MonitoringEngine } from "./engine.ts";
  */
 export class DIContainer {
   private static instance: DIContainer;
-  private dependencies: Map<string, any> = new Map();
+  private dependencies: Map<string, () => unknown> = new Map();
 
   private constructor() {}
 
@@ -33,47 +44,60 @@ export class DIContainer {
     if (!factory) {
       throw new Error(`Dependency not found: ${key}`);
     }
-    return factory();
+    return factory() as T;
   }
 
   initialize(): void {
     // Core utilities
-    this.register('logger', () => new Logger());
-    this.register('commandExecutor', () => new CommandExecutor());
-    this.register('timeManager', () => new TimeManager());
-    this.register('keyboardHandler', () => new KeyboardInterruptHandler());
-    this.register('runtimeTracker', () => new RuntimeTracker(14400000));
+    this.register("logger", () => new Logger());
+    this.register("commandExecutor", () => new CommandExecutor());
+    this.register("timeManager", () => new TimeManager());
+    this.register("keyboardHandler", () => new KeyboardInterruptHandler());
+    this.register("runtimeTracker", () => new RuntimeTracker(14400000));
 
     // Data processing
-    this.register('paneDataProcessor', () => new PaneDataProcessor(this.get('commandExecutor')));
-    this.register('statusAnalyzer', () => new StatusAnalyzer(this.get('logger')));
-    this.register('messageGenerator', () => new MessageGenerator());
+    this.register(
+      "paneDataProcessor",
+      () => new PaneDataProcessor(this.get("commandExecutor")),
+    );
+    this.register(
+      "statusAnalyzer",
+      () => new StatusAnalyzer(this.get("logger")),
+    );
+    this.register("messageGenerator", () => new MessageGenerator());
 
     // Command line processing
-    this.register('argumentParser', () => new ArgumentParser(this.get('timeManager'), this.get('logger')));
+    this.register(
+      "argumentParser",
+      () => new ArgumentParser(this.get("timeManager"), this.get("logger")),
+    );
 
     // Business logic
-    this.register('session', () => TmuxSession.create(
-      this.get('commandExecutor'),
-      this.get('logger')
-    ));
+    this.register("session", () =>
+      TmuxSession.create(
+        this.get("commandExecutor"),
+        this.get("logger"),
+      ));
 
-    this.register('paneManager', () => new PaneManager(this.get('logger')));
-    this.register('statusManager', () => new PaneStatusManager());
+    this.register("paneManager", () => new PaneManager(this.get("logger")));
+    this.register("statusManager", () => new PaneStatusManager());
 
-    this.register('communicator', () => PaneCommunicator.create(
-      this.get('commandExecutor'),
-      this.get('logger')
-    ));
+    this.register("communicator", () =>
+      PaneCommunicator.create(
+        this.get("commandExecutor"),
+        this.get("logger"),
+      ));
 
-    this.register('displayer', () => PaneDisplayer.create(
-      this.get('logger')
-    ));
+    this.register("displayer", () =>
+      PaneDisplayer.create(
+        this.get("logger"),
+      ));
 
-    this.register('ciManager', () => CIManager.create(
-      this.get('commandExecutor'),
-      this.get('logger')
-    ));
+    this.register("ciManager", () =>
+      CIManager.create(
+        this.get("commandExecutor"),
+        this.get("logger"),
+      ));
   }
 
   createMonitoringEngine(options: MonitoringOptions): MonitoringEngine {
@@ -97,21 +121,21 @@ export class DIContainer {
     }
 
     return new MonitoringEngine(
-      this.get('session'),
-      this.get('paneManager'),
-      this.get('communicator'),
-      this.get('displayer'),
-      this.get('statusManager'),
-      this.get('ciManager'),
-      this.get('timeManager'),
-      this.get('runtimeTracker'),
-      this.get('keyboardHandler'),
-      this.get('paneDataProcessor'),
-      this.get('statusAnalyzer'),
-      this.get('messageGenerator'),
-      this.get('logger'),
+      this.get("session"),
+      this.get("paneManager"),
+      this.get("communicator"),
+      this.get("displayer"),
+      this.get("statusManager"),
+      this.get("ciManager"),
+      this.get("timeManager"),
+      this.get("runtimeTracker"),
+      this.get("keyboardHandler"),
+      this.get("paneDataProcessor"),
+      this.get("statusAnalyzer"),
+      this.get("messageGenerator"),
+      this.get("logger"),
       scheduledTime,
-      instructionFile
+      instructionFile,
     );
   }
 }

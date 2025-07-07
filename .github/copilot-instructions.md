@@ -14,7 +14,8 @@
 
 - **言語**: TypeScript（Denoランタイム）
 - **スタイル**: Denoの標準フォーマッター（`deno fmt`）に準拠
-- **インポート**: HTTPSベースのESモジュール（`https://deno.land/std/` など）を使用
+- **インポート**: HTTPSベースのESモジュール（`https://deno.land/std/`
+  など）を使用
 - **権限**: 必要最小限の権限のみを指定（`--allow-net`, `--allow-read` など）
 
 ### ファイル構成
@@ -30,7 +31,7 @@
 
 ### 推奨事項
 
-1. **外部依存関係**: 
+1. **外部依存関係**:
    - Deno標準ライブラリを優先的に使用
    - サードパーティライブラリは `https://deno.land/x/` から選択
 
@@ -80,7 +81,7 @@ export interface Config {
 
 export class TmuxMonitor {
   constructor(private config: Config) {}
-  
+
   async monitor(): Promise<void> {
     // 監視ロジック
   }

@@ -5,8 +5,23 @@
 // Common Result type for error handling
 export type Result<T, E> = { ok: true; data: T } | { ok: false; error: E };
 
+// Service interfaces to avoid any type usage
+export interface KeyboardHandler {
+  setup(): void;
+  cleanup(): void;
+}
+
+export interface RuntimeTracker {
+  logStartupInfo(logger: unknown, timeManager: unknown): void;
+}
+
+export interface TimeManager {
+  getCurrentTime(): Date;
+  formatTime(date: Date): string;
+}
+
 // Common validation error types
-export type ValidationError = 
+export type ValidationError =
   | { kind: "ParseError"; input: string }
   | { kind: "EmptyInput" }
   | { kind: "InvalidFormat"; input: string; expected: string }
@@ -21,30 +36,33 @@ export type ValidationError =
   | { kind: "RuntimeLimitExceeded"; maxRuntime: number };
 
 // Error creation helper
-export const createError = (error: ValidationError, customMessage?: string): ValidationError & { message: string } => ({
+export const createError = (
+  error: ValidationError,
+  customMessage?: string,
+): ValidationError & { message: string } => ({
   ...error,
-  message: customMessage || getDefaultMessage(error)
+  message: customMessage || getDefaultMessage(error),
 });
 
 export const getDefaultMessage = (error: ValidationError): string => {
   switch (error.kind) {
-    case "ParseError": 
+    case "ParseError":
       return `Cannot parse "${error.input}"`;
-    case "EmptyInput": 
+    case "EmptyInput":
       return "Input cannot be empty";
-    case "InvalidFormat": 
+    case "InvalidFormat":
       return `Invalid format: "${error.input}", expected: ${error.expected}`;
-    case "CommandFailed": 
+    case "CommandFailed":
       return `Command failed: ${error.command}. Error: ${error.stderr}`;
-    case "TimeoutError": 
+    case "TimeoutError":
       return `Operation timed out: ${error.operation}`;
-    case "InvalidTimeFormat": 
+    case "InvalidTimeFormat":
       return `Invalid time format: "${error.input}", expected: HH:MM`;
-    case "FileNotFound": 
+    case "FileNotFound":
       return `File not found: ${error.path}`;
-    case "InvalidState": 
+    case "InvalidState":
       return `Invalid state: ${error.current}, expected: ${error.expected}`;
-    case "CancellationRequested": 
+    case "CancellationRequested":
       return `Cancellation requested for operation: ${error.operation}`;
     case "SessionNotFound":
       return "No tmux session found";

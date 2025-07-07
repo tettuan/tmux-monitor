@@ -63,7 +63,8 @@ Deno.test("WORKER_STATUS_TYPES - all status types defined", () => {
 });
 
 Deno.test("Timing calculations - monitoring cycles", () => {
-  const cycleCount = TIMING.MONITORING_CYCLE_DELAY / TIMING.ENTER_SEND_CYCLE_DELAY;
+  const cycleCount = TIMING.MONITORING_CYCLE_DELAY /
+    TIMING.ENTER_SEND_CYCLE_DELAY;
   assertEquals(cycleCount, 10); // 300000 / 30000 = 10 cycles
 });
 

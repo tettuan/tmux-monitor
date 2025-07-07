@@ -18,7 +18,7 @@ A comprehensive tmux monitoring tool built with Deno and totality principles.
 import { createMonitorApp, runMonitoring } from "jsr:@tmux-monitor/core";
 
 // Or import specific modules
-import { Logger, CommandExecutor } from "jsr:@tmux-monitor/core";
+import { CommandExecutor, Logger } from "jsr:@tmux-monitor/core";
 ```
 
 ### From Source
@@ -34,7 +34,11 @@ cd tmux-monitor
 ### As a Library
 
 ```typescript
-import { createMonitorApp, runMonitoring, createLogger } from "jsr:@tmux-monitor/core";
+import {
+  createLogger,
+  createMonitorApp,
+  runMonitoring,
+} from "jsr:@tmux-monitor/core";
 
 // Simple usage
 await runMonitoring();
@@ -99,7 +103,8 @@ deno task lint
 
 ## VS Code Integration
 
-This project is configured to work with VS Code and the Deno extension. The workspace settings are configured to:
+This project is configured to work with VS Code and the Deno extension. The
+workspace settings are configured to:
 
 - Enable Deno language server
 - Use Deno as the TypeScript/JavaScript formatter
@@ -108,13 +113,16 @@ This project is configured to work with VS Code and the Deno extension. The work
 
 ## GitHub Copilot Integration
 
-This project includes GitHub Copilot instructions in `.github/copilot-instructions.md` to help provide context-aware code suggestions that follow the project's conventions and best practices.
+This project includes GitHub Copilot instructions in
+`.github/copilot-instructions.md` to help provide context-aware code suggestions
+that follow the project's conventions and best practices.
 
 ## Continuous Integration
 
 This project uses GitHub Actions for automated testing and publishing:
 
 ### CI Workflow
+
 - **Formatting**: Checks code formatting with `deno fmt`
 - **Linting**: Runs linter with `deno lint`
 - **Type Checking**: Validates TypeScript types
@@ -122,7 +130,9 @@ This project uses GitHub Actions for automated testing and publishing:
 - **Publish Validation**: Ensures publish configuration is correct
 
 ### Publish Workflow
-- **Selective Publishing**: Only includes `main.ts`, `mod.ts`, `src/`, and `LICENSE`
+
+- **Selective Publishing**: Only includes `main.ts`, `mod.ts`, `src/`, and
+  `LICENSE`
 - **Excludes**: Test files, documentation, hidden files, and `CLAUDE.md`
 - **Automatic**: Triggered on version tags or manual workflow dispatch
 - **JSR Ready**: Publishes to JSR (JavaScript Registry)
@@ -132,10 +142,12 @@ This project uses GitHub Actions for automated testing and publishing:
 This project uses automated version management:
 
 ### Version Files
+
 - `deno.json` - Main project configuration with version
 - `src/version.ts` - Version constant exported for library use
 
 ### Version Bumping
+
 ```bash
 # Bump patch version (1.0.0 → 1.0.1)
 deno task bump
@@ -149,6 +161,7 @@ deno task bump:major
 ```
 
 ### Manual Version Management
+
 ```bash
 # Create and push a version tag manually
 git tag v1.0.0
@@ -159,6 +172,7 @@ git push origin v1.0.0
 ```
 
 The version bump script automatically:
+
 - Performs status checks (git, CI, version consistency)
 - Runs local CI tests
 - Updates version in both `deno.json` and `src/version.ts`

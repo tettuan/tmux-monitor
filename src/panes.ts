@@ -1,6 +1,11 @@
-import { Result, ValidationError, createError } from "./types.ts";
-import { Pane, PaneDetail, WorkerStatus, WorkerStatusParser } from "./models.ts";
-import { CommandExecutor, Logger } from "./services.ts";
+import { createError, type Result, type ValidationError } from "./types.ts";
+import {
+  Pane,
+  PaneDetail,
+  type WorkerStatus,
+  WorkerStatusParser,
+} from "./models.ts";
+import type { CommandExecutor, Logger } from "./services.ts";
 import { WORKER_STATUS_TYPES } from "./config.ts";
 
 // =============================================================================
@@ -10,14 +15,23 @@ import { WORKER_STATUS_TYPES } from "./config.ts";
 export class PaneDataProcessor {
   constructor(private commandExecutor: CommandExecutor) {}
 
-  parsePaneInfo(line: string): Result<Pane, ValidationError & { message: string }> {
+  parsePaneInfo(
+    line: string,
+  ): Result<Pane, ValidationError & { message: string }> {
     if (!line || line.trim() === "") {
       return { ok: false, error: createError({ kind: "EmptyInput" }) };
     }
 
     const parts = line.split(" ");
     if (parts.length < 2) {
-      return { ok: false, error: createError({ kind: "InvalidFormat", input: line, expected: "pane_id active_flag [command] [title]" }) };
+      return {
+        ok: false,
+        error: createError({
+          kind: "InvalidFormat",
+          input: line,
+          expected: "pane_id active_flag [command] [title]",
+        }),
+      };
     }
 
     const paneId = parts[0];
@@ -29,7 +43,10 @@ export class PaneDataProcessor {
     return Pane.create(paneId, active, command, title);
   }
 
-  async getPaneDetail(paneId: string, logger: Logger): Promise<Result<PaneDetail, ValidationError & { message: string }>> {
+  async getPaneDetail(
+    paneId: string,
+    logger: Logger,
+  ): Promise<Result<PaneDetail, ValidationError & { message: string }>> {
     const commandResult = await this.commandExecutor.executeTmuxCommand(
       `tmux display -p -t "${paneId}" -F 'Session: #{session_name}
 Window: #{window_index} #{window_name}
@@ -67,13 +84,13 @@ Start Command: #{pane_start_command}'`,
       zoomed: "",
       width: "",
       height: "",
-      startCommand: ""
+      startCommand: "",
     };
 
     for (const line of lines) {
       const [key, ...valueParts] = line.split(": ");
       const value = valueParts.join(": ");
-      
+
       switch (key) {
         case "Session":
           rawData.sessionName = value;
@@ -137,7 +154,7 @@ Start Command: #{pane_start_command}'`,
       rawData.zoomed,
       rawData.width,
       rawData.height,
-      rawData.startCommand
+      rawData.startCommand,
     );
   }
 
@@ -213,12 +230,15 @@ export class StatusAnalyzer {
 
     try {
       return allPatterns.some((pattern) => {
-        return normalizedCommand === pattern || 
-               normalizedCommand.includes(`${pattern} `) ||
-               normalizedCommand.includes(`/${pattern}`);
+        return normalizedCommand === pattern ||
+          normalizedCommand.includes(`${pattern} `) ||
+          normalizedCommand.includes(`/${pattern}`);
       });
     } catch (error) {
-      this.logger.error(`Error in isNodeCommand for command "${command}":`, error);
+      this.logger.error(
+        `Error in isNodeCommand for command "${command}":`,
+        error,
+      );
       return false;
     }
   }
@@ -304,7 +324,10 @@ export class StatusAnalyzer {
       // Check for Node.js related processes
       if (this.isNodeCommand(command)) {
         // Check for specific Node.js states
-        if (command.includes("watch") || command.includes("dev") || command.includes("start")) {
+        if (
+          command.includes("watch") || command.includes("dev") ||
+          command.includes("start")
+        ) {
           return WorkerStatusParser.parse("WORKING");
         }
         if (command.includes("install") || command.includes("update")) {
@@ -328,9 +351,18 @@ export class PaneManager {
 
   constructor(private logger: Logger) {}
 
-  separate(allPanes: Pane[]): Result<void, ValidationError & { message: string }> {
+  separate(
+    allPanes: Pane[],
+  ): Result<void, ValidationError & { message: string }> {
     if (allPanes.length === 0) {
-      return { ok: false, error: createError({ kind: "InvalidState", current: "no_panes", expected: "at_least_one_pane" }) };
+      return {
+        ok: false,
+        error: createError({
+          kind: "InvalidState",
+          current: "no_panes",
+          expected: "at_least_one_pane",
+        }),
+      };
     }
 
     this.mainPane = allPanes.find((pane) => pane.isActive()) || null;
@@ -356,7 +388,10 @@ export class PaneManager {
 }
 
 export class PaneStatusManager {
-  private statusMap: Map<string, { current: WorkerStatus; previous?: WorkerStatus }> = new Map();
+  private statusMap: Map<
+    string,
+    { current: WorkerStatus; previous?: WorkerStatus }
+  > = new Map();
 
   updateStatus(paneId: string, newStatus: WorkerStatus): boolean {
     const existing = this.statusMap.get(paneId);
@@ -413,5 +448,10 @@ export class PaneStatusManager {
       }
     }
     return result;
+  }
+
+  getStatus(paneId: string): WorkerStatus | undefined {
+    const info = this.statusMap.get(paneId);
+    return info?.current;
   }
 }

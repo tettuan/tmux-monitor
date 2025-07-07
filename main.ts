@@ -53,29 +53,29 @@
 // Imports from the src module directory
 // =============================================================================
 
-import { Result, ValidationError, createError } from "./src/types.ts";
+import { createError, type Result, type ValidationError } from "./src/types.ts";
 import { TIMING } from "./src/config.ts";
-import { 
-  Pane, 
-  PaneDetail, 
-  WorkerStatus, 
-  WorkerStatusParser, 
-  MonitoringOptions, 
-  ValidatedTime 
+import {
+  MonitoringOptions,
+  Pane,
+  PaneDetail,
+  ValidatedTime,
+  type WorkerStatus,
+  WorkerStatusParser,
 } from "./src/models.ts";
-import { 
-  CommandExecutor, 
-  Logger, 
-  TimeManager, 
-  KeyboardInterruptHandler, 
-  RuntimeTracker 
+import {
+  CommandExecutor,
+  KeyboardInterruptHandler,
+  Logger,
+  RuntimeTracker,
+  TimeManager,
 } from "./src/services.ts";
 import { ArgumentParser } from "./src/arguments.ts";
-import { 
-  PaneDataProcessor, 
-  StatusAnalyzer, 
-  PaneManager, 
-  PaneStatusManager 
+import {
+  PaneDataProcessor,
+  PaneManager,
+  PaneStatusManager,
+  StatusAnalyzer,
 } from "./src/panes.ts";
 import { MessageGenerator, PaneCommunicator } from "./src/communication.ts";
 import { PaneDisplayer } from "./src/display.ts";
@@ -97,23 +97,23 @@ import { Application } from "./src/application.ts";
 async function main(): Promise<void> {
   // Initialize logger first for error reporting
   const logger = new Logger();
-  
+
   try {
     logger.info("Starting tmux monitor with totality principles...");
     logger.info("Initializing application with dependency injection...");
-    
+
     // Create application instance with proper initialization
     const app = new Application();
-    
+
     // Run the application - all errors are handled internally
     await app.run();
-    
+
     logger.info("Application completed successfully");
   } catch (error) {
     // This should never happen due to totality principles,
     // but we handle it just in case
     logger.error("Unexpected error occurred:", error);
-    
+
     // Exit with error code
     Deno.exit(1);
   }
@@ -135,44 +135,39 @@ export type {
   // Core types
   Result,
   ValidationError,
-  
   // Smart constructors and models
   WorkerStatus,
 };
 
 export {
-  // Helper functions
-  createError,
-  
-  // Smart constructors and models
-  Pane,
-  PaneDetail,
-  WorkerStatusParser,
-  MonitoringOptions,
-  ValidatedTime,
-  
-  // Services
-  CommandExecutor,
-  Logger,
-  TimeManager,
-  KeyboardInterruptHandler,
-  RuntimeTracker,
-  
+  Application,
   // Business logic
   ArgumentParser,
+  CIManager,
+  // Services
+  CommandExecutor,
+  // Helper functions
+  createError,
+  DIContainer,
+  KeyboardInterruptHandler,
+  Logger,
+  MessageGenerator,
+  MonitoringEngine,
+  MonitoringOptions,
+  // Smart constructors and models
+  Pane,
+  PaneCommunicator,
   PaneDataProcessor,
-  StatusAnalyzer,
+  PaneDetail,
+  PaneDisplayer,
   PaneManager,
   PaneStatusManager,
-  MessageGenerator,
-  PaneCommunicator,
-  PaneDisplayer,
-  CIManager,
-  TmuxSession,
-  MonitoringEngine,
-  DIContainer,
-  Application,
-  
+  RuntimeTracker,
+  StatusAnalyzer,
+  TimeManager,
   // Configuration
   TIMING,
+  TmuxSession,
+  ValidatedTime,
+  WorkerStatusParser,
 };

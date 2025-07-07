@@ -1,11 +1,11 @@
-import { Result, ValidationError, createError } from "./types.ts";
+import type { createError, Result, ValidationError } from "./types.ts";
 import { TIMING } from "./config.ts";
-import { MonitoringOptions, Pane } from "./models.ts";
-import { TmuxSession } from "./session.ts";
-import { PaneManager } from "./panes.ts";
-import { PaneCommunicator, MessageGenerator } from "./communication.ts";
-import { PaneDisplayer } from "./display.ts";
-import { CIManager } from "./ci.ts";
+import { type MonitoringOptions, Pane } from "./models.ts";
+import type { TmuxSession } from "./session.ts";
+import type { PaneManager } from "./panes.ts";
+import { MessageGenerator, type PaneCommunicator } from "./communication.ts";
+import type { PaneDisplayer } from "./display.ts";
+import type { CIManager } from "./ci.ts";
 
 /**
  * Monitoring Engine Class - Single Responsibility: Core Monitoring Logic
@@ -29,7 +29,7 @@ export class MonitoringEngine {
     private messageGenerator: MessageGenerator,
     private logger: any,
     scheduledTime?: Date | null,
-    instructionFile?: string | null
+    instructionFile?: string | null,
   ) {
     this.scheduledTime = scheduledTime || null;
     this.instructionFile = instructionFile || null;
@@ -46,11 +46,18 @@ export class MonitoringEngine {
       return;
     }
 
-    this.logger.info(`Sending instruction file to main pane: ${this.instructionFile}`);
+    this.logger.info(
+      `Sending instruction file to main pane: ${this.instructionFile}`,
+    );
 
-    const result = await this.communicator.sendInstructionFile(mainPane.id, this.instructionFile);
+    const result = await this.communicator.sendInstructionFile(
+      mainPane.id,
+      this.instructionFile,
+    );
     if (!result.ok) {
-      this.logger.error(`Failed to send instruction file: ${result.error.message}`);
+      this.logger.error(
+        `Failed to send instruction file: ${result.error.message}`,
+      );
       return;
     }
 
@@ -69,7 +76,9 @@ export class MonitoringEngine {
 
     const result = await this.communicator.sendToPane(mainPane.id, message);
     if (!result.ok) {
-      this.logger.error(`Failed to send CI instruction: ${result.error.message}`);
+      this.logger.error(
+        `Failed to send CI instruction: ${result.error.message}`,
+      );
       return;
     }
 
@@ -85,7 +94,9 @@ export class MonitoringEngine {
       await this.timeManager.sleep(TIMING.ENTER_KEY_DELAY);
       const result = await this.communicator.sendToPane(pane.id, "");
       if (!result.ok) {
-        this.logger.warn(`Failed to send Enter to pane ${pane.id}: ${result.error.message}`);
+        this.logger.warn(
+          `Failed to send Enter to pane ${pane.id}: ${result.error.message}`,
+        );
       }
     }
 
@@ -104,7 +115,9 @@ export class MonitoringEngine {
     for (const pane of allPanes) {
       const result = await this.communicator.sendToPane(pane.id, "");
       if (!result.ok) {
-        this.logger.warn(`Failed to send Enter to pane ${pane.id}: ${result.error.message}`);
+        this.logger.warn(
+          `Failed to send Enter to pane ${pane.id}: ${result.error.message}`,
+        );
       }
     }
 
@@ -112,13 +125,18 @@ export class MonitoringEngine {
   }
 
   async checkAndClearDoneAndIdlePanes(): Promise<void> {
-    this.logger.info("Checking for DONE and IDLE panes and sending clear commands...");
+    this.logger.info(
+      "Checking for DONE and IDLE panes and sending clear commands...",
+    );
 
     // Update status tracking for all panes first
     const targetPanes = this.paneManager.getTargetPanes();
-    
+
     for (const pane of targetPanes) {
-      const paneDetail = await this.paneDataProcessor.getPaneDetail(pane.id, this.logger);
+      const paneDetail = await this.paneDataProcessor.getPaneDetail(
+        pane.id,
+        this.logger,
+      );
       if (paneDetail) {
         const currentStatus = this.statusAnalyzer.determineStatus(paneDetail);
         this.statusManager.updateStatus(pane.id, currentStatus);
@@ -127,39 +145,63 @@ export class MonitoringEngine {
 
     // Get all panes with DONE or IDLE status
     const clearTargetPanes = this.statusManager.getDoneAndIdlePanes();
-    
+
     if (clearTargetPanes.length > 0) {
-      this.logger.info(`Found ${clearTargetPanes.length} DONE/IDLE panes: ${clearTargetPanes.join(", ")}`);
-      
+      this.logger.info(
+        `Found ${clearTargetPanes.length} DONE/IDLE panes: ${
+          clearTargetPanes.join(", ")
+        }`,
+      );
+
       // Sort panes by ID and exclude the 4 smallest IDs
-      const sortedPanes = clearTargetPanes.sort((a: string, b: string) => a.localeCompare(b));
+      const sortedPanes = clearTargetPanes.sort((a: string, b: string) =>
+        a.localeCompare(b)
+      );
       const panesToClear = sortedPanes.slice(4); // Skip first 4 (smallest IDs)
-      
+
       if (panesToClear.length > 0) {
-        this.logger.info(`Excluding 4 smallest pane IDs: ${sortedPanes.slice(0, 4).join(", ")}`);
-        this.logger.info(`Clearing ${panesToClear.length} panes: ${panesToClear.join(", ")}`);
-        
+        this.logger.info(
+          `Excluding 4 smallest pane IDs: ${
+            sortedPanes.slice(0, 4).join(", ")
+          }`,
+        );
+        this.logger.info(
+          `Clearing ${panesToClear.length} panes: ${panesToClear.join(", ")}`,
+        );
+
         // Send clear command to each selected pane
         for (const paneId of panesToClear) {
           const result = await this.communicator.sendToPane(paneId, "clear");
           if (!result.ok) {
-            this.logger.warn(`Failed to send clear to pane ${paneId}: ${result.error.message}`);
+            this.logger.warn(
+              `Failed to send clear to pane ${paneId}: ${result.error.message}`,
+            );
           }
         }
-        
+
         this.logger.info(`Clear commands sent to ${panesToClear.length} panes`);
 
         // Report the clearing action to main pane
         const mainPane = this.paneManager.getMainPane();
         if (mainPane) {
-          const clearReport = `Cleared ${panesToClear.length} DONE/IDLE panes: ${panesToClear.join(", ")} (excluded 4 smallest IDs)`;
-          const result = await this.communicator.sendToPane(mainPane.id, clearReport);
+          const clearReport =
+            `Cleared ${panesToClear.length} DONE/IDLE panes: ${
+              panesToClear.join(", ")
+            } (excluded 4 smallest IDs)`;
+          const result = await this.communicator.sendToPane(
+            mainPane.id,
+            clearReport,
+          );
           if (!result.ok) {
-            this.logger.warn(`Failed to send clear report: ${result.error.message}`);
+            this.logger.warn(
+              `Failed to send clear report: ${result.error.message}`,
+            );
           }
         }
       } else {
-        this.logger.info("All DONE/IDLE panes are among the 4 smallest IDs - no clearing performed");
+        this.logger.info(
+          "All DONE/IDLE panes are among the 4 smallest IDs - no clearing performed",
+        );
       }
     } else {
       this.logger.info("No DONE/IDLE panes found for clearing");
@@ -173,7 +215,9 @@ export class MonitoringEngine {
     for (const pane of targetPanes) {
       const result = await this.communicator.sendStatusUpdateToPane(pane.id);
       if (!result.ok) {
-        this.logger.warn(`Failed to send instruction to pane ${pane.id}: ${result.error.message}`);
+        this.logger.warn(
+          `Failed to send instruction to pane ${pane.id}: ${result.error.message}`,
+        );
       }
     }
 
@@ -184,9 +228,14 @@ export class MonitoringEngine {
     const targetPanes = this.paneManager.getTargetPanes();
 
     for (const pane of targetPanes) {
-      const paneDetail = await this.paneDataProcessor.getPaneDetail(pane.id, this.logger);
+      const paneDetail = await this.paneDataProcessor.getPaneDetail(
+        pane.id,
+        this.logger,
+      );
       if (paneDetail) {
-        const currentStatus = this.statusAnalyzer.extractStatusFromTitle(paneDetail.title);
+        const currentStatus = this.statusAnalyzer.extractStatusFromTitle(
+          paneDetail.title,
+        );
         this.statusManager.updateStatus(pane.id, currentStatus);
       }
     }
@@ -201,10 +250,17 @@ export class MonitoringEngine {
 
     const changedPanes = this.statusManager.getChangedPanes();
     if (changedPanes.length > 0) {
-      const statusMessage = `Status changes detected in panes: ${changedPanes.join(", ")}`;
-      const result = await this.communicator.sendToPane(mainPane.id, statusMessage);
+      const statusMessage = `Status changes detected in panes: ${
+        changedPanes.join(", ")
+      }`;
+      const result = await this.communicator.sendToPane(
+        mainPane.id,
+        statusMessage,
+      );
       if (!result.ok) {
-        this.logger.warn(`Failed to send status change report: ${result.error.message}`);
+        this.logger.warn(
+          `Failed to send status change report: ${result.error.message}`,
+        );
       }
     }
 
@@ -221,52 +277,56 @@ export class MonitoringEngine {
 
     const targetPanes = this.paneManager.getTargetPanes();
     const activePanes = mainPane ? [mainPane] : [];
-    
+
     // Get current status for each pane
     const statusResults: Array<{ pane: any; status: string }> = [];
     for (const pane of targetPanes) {
-      const status = this.statusManager.getStatus(pane.id) || 'UNKNOWN';
+      const status = this.statusManager.getStatus(pane.id) || "UNKNOWN";
       statusResults.push({ pane, status });
     }
 
     // Convert Pane objects to PaneDetail-like objects for message generation
-    const activePaneDetails = activePanes.map(pane => ({
+    const activePaneDetails = activePanes.map((pane) => ({
       paneId: pane.id,
-      title: pane.getTitle() || 'untitled',
-      currentCommand: pane.getCommand() || 'unknown',
-      sessionName: '',
-      windowIndex: '',
-      windowName: '',
-      paneIndex: '',
-      tty: '',
-      pid: '',
-      currentPath: '',
-      active: '1',
-      zoomed: '',
-      width: '',
-      height: '',
-      startCommand: ''
+      title: pane.getTitle() || "untitled",
+      currentCommand: pane.getCommand() || "unknown",
+      sessionName: "",
+      windowIndex: "",
+      windowName: "",
+      paneIndex: "",
+      tty: "",
+      pid: "",
+      currentPath: "",
+      active: "1",
+      zoomed: "",
+      width: "",
+      height: "",
+      startCommand: "",
     }));
 
-    const targetPaneDetails = targetPanes.map(pane => ({
+    const targetPaneDetails = targetPanes.map((pane) => ({
       paneId: pane.id,
-      title: pane.getTitle() || 'untitled',
-      currentCommand: pane.getCommand() || 'unknown',
-      sessionName: '',
-      windowIndex: '',
-      windowName: '',
-      paneIndex: '',
-      tty: '',
-      pid: '',
-      currentPath: '',
-      active: '0',
-      zoomed: '',
-      width: '',
-      height: '',
-      startCommand: ''
+      title: pane.getTitle() || "untitled",
+      currentCommand: pane.getCommand() || "unknown",
+      sessionName: "",
+      windowIndex: "",
+      windowName: "",
+      paneIndex: "",
+      tty: "",
+      pid: "",
+      currentPath: "",
+      active: "0",
+      zoomed: "",
+      width: "",
+      height: "",
+      startCommand: "",
     }));
 
-    const message = MessageGenerator.generateStatusMessage(activePaneDetails, targetPaneDetails, statusResults);
+    const message = MessageGenerator.generateStatusMessage(
+      activePaneDetails,
+      targetPaneDetails,
+      statusResults,
+    );
     const result = await this.communicator.sendToPane(mainPane.id, message);
     if (!result.ok) {
       this.logger.warn(`Failed to send main report: ${result.error.message}`);
@@ -276,7 +336,11 @@ export class MonitoringEngine {
   async monitor(): Promise<void> {
     // If scheduled time is set, wait for it first
     if (this.scheduledTime) {
-      const interrupted = await this.timeManager.waitUntilScheduledTime(this.scheduledTime, this.logger, this.keyboardHandler);
+      const interrupted = await this.timeManager.waitUntilScheduledTime(
+        this.scheduledTime,
+        this.logger,
+        this.keyboardHandler,
+      );
       if (interrupted) {
         this.logger.info("Monitoring cancelled by user input. Exiting...");
         return;
@@ -288,8 +352,11 @@ export class MonitoringEngine {
       this.logger.info("Starting tmux monitoring...");
 
       // Check for 4-hour runtime limit
-      if (this.runtimeTracker.hasExceededLimit(this.logger, this.timeManager)) {
-        this.logger.info("Monitoring cancelled due to 4-hour runtime limit. Exiting...");
+      const limitCheck = this.runtimeTracker.hasExceededLimit();
+      if (!limitCheck.ok) {
+        this.logger.info(
+          "Monitoring cancelled due to 4-hour runtime limit. Exiting...",
+        );
         return;
       }
 
@@ -302,7 +369,9 @@ export class MonitoringEngine {
       // 1. Get session and panes
       const sessionResult = await this.session.findMostActiveSession();
       if (!sessionResult.ok) {
-        this.logger.error(`Failed to find session: ${sessionResult.error.message}`);
+        this.logger.error(
+          `Failed to find session: ${sessionResult.error.message}`,
+        );
         return;
       }
 
@@ -312,10 +381,17 @@ export class MonitoringEngine {
         return;
       }
 
-      this.paneManager.separate(panesResult.data.map(pd => {
-        const paneResult = Pane.create(pd.paneId, pd.active === '1', pd.currentCommand, pd.title);
-        return paneResult.ok ? paneResult.data : null;
-      }).filter(p => p !== null) as any[]);
+      this.paneManager.separate(
+        panesResult.data.map((pd) => {
+          const paneResult = Pane.create(
+            pd.paneId,
+            pd.active === "1",
+            pd.currentCommand,
+            pd.title,
+          );
+          return paneResult.ok ? paneResult.data : null;
+        }).filter((p): p is Pane => p !== null),
+      );
 
       // Check for cancellation
       if (this.keyboardHandler.isCancellationRequested()) {
@@ -345,22 +421,22 @@ export class MonitoringEngine {
       const targetPanes = this.paneManager.getTargetPanes();
       const mainPane = this.paneManager.getMainPane();
       const allPanes = mainPane ? [mainPane, ...targetPanes] : targetPanes;
-      this.displayer.displayPaneList(allPanes.map(p => ({
+      this.displayer.displayPaneList(allPanes.map((p) => ({
         paneId: p.id,
-        title: p.getTitle() || 'untitled',
-        currentCommand: p.getCommand() || 'unknown',
-        sessionName: '',
-        windowIndex: '',
-        windowName: '',
-        paneIndex: '',
-        tty: '',
-        pid: '',
-        currentPath: '',
-        active: p.isActive() ? '1' : '0',
-        zoomed: '',
-        width: '',
-        height: '',
-        startCommand: ''
+        title: p.getTitle() || "untitled",
+        currentCommand: p.getCommand() || "unknown",
+        sessionName: "",
+        windowIndex: "",
+        windowName: "",
+        paneIndex: "",
+        tty: "",
+        pid: "",
+        currentPath: "",
+        active: p.isActive() ? "1" : "0",
+        zoomed: "",
+        width: "",
+        height: "",
+        startCommand: "",
       })));
 
       // 6. Send additional Enter to all panes
@@ -377,8 +453,11 @@ export class MonitoringEngine {
       }
 
       // 8. Start 30-second ENTER sending cycle during waiting period
-      const monitoringCycles = TIMING.MONITORING_CYCLE_DELAY / TIMING.ENTER_SEND_CYCLE_DELAY;
-      this.logger.info(`Waiting for 5 minutes with 30-second ENTER cycles (${monitoringCycles} cycles)...`);
+      const monitoringCycles = TIMING.MONITORING_CYCLE_DELAY /
+        TIMING.ENTER_SEND_CYCLE_DELAY;
+      this.logger.info(
+        `Waiting for 5 minutes with 30-second ENTER cycles (${monitoringCycles} cycles)...`,
+      );
 
       let interrupted = false;
       for (let i = 0; i < monitoringCycles; i++) {
@@ -393,7 +472,10 @@ export class MonitoringEngine {
         await this.sendEnterToAllPanesCycle();
 
         // Wait 30 seconds with cancellation check
-        interrupted = await this.keyboardHandler.sleepWithCancellation(TIMING.ENTER_SEND_CYCLE_DELAY, this.timeManager);
+        interrupted = await this.keyboardHandler.sleepWithCancellation(
+          TIMING.ENTER_SEND_CYCLE_DELAY,
+          this.timeManager,
+        );
         if (interrupted) {
           this.logger.info("Monitoring cancelled by user input. Exiting...");
           break;
@@ -414,7 +496,9 @@ export class MonitoringEngine {
       }
 
       // 10. Start another 30-second ENTER sending cycle after /clear commands
-      this.logger.info("Starting 30-second ENTER cycles after /clear commands...");
+      this.logger.info(
+        "Starting 30-second ENTER cycles after /clear commands...",
+      );
       for (let i = 0; i < monitoringCycles; i++) {
         // Check for cancellation
         if (this.keyboardHandler.isCancellationRequested()) {
@@ -427,7 +511,10 @@ export class MonitoringEngine {
         await this.sendEnterToAllPanesCycle();
 
         // Wait 30 seconds with cancellation check
-        interrupted = await this.keyboardHandler.sleepWithCancellation(TIMING.ENTER_SEND_CYCLE_DELAY, this.timeManager);
+        interrupted = await this.keyboardHandler.sleepWithCancellation(
+          TIMING.ENTER_SEND_CYCLE_DELAY,
+          this.timeManager,
+        );
         if (interrupted) {
           this.logger.info("Monitoring cancelled by user input. Exiting...");
           break;
@@ -453,31 +540,52 @@ export class MonitoringEngine {
   }
 
   async startContinuousMonitoring(): Promise<void> {
-    this.logger.info("Starting continuous monitoring mode (Press any key to stop, auto-stop after 4 hours)");
+    this.logger.info(
+      "Starting continuous monitoring mode (Press any key to stop, auto-stop after 4 hours)",
+    );
 
     while (true) {
       // Check for 4-hour runtime limit
-      if (this.runtimeTracker.hasExceededLimit(this.logger, this.timeManager)) {
-        this.logger.info("Automatic termination due to 4-hour runtime limit. Exiting...");
+      const limitCheck = this.runtimeTracker.hasExceededLimit();
+      if (!limitCheck.ok) {
+        this.logger.info(
+          "Automatic termination due to 4-hour runtime limit. Exiting...",
+        );
         break;
       }
 
       // Check for cancellation
       if (this.keyboardHandler.isCancellationRequested()) {
-        this.logger.info("Continuous monitoring cancelled by user input. Exiting...");
+        this.logger.info(
+          "Continuous monitoring cancelled by user input. Exiting...",
+        );
         break;
       }
 
       await this.monitor();
-      
+
       // Check for cancellation after monitor cycle
       if (this.keyboardHandler.isCancellationRequested()) {
-        this.logger.info("Continuous monitoring cancelled by user input. Exiting...");
+        this.logger.info(
+          "Continuous monitoring cancelled by user input. Exiting...",
+        );
         break;
       }
 
       // After the first execution, scheduled time is cleared, so subsequent cycles use normal 5-minute intervals
       this.logger.info("Waiting for next cycle...\n");
+
+      // Wait for the configured interval with cancellation support
+      const cancelled = await this.keyboardHandler.sleepWithCancellation(
+        TIMING.MONITORING_CYCLE_DELAY,
+        this.timeManager,
+      );
+      if (cancelled) {
+        this.logger.info(
+          "Continuous monitoring cancelled by user input during wait. Exiting...",
+        );
+        break;
+      }
     }
   }
 }

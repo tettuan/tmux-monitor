@@ -1,11 +1,11 @@
-import { Result, ValidationError, createError } from "./types.ts";
+import { createError, type Result, type ValidationError } from "./types.ts";
 
 // =============================================================================
 // Domain Models with Totality Principles
 // =============================================================================
 
 // Worker status as discriminated union instead of string literals
-export type WorkerStatus = 
+export type WorkerStatus =
   | { kind: "IDLE" }
   | { kind: "WORKING"; details?: string }
   | { kind: "BLOCKED"; reason?: string }
@@ -14,19 +14,19 @@ export type WorkerStatus =
   | { kind: "UNKNOWN"; lastKnownState?: string };
 
 // Pane state as discriminated union instead of optional properties
-export type PaneState = 
+export type PaneState =
   | { kind: "Active"; command: string; title: string }
   | { kind: "Inactive"; command: string; title: string }
   | { kind: "Unknown" };
 
 // Monitoring mode as discriminated union instead of nullable properties
-export type MonitoringMode = 
+export type MonitoringMode =
   | { kind: "SingleRun" }
   | { kind: "Continuous" }
   | { kind: "Scheduled"; scheduledTime: Date }
   | { kind: "ScheduledContinuous"; scheduledTime: Date };
 
-export type InstructionConfig = 
+export type InstructionConfig =
   | { kind: "None" }
   | { kind: "WithFile"; filePath: string };
 
@@ -38,26 +38,31 @@ export type InstructionConfig =
 export class Pane {
   private constructor(
     readonly id: string,
-    readonly state: PaneState
+    readonly state: PaneState,
   ) {}
 
-  static create(id: string, active: boolean, command?: string, title?: string): Result<Pane, ValidationError & { message: string }> {
+  static create(
+    id: string,
+    active: boolean,
+    command?: string,
+    title?: string,
+  ): Result<Pane, ValidationError & { message: string }> {
     if (!id || id.trim() === "") {
       return { ok: false, error: createError({ kind: "EmptyInput" }) };
     }
 
     let state: PaneState;
     if (active) {
-      state = { 
-        kind: "Active", 
-        command: command || "unknown", 
-        title: title || "untitled" 
+      state = {
+        kind: "Active",
+        command: command || "unknown",
+        title: title || "untitled",
       };
     } else if (command !== undefined || title !== undefined) {
-      state = { 
-        kind: "Inactive", 
-        command: command || "unknown", 
-        title: title || "untitled" 
+      state = {
+        kind: "Inactive",
+        command: command || "unknown",
+        title: title || "untitled",
       };
     } else {
       state = { kind: "Unknown" };
@@ -108,7 +113,7 @@ export class PaneDetail {
     readonly zoomed: string,
     readonly width: string,
     readonly height: string,
-    readonly startCommand: string
+    readonly startCommand: string,
   ) {}
 
   static create(
@@ -126,13 +131,13 @@ export class PaneDetail {
     zoomed: string,
     width: string,
     height: string,
-    startCommand: string
+    startCommand: string,
   ): Result<PaneDetail, ValidationError & { message: string }> {
     // Validate required fields
     const requiredFields = [
       { value: sessionName, name: "sessionName" },
       { value: paneId, name: "paneId" },
-      { value: active, name: "active" }
+      { value: active, name: "active" },
     ];
 
     for (const field of requiredFields) {
@@ -141,23 +146,26 @@ export class PaneDetail {
       }
     }
 
-    return { ok: true, data: new PaneDetail(
-      sessionName,
-      windowIndex,
-      windowName,
-      paneId,
-      paneIndex,
-      tty,
-      pid,
-      currentCommand,
-      currentPath,
-      title,
-      active,
-      zoomed,
-      width,
-      height,
-      startCommand
-    ) };
+    return {
+      ok: true,
+      data: new PaneDetail(
+        sessionName,
+        windowIndex,
+        windowName,
+        paneId,
+        paneIndex,
+        tty,
+        pid,
+        currentCommand,
+        currentPath,
+        title,
+        active,
+        zoomed,
+        width,
+        height,
+        startCommand,
+      ),
+    };
   }
 }
 
@@ -165,21 +173,29 @@ export class PaneDetail {
 export class ValidatedTime {
   private constructor(readonly value: Date) {}
 
-  static create(timeStr: string): Result<ValidatedTime, ValidationError & { message: string }> {
+  static create(
+    timeStr: string,
+  ): Result<ValidatedTime, ValidationError & { message: string }> {
     if (!timeStr || timeStr.trim() === "") {
       return { ok: false, error: createError({ kind: "EmptyInput" }) };
     }
 
     const timeMatch = timeStr.match(/^(\d{1,2}):(\d{2})$/);
     if (!timeMatch) {
-      return { ok: false, error: createError({ kind: "InvalidTimeFormat", input: timeStr }) };
+      return {
+        ok: false,
+        error: createError({ kind: "InvalidTimeFormat", input: timeStr }),
+      };
     }
 
     const hours = parseInt(timeMatch[1], 10);
     const minutes = parseInt(timeMatch[2], 10);
 
     if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-      return { ok: false, error: createError({ kind: "InvalidTimeFormat", input: timeStr }) };
+      return {
+        ok: false,
+        error: createError({ kind: "InvalidTimeFormat", input: timeStr }),
+      };
     }
 
     const now = new Date();
@@ -203,26 +219,24 @@ export class ValidatedTime {
 export class MonitoringOptions {
   private constructor(
     readonly mode: MonitoringMode,
-    readonly instruction: InstructionConfig
+    readonly instruction: InstructionConfig,
   ) {}
 
   static create(
     continuous: boolean,
     scheduledTime: Date | null,
-    instructionFile: string | null
+    instructionFile: string | null,
   ): MonitoringOptions {
     let mode: MonitoringMode;
     if (scheduledTime) {
-      mode = continuous 
+      mode = continuous
         ? { kind: "ScheduledContinuous", scheduledTime }
         : { kind: "Scheduled", scheduledTime };
     } else {
-      mode = continuous 
-        ? { kind: "Continuous" }
-        : { kind: "SingleRun" };
+      mode = continuous ? { kind: "Continuous" } : { kind: "SingleRun" };
     }
 
-    const instruction: InstructionConfig = instructionFile 
+    const instruction: InstructionConfig = instructionFile
       ? { kind: "WithFile", filePath: instructionFile }
       : { kind: "None" };
 
@@ -230,11 +244,13 @@ export class MonitoringOptions {
   }
 
   isContinuous(): boolean {
-    return this.mode.kind === "Continuous" || this.mode.kind === "ScheduledContinuous";
+    return this.mode.kind === "Continuous" ||
+      this.mode.kind === "ScheduledContinuous";
   }
 
   isScheduled(): boolean {
-    return this.mode.kind === "Scheduled" || this.mode.kind === "ScheduledContinuous";
+    return this.mode.kind === "Scheduled" ||
+      this.mode.kind === "ScheduledContinuous";
   }
 
   getScheduledTime(): Date | null {
@@ -262,7 +278,7 @@ export class MonitoringOptions {
 export class WorkerStatusParser {
   static parse(statusString: string): WorkerStatus {
     const trimmed = statusString.trim().toUpperCase();
-    
+
     switch (trimmed) {
       case "IDLE":
         return { kind: "IDLE" };

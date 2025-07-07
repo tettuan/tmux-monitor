@@ -1,6 +1,6 @@
-import { Result, ValidationError, createError } from "./types.ts";
+import type { createError, Result, ValidationError } from "./types.ts";
 import { MonitoringOptions, ValidatedTime } from "./models.ts";
-import { TimeManager, Logger } from "./services.ts";
+import type { Logger, TimeManager } from "./services.ts";
 
 // =============================================================================
 // Command Line Argument Processing
@@ -9,7 +9,7 @@ import { TimeManager, Logger } from "./services.ts";
 export class ArgumentParser {
   constructor(
     private timeManager: TimeManager,
-    private logger: Logger
+    private logger: Logger,
   ) {}
 
   parse(): Result<MonitoringOptions, ValidationError & { message: string }> {
@@ -35,15 +35,20 @@ export class ArgumentParser {
         }
         scheduledTime = parseResult.data.getDate();
       } else if (arg.startsWith("--instruction=")) {
-        instructionFile = arg.substring(14);
+        const filePath = arg.substring(14);
+        instructionFile = filePath.trim() === "" ? null : filePath;
       } else if (arg === "-i" && i + 1 < args.length) {
         instructionFile = args[i + 1];
       }
     }
 
     const continuous = args.includes("--continuous") || args.includes("-c");
-    const options = MonitoringOptions.create(continuous, scheduledTime, instructionFile);
-    
+    const options = MonitoringOptions.create(
+      continuous,
+      scheduledTime,
+      instructionFile,
+    );
+
     return { ok: true, data: options };
   }
 }

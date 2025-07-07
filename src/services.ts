@@ -1,12 +1,56 @@
-import { Result, ValidationError, createError } from "./types.ts";
-import { TIMING } from "./config.ts";
+import { createError, type Result, type ValidationError } from "./types.ts";
+import type { TIMING } from "./config.ts";
 
 // =============================================================================
 // Core Infrastructure Services
 // =============================================================================
 
 export class CommandExecutor {
-  async executeTmuxCommand(command: string): Promise<Result<string, ValidationError & { message: string }>> {
+  async execute(
+    args: string[],
+  ): Promise<Result<string, ValidationError & { message: string }>> {
+    if (!args || args.length === 0) {
+      return { ok: false, error: createError({ kind: "EmptyInput" }) };
+    }
+
+    try {
+      const process = new Deno.Command(args[0], {
+        args: args.slice(1),
+        stdout: "piped",
+        stderr: "piped",
+      });
+
+      const result = await process.output();
+
+      if (!result.success) {
+        const stderr = new TextDecoder().decode(result.stderr);
+        return {
+          ok: false,
+          error: createError({
+            kind: "CommandFailed",
+            command: args.join(" "),
+            stderr,
+          }),
+        };
+      }
+
+      const stdout = new TextDecoder().decode(result.stdout).trim();
+      return { ok: true, data: stdout };
+    } catch (error) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "CommandFailed",
+          command: args.join(" "),
+          stderr: String(error),
+        }),
+      };
+    }
+  }
+
+  async executeTmuxCommand(
+    command: string,
+  ): Promise<Result<string, ValidationError & { message: string }>> {
     if (!command || command.trim() === "") {
       return { ok: false, error: createError({ kind: "EmptyInput" }) };
     }
@@ -22,13 +66,23 @@ export class CommandExecutor {
 
       if (!result.success) {
         const stderr = new TextDecoder().decode(result.stderr);
-        return { ok: false, error: createError({ kind: "CommandFailed", command, stderr }) };
+        return {
+          ok: false,
+          error: createError({ kind: "CommandFailed", command, stderr }),
+        };
       }
 
       const stdout = new TextDecoder().decode(result.stdout).trim();
       return { ok: true, data: stdout };
     } catch (error) {
-      return { ok: false, error: createError({ kind: "CommandFailed", command, stderr: String(error) }) };
+      return {
+        ok: false,
+        error: createError({
+          kind: "CommandFailed",
+          command,
+          stderr: String(error),
+        }),
+      };
     }
   }
 }
@@ -36,6 +90,10 @@ export class CommandExecutor {
 export class Logger {
   info(message: string): void {
     console.log(`[INFO] ${message}`);
+  }
+
+  warn(message: string): void {
+    console.warn(`[WARN] ${message}`);
   }
 
   error(message: string, error?: unknown): void {
@@ -60,9 +118,9 @@ export class TimeManager {
   }
 
   async waitUntilScheduledTime(
-    scheduledTime: Date, 
-    logger: Logger, 
-    keyboardHandler: KeyboardInterruptHandler
+    scheduledTime: Date,
+    logger: Logger,
+    keyboardHandler: KeyboardInterruptHandler,
   ): Promise<Result<void, ValidationError & { message: string }>> {
     const now = new Date();
     const msUntilScheduled = scheduledTime.getTime() - now.getTime();
@@ -73,16 +131,26 @@ export class TimeManager {
     }
 
     const scheduledTimeStr = this.formatTimeForDisplay(scheduledTime);
-    logger.info(`Waiting until scheduled time: ${scheduledTimeStr} (Asia/Tokyo)`);
+    logger.info(
+      `Waiting until scheduled time: ${scheduledTimeStr} (Asia/Tokyo)`,
+    );
     logger.info(
       `Time remaining: ${
         Math.round(msUntilScheduled / 1000 / 60)
       } minutes. Press any key to cancel and exit.`,
     );
 
-    const interrupted = await keyboardHandler.waitWithKeyboardInterrupt(msUntilScheduled);
+    const interrupted = await keyboardHandler.waitWithKeyboardInterrupt(
+      msUntilScheduled,
+    );
     if (interrupted) {
-      return { ok: false, error: createError({ kind: "CancellationRequested", operation: "scheduled_wait" }) };
+      return {
+        ok: false,
+        error: createError({
+          kind: "CancellationRequested",
+          operation: "scheduled_wait",
+        }),
+      };
     }
 
     return { ok: true, data: undefined };
@@ -110,7 +178,7 @@ export class KeyboardInterruptHandler {
               break;
             }
           }
-        } catch (error) {
+        } catch (_error) {
           // Ignore errors during cleanup
         }
       };
@@ -124,7 +192,7 @@ export class KeyboardInterruptHandler {
     if (Deno.stdin.isTerminal()) {
       try {
         Deno.stdin.setRaw(false);
-      } catch (error) {
+      } catch (_error) {
         // Ignore errors during cleanup
       }
     }
@@ -166,7 +234,10 @@ export class KeyboardInterruptHandler {
     }
   }
 
-  async sleepWithCancellation(ms: number, timeManager: TimeManager): Promise<boolean> {
+  async sleepWithCancellation(
+    ms: number,
+    timeManager: TimeManager,
+  ): Promise<boolean> {
     const startTime = Date.now();
     const checkInterval = 100; // Check every 100ms
 
@@ -175,7 +246,9 @@ export class KeyboardInterruptHandler {
         return true; // Cancelled
       }
 
-      await timeManager.sleep(Math.min(checkInterval, ms - (Date.now() - startTime)));
+      await timeManager.sleep(
+        Math.min(checkInterval, ms - (Date.now() - startTime)),
+      );
     }
 
     return false; // Not cancelled
@@ -199,18 +272,28 @@ export class RuntimeTracker {
     const currentTime = Date.now();
     const elapsedTime = currentTime - this.startTime;
     const remainingTime = this.maxRuntime - elapsedTime;
-    
+
     if (remainingTime <= 0) {
-      return { ok: false, error: createError({ kind: "RuntimeLimitExceeded", maxRuntime: this.maxRuntime }) };
+      return {
+        ok: false,
+        error: createError({
+          kind: "RuntimeLimitExceeded",
+          maxRuntime: this.maxRuntime,
+        }),
+      };
     }
-    
+
     return { ok: true, data: false };
   }
 
   logStartupInfo(logger: Logger, timeManager: TimeManager): void {
-    const startTimeStr = timeManager.formatTimeForDisplay(new Date(this.startTime));
-    const autoStopTime = timeManager.formatTimeForDisplay(new Date(this.startTime + this.maxRuntime));
-    
+    const startTimeStr = timeManager.formatTimeForDisplay(
+      new Date(this.startTime),
+    );
+    const autoStopTime = timeManager.formatTimeForDisplay(
+      new Date(this.startTime + this.maxRuntime),
+    );
+
     logger.info(`Monitor started at: ${startTimeStr} (Asia/Tokyo)`);
     logger.info(`Auto-stop scheduled at: ${autoStopTime} (Asia/Tokyo)`);
   }

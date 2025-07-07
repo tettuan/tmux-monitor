@@ -2,120 +2,120 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   workflow_dispatch:
 
 jobs:
   test:
     name: Test and Lint
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
           deno-version: v2.4.0
-          
+
       - name: Check formatting
         run: deno fmt --check
-        
+
       - name: Run linter
         run: deno lint
-        
+
       - name: Type check
         run: deno check mod.ts main.ts
-        
+
       - name: Run tests
         run: deno test --allow-all --coverage=coverage/
-        
+
       - name: Generate coverage report
         run: deno coverage coverage/ --lcov --output=coverage/lcov.info
-        
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
           file: ./coverage/lcov.info
           fail_ci_if_error: false
-          
+
   validate-publish:
     name: Validate Publish Configuration
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
           deno-version: v2.4.0
-          
+
       - name: Validate publish files exist
         run: |
           echo "Checking required files for publishing..."
-          
+
           # Check main files
           if [ ! -f "main.ts" ]; then
             echo "❌ main.ts not found"
             exit 1
           fi
           echo "✅ main.ts found"
-          
+
           if [ ! -f "mod.ts" ]; then
             echo "❌ mod.ts not found"
             exit 1
           fi
           echo "✅ mod.ts found"
-          
+
           # Check src directory
           if [ ! -d "src" ]; then
             echo "❌ src/ directory not found"
             exit 1
           fi
           echo "✅ src/ directory found"
-          
+
           # Check LICENSE
           if [ ! -f "LICENSE" ]; then
             echo "❌ LICENSE file not found"
             exit 1
           fi
           echo "✅ LICENSE file found"
-          
+
           echo "All required files are present"
-          
+
       - name: Validate no excluded files would be published
         run: |
           echo "Checking for files that should be excluded..."
-          
+
           # Check for test files in root
           if ls *_test.ts 2>/dev/null; then
             echo "❌ Found test files in root directory"
             exit 1
           fi
           echo "✅ No test files in root directory"
-          
+
           # Check for CLAUDE.md
           if [ -f "CLAUDE.md" ]; then
             echo "⚠️ CLAUDE.md found - this will be excluded from publish"
           fi
-          
+
           # Check for scripts directory
           if [ -d "scripts" ]; then
             echo "⚠️ scripts/ directory found - this will be excluded from publish"
           fi
-          
+
           # Check for hidden files
           if ls .* 2>/dev/null | grep -v "^\.\.*$"; then
             echo "⚠️ Hidden files found - these will be excluded from publish"
           fi
-          
+
           echo "Validation complete"
-          
+
       - name: Dry run publish
         run: |
           echo "Performing dry run of publish..."

@@ -1,5 +1,14 @@
-import { assertEquals, assertExists, assertInstanceOf } from "https://deno.land/std@0.208.0/assert/mod.ts";
-import { Result, ValidationError, createError, getDefaultMessage } from "../types.ts";
+import {
+  assertEquals,
+  type assertExists,
+  assertInstanceOf,
+} from "https://deno.land/std@0.208.0/assert/mod.ts";
+import {
+  createError,
+  getDefaultMessage,
+  type Result,
+  type ValidationError,
+} from "../types.ts";
 
 Deno.test("Result type - success case", () => {
   const result: Result<string, Error> = { ok: true, data: "success" };
@@ -10,7 +19,10 @@ Deno.test("Result type - success case", () => {
 });
 
 Deno.test("Result type - error case", () => {
-  const result: Result<string, Error> = { ok: false, error: new Error("failed") };
+  const result: Result<string, Error> = {
+    ok: false,
+    error: new Error("failed"),
+  };
   assertEquals(result.ok, false);
   if (!result.ok) {
     assertInstanceOf(result.error, Error);
@@ -30,10 +42,10 @@ Deno.test("ValidationError - EmptyInput", () => {
 });
 
 Deno.test("ValidationError - InvalidFormat", () => {
-  const error: ValidationError = { 
-    kind: "InvalidFormat", 
-    input: "wrong", 
-    expected: "correct" 
+  const error: ValidationError = {
+    kind: "InvalidFormat",
+    input: "wrong",
+    expected: "correct",
   };
   assertEquals(error.kind, "InvalidFormat");
   assertEquals(error.input, "wrong");
@@ -41,10 +53,10 @@ Deno.test("ValidationError - InvalidFormat", () => {
 });
 
 Deno.test("ValidationError - CommandFailed", () => {
-  const error: ValidationError = { 
-    kind: "CommandFailed", 
-    command: "test", 
-    stderr: "error output" 
+  const error: ValidationError = {
+    kind: "CommandFailed",
+    command: "test",
+    stderr: "error output",
   };
   assertEquals(error.kind, "CommandFailed");
   assertEquals(error.command, "test");
@@ -64,16 +76,19 @@ Deno.test("ValidationError - InvalidTimeFormat", () => {
 });
 
 Deno.test("ValidationError - FileNotFound", () => {
-  const error: ValidationError = { kind: "FileNotFound", path: "/missing/file" };
+  const error: ValidationError = {
+    kind: "FileNotFound",
+    path: "/missing/file",
+  };
   assertEquals(error.kind, "FileNotFound");
   assertEquals(error.path, "/missing/file");
 });
 
 Deno.test("ValidationError - InvalidState", () => {
-  const error: ValidationError = { 
-    kind: "InvalidState", 
-    current: "bad", 
-    expected: "good" 
+  const error: ValidationError = {
+    kind: "InvalidState",
+    current: "bad",
+    expected: "good",
   };
   assertEquals(error.kind, "InvalidState");
   assertEquals(error.current, "bad");
@@ -81,7 +96,10 @@ Deno.test("ValidationError - InvalidState", () => {
 });
 
 Deno.test("ValidationError - CancellationRequested", () => {
-  const error: ValidationError = { kind: "CancellationRequested", operation: "test" };
+  const error: ValidationError = {
+    kind: "CancellationRequested",
+    operation: "test",
+  };
   assertEquals(error.kind, "CancellationRequested");
   assertEquals(error.operation, "test");
 });
@@ -109,30 +127,36 @@ Deno.test("getDefaultMessage - EmptyInput", () => {
 });
 
 Deno.test("getDefaultMessage - InvalidFormat", () => {
-  const message = getDefaultMessage({ 
-    kind: "InvalidFormat", 
-    input: "wrong", 
-    expected: "correct" 
+  const message = getDefaultMessage({
+    kind: "InvalidFormat",
+    input: "wrong",
+    expected: "correct",
   });
   assertEquals(message, 'Invalid format: "wrong", expected: correct');
 });
 
 Deno.test("getDefaultMessage - CommandFailed", () => {
-  const message = getDefaultMessage({ 
-    kind: "CommandFailed", 
-    command: "test", 
-    stderr: "error" 
+  const message = getDefaultMessage({
+    kind: "CommandFailed",
+    command: "test",
+    stderr: "error",
   });
   assertEquals(message, "Command failed: test. Error: error");
 });
 
 Deno.test("getDefaultMessage - TimeoutError", () => {
-  const message = getDefaultMessage({ kind: "TimeoutError", operation: "test" });
+  const message = getDefaultMessage({
+    kind: "TimeoutError",
+    operation: "test",
+  });
   assertEquals(message, "Operation timed out: test");
 });
 
 Deno.test("getDefaultMessage - InvalidTimeFormat", () => {
-  const message = getDefaultMessage({ kind: "InvalidTimeFormat", input: "25:99" });
+  const message = getDefaultMessage({
+    kind: "InvalidTimeFormat",
+    input: "25:99",
+  });
   assertEquals(message, 'Invalid time format: "25:99", expected: HH:MM');
 });
 
@@ -142,15 +166,18 @@ Deno.test("getDefaultMessage - FileNotFound", () => {
 });
 
 Deno.test("getDefaultMessage - InvalidState", () => {
-  const message = getDefaultMessage({ 
-    kind: "InvalidState", 
-    current: "bad", 
-    expected: "good" 
+  const message = getDefaultMessage({
+    kind: "InvalidState",
+    current: "bad",
+    expected: "good",
   });
   assertEquals(message, "Invalid state: bad, expected: good");
 });
 
 Deno.test("getDefaultMessage - CancellationRequested", () => {
-  const message = getDefaultMessage({ kind: "CancellationRequested", operation: "test" });
+  const message = getDefaultMessage({
+    kind: "CancellationRequested",
+    operation: "test",
+  });
   assertEquals(message, "Cancellation requested for operation: test");
 });

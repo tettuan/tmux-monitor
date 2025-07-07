@@ -1,6 +1,6 @@
-import { MonitoringOptions } from "./models.ts";
-import { Logger } from "./services.ts";
-import { ArgumentParser } from "./arguments.ts";
+import type { Logger } from "./services.ts";
+import type { ArgumentParser } from "./arguments.ts";
+import type { KeyboardHandler, RuntimeTracker, TimeManager } from "./types.ts";
 import { DIContainer } from "./container.ts";
 
 /**
@@ -15,20 +15,22 @@ export class Application {
   }
 
   async run(): Promise<void> {
-    const logger = this.container.get<Logger>('logger');
-    const argumentParser = this.container.get<ArgumentParser>('argumentParser');
-    const keyboardHandler = this.container.get<any>('keyboardHandler');
-    const runtimeTracker = this.container.get<any>('runtimeTracker');
-    const timeManager = this.container.get<any>('timeManager');
+    const logger = this.container.get<Logger>("logger");
+    const argumentParser = this.container.get<ArgumentParser>("argumentParser");
+    const keyboardHandler = this.container.get<KeyboardHandler>(
+      "keyboardHandler",
+    );
+    const runtimeTracker = this.container.get<RuntimeTracker>("runtimeTracker");
+    const timeManager = this.container.get<TimeManager>("timeManager");
 
     const optionsResult = argumentParser.parse();
     if (!optionsResult.ok) {
       logger.error(`Failed to parse arguments: ${optionsResult.error.message}`);
       return;
     }
-    
+
     const options = optionsResult.data;
-    
+
     // Log startup information
     runtimeTracker.logStartupInfo(logger, timeManager);
 
