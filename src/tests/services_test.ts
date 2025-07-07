@@ -1,8 +1,4 @@
-import {
-  assertEquals,
-  type assertExists,
-  type assertInstanceOf,
-} from "https://deno.land/std@0.208.0/assert/mod.ts";
+import { assertEquals } from "https://deno.land/std@0.208.0/assert/mod.ts";
 import {
   CommandExecutor,
   KeyboardInterruptHandler,
@@ -13,9 +9,9 @@ import {
 
 // Mock Deno.Command for testing
 class MockCommand {
-  constructor(private cmd: string, private options: any) {}
+  constructor(private cmd: string, private options: { args?: string[] }) {}
 
-  async output() {
+  output() {
     // Return success for simple commands
     if (this.options.args?.[1] === "echo 'test'") {
       return {
@@ -50,6 +46,7 @@ class MockCommand {
 Deno.test("CommandExecutor.executeTmuxCommand - success", async () => {
   // Mock Deno.Command
   const originalCommand = Deno.Command;
+  // deno-lint-ignore no-explicit-any
   (globalThis as any).Deno.Command = MockCommand;
 
   try {
@@ -61,6 +58,7 @@ Deno.test("CommandExecutor.executeTmuxCommand - success", async () => {
       assertEquals(result.data, "test");
     }
   } finally {
+    // deno-lint-ignore no-explicit-any
     (globalThis as any).Deno.Command = originalCommand;
   }
 });
@@ -68,6 +66,7 @@ Deno.test("CommandExecutor.executeTmuxCommand - success", async () => {
 Deno.test("CommandExecutor.executeTmuxCommand - failure", async () => {
   // Mock Deno.Command
   const originalCommand = Deno.Command;
+  // deno-lint-ignore no-explicit-any
   (globalThis as any).Deno.Command = MockCommand;
 
   try {
@@ -79,6 +78,7 @@ Deno.test("CommandExecutor.executeTmuxCommand - failure", async () => {
       assertEquals(result.error.kind, "CommandFailed");
     }
   } finally {
+    // deno-lint-ignore no-explicit-any
     (globalThis as any).Deno.Command = originalCommand;
   }
 });
@@ -135,6 +135,7 @@ Deno.test("Logger.error - basic error", () => {
   let loggedMessage = "";
   let loggedError = "";
   const originalError = console.error;
+  // deno-lint-ignore no-explicit-any
   console.error = (message: string, error: any) => {
     loggedMessage = message;
     loggedError = error;
@@ -154,8 +155,10 @@ Deno.test("Logger.error - basic error", () => {
 Deno.test("Logger.error - with error object", () => {
   // Mock console.error
   let loggedMessage = "";
+  // deno-lint-ignore no-explicit-any
   let loggedError: any;
   const originalError = console.error;
+  // deno-lint-ignore no-explicit-any
   console.error = (message: string, error: any) => {
     loggedMessage = message;
     loggedError = error;
