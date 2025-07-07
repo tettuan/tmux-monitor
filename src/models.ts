@@ -220,12 +220,14 @@ export class MonitoringOptions {
   private constructor(
     readonly mode: MonitoringMode,
     readonly instruction: InstructionConfig,
+    readonly killAllPanes: boolean = false,
   ) {}
 
   static create(
     continuous: boolean,
     scheduledTime: Date | null,
     instructionFile: string | null,
+    killAllPanes: boolean = false,
   ): MonitoringOptions {
     let mode: MonitoringMode;
     if (scheduledTime) {
@@ -240,7 +242,7 @@ export class MonitoringOptions {
       ? { kind: "WithFile", filePath: instructionFile }
       : { kind: "None" };
 
-    return new MonitoringOptions(mode, instruction);
+    return new MonitoringOptions(mode, instruction, killAllPanes);
   }
 
   isContinuous(): boolean {
@@ -251,6 +253,10 @@ export class MonitoringOptions {
   isScheduled(): boolean {
     return this.mode.kind === "Scheduled" ||
       this.mode.kind === "ScheduledContinuous";
+  }
+
+  shouldKillAllPanes(): boolean {
+    return this.killAllPanes;
   }
 
   getScheduledTime(): Date | null {

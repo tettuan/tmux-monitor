@@ -20,9 +20,7 @@
   },
   "exports": {
     ".": "./main.ts",
-    "./lib": "./mod.ts",
-    "./main": "./main.ts",
-    "./cli": "./main.ts"
+    "./lib": "./mod.ts"
   },
   "bin": {
     "tmux-monitor": "./main.ts"

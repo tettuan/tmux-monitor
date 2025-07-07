@@ -20,6 +20,10 @@ class MockCommandExecutor {
   executeTmuxCommand = (_command: string) => {
     return Promise.resolve({ ok: true as const, data: "mock output" });
   };
+
+  killAllPanes = () => {
+    return Promise.resolve({ ok: true as const, data: "mock kill all panes" });
+  };
 }
 
 Deno.test("CIManager - create", () => {

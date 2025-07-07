@@ -3,224 +3,177 @@
 [![JSR](https://jsr.io/badges/@aidevtool/tmux-monitor)](https://jsr.io/@aidevtool/tmux-monitor)
 [![JSR Score](https://jsr.io/badges/@aidevtool/tmux-monitor/score)](https://jsr.io/@aidevtool/tmux-monitor)
 
-A comprehensive tmux monitoring tool with totality principles, real-time monitoring, and keyboard interrupt handling.
+A comprehensive tmux monitoring tool designed for command-line usage with real-time monitoring and keyboard interrupt handling.
 
 ## Features
 
-- **🎯 Totality Principles**: Type-safe design with exhaustive error handling
 - **🖥️ Real-time Monitoring**: Live tmux session and pane status updates
 - **⚡ Immediate Cancellation**: Any key press or Ctrl+C stops monitoring instantly
 - **📅 Scheduled Execution**: Run monitoring at specific times
 - **🔄 Continuous Mode**: Long-running monitoring with configurable cycles
 - **🚀 CI/CD Integration**: Built-in CI environment detection
-- **📝 TypeScript Support**: Full TypeScript definitions and type safety
-- **🛠️ Flexible API**: Use as library or standalone application
+- **📝 Instruction Files**: Send startup commands to main pane
+- **🛠️ Cross-platform**: Works on macOS, Linux, and Windows (with WSL)
 
-## Installation
+## Quick Start - CLI Usage
 
-```bash
-# Import from JSR
-deno add @aidevtool/tmux-monitor
-```
+The primary way to use tmux-monitor is through the CLI interface:
 
-```typescript
-import { runMonitoring, createMonitorApp } from "@aidevtool/tmux-monitor";
-```
-
-## Quick Start
-
-### Simple Usage
-
-```typescript
-import { runMonitoring } from "@aidevtool/tmux-monitor";
-
-// Start monitoring with default configuration
-await runMonitoring();
-```
-
-### Advanced Usage
-
-```typescript
-import { 
-  createMonitorApp, 
-  createLogger, 
-  createCommandExecutor,
-  CancellationToken 
-} from "@aidevtool/tmux-monitor";
-
-// Create application instance
-const app = createMonitorApp();
-await app.run();
-
-// Use individual components
-const logger = createLogger();
-const executor = createCommandExecutor();
-
-// Execute tmux commands
-const result = await executor.executeTmuxCommand("tmux list-sessions");
-if (result.ok) {
-  logger.info(`Sessions: ${result.data}`);
-} else {
-  logger.error("Failed to list sessions", result.error);
-}
-```
-
-### Command Line Usage
+### Direct Execution from JSR
 
 ```bash
-# Run directly from JSR (recommended for one-time use)
-deno run --allow-all @aidevtool/tmux-monitor
+# Basic monitoring (minimum permissions)
+deno run --allow-run jsr:@aidevtool/tmux-monitor
 
-# With options
-deno run --allow-all @aidevtool/tmux-monitor --continuous
-deno run --allow-all @aidevtool/tmux-monitor --time=14:30
-deno run --allow-all @aidevtool/tmux-monitor --instruction=./instructions.txt
+# With continuous monitoring
+deno run --allow-run jsr:@aidevtool/tmux-monitor --continuous
+
+# Scheduled execution
+deno run --allow-run jsr:@aidevtool/tmux-monitor --time=14:30
+
+# With instruction file (requires read permission)
+deno run --allow-run --allow-read jsr:@aidevtool/tmux-monitor --instruction=./startup.txt
 ```
 
 ### Global Installation
 
 ```bash
-# Install as global command
-deno install --allow-all -n tmux-monitor @aidevtool/tmux-monitor
+# Install with specific permissions (recommended)
+deno install --allow-run --allow-read -n tmux-monitor jsr:@aidevtool/tmux-monitor
 
-# Then use directly
+# Then use anywhere
 tmux-monitor
 tmux-monitor --continuous
 tmux-monitor --time=14:30
-```
-
-### NPX-style Usage
-
-```bash
-# One-time execution
-deno run --allow-all @aidevtool/tmux-monitor
-
-# With arguments
-deno run --allow-all @aidevtool/tmux-monitor --continuous --time=14:30
-```
-
-## JSR CLI Usage
-
-### Direct Execution
-
-```bash
-# Run directly from JSR (recommended for one-time use)
-deno run --allow-all @aidevtool/tmux-monitor
-
-# With options
-deno run --allow-all @aidevtool/tmux-monitor --continuous
-deno run --allow-all @aidevtool/tmux-monitor --time=14:30
-deno run --allow-all @aidevtool/tmux-monitor --instruction=./instructions.txt
-```
-
-### Global Installation
-
-```bash
-# Install as global command
-deno install --allow-all -n tmux-monitor @aidevtool/tmux-monitor
-
-# Then use directly
-tmux-monitor
-tmux-monitor --continuous
-tmux-monitor --time=14:30
+tmux-monitor --instruction=./startup.txt
 ```
 
 ### Available CLI Options
 
 - `--continuous` or `-c`: Run in continuous monitoring mode
 - `--time=HH:MM` or `-t HH:MM`: Schedule monitoring start time
-- `--instruction=PATH` or `-i PATH`: Load instruction file
+- `--instruction=PATH` or `-i PATH`: Load instruction file with startup commands
+- `--kill-all-panes`: Safely terminate all tmux panes (SIGTERM first, then SIGKILL)
 
-### Permissions Required
+## How It Works
 
-The CLI requires the following Deno permissions:
-- `--allow-run`: Execute tmux commands
-- `--allow-net`: Network access for potential future features
-- `--allow-read`: Read instruction files (when specified)
-
-## API Reference
-
-### Core Functions
-
-- `runMonitoring()` - Start monitoring with default configuration
-- `createMonitorApp()` - Create a new Application instance
-- `createLogger()` - Create a Logger instance
-- `createCommandExecutor()` - Create a CommandExecutor instance
-
-### Core Classes
-
-- `Application` - Main application orchestrator
-- `CommandExecutor` - System command execution with error handling
-- `Logger` - Structured logging with multiple levels
-- `CancellationToken` - Centralized cancellation management
-- `KeyboardInterruptHandler` - Keyboard interrupt detection
-
-### Configuration
-
-- `TIMING` - Configuration constants for delays and timeouts
-- `WORKER_STATUS_TYPES` - Worker status type definitions
-
-## Examples
-
-### Library Integration
-
-```typescript
-import { 
-  createMonitorApp, 
-  Logger, 
-  CommandExecutor,
-  type Result 
-} from "@aidevtool/tmux-monitor";
-
-class MyTmuxManager {
-  private logger = new Logger();
-  private executor = new CommandExecutor();
-
-  async checkSessions(): Promise<Result<string[], any>> {
-    const result = await this.executor.executeTmuxCommand("tmux list-sessions");
-    if (result.ok) {
-      return { ok: true, data: result.data.split('\n') };
-    }
-    return result;
-  }
-
-  async startMonitoring(): Promise<void> {
-    this.logger.info("Starting tmux monitoring...");
-    const app = createMonitorApp();
-    await app.run();
-  }
-}
-```
-
-### Custom Cancellation
-
-```typescript
-import { CancellationToken } from "@aidevtool/tmux-monitor";
-
-const token = new CancellationToken();
-
-// Setup cancellation
-setTimeout(() => {
-  token.cancel("Timeout reached");
-}, 5000);
-
-// Use with delays
-const interrupted = await token.delay(10000);
-if (interrupted) {
-  console.log("Operation was cancelled");
-}
-```
+1. **Session Discovery**: Automatically finds the most active tmux session
+2. **Pane Classification**: Separates main pane (active) from target panes (inactive)
+3. **Status Updates**: Sends status update instructions to target panes
+4. **Monitoring**: Reports pane status back to main pane
+5. **Display**: Shows comprehensive pane list with real-time updates
 
 ## Requirements
 
-- Deno 1.40+
-- tmux installed and available in PATH
-- Terminal with raw mode support (for keyboard interrupts)
+- **Deno**: 1.40+ (runtime)
+- **tmux**: Installed and available in PATH
+- **Terminal**: Raw mode support for keyboard interrupts
 
-## License
+## Permissions
 
-MIT License - see LICENSE file for details.
+The CLI requires these specific Deno permissions:
+
+### Essential Permissions
+- `--allow-run`: Execute tmux commands (tmux list-sessions, tmux send-keys, etc.)
+
+### Conditional Permissions
+- `--allow-read`: Read instruction files (only when `--instruction` flag is used)
+
+### Optional Permissions
+- `--allow-net`: Network access for potential future features (currently unused)
+
+### Recommended Usage
+
+For maximum security, use specific permissions:
+```bash
+# Basic monitoring (most common use case)
+deno run --allow-run jsr:@aidevtool/tmux-monitor
+
+# With instruction file
+deno run --allow-run --allow-read jsr:@aidevtool/tmux-monitor --instruction=./startup.txt
+
+# For global installation
+deno install --allow-run --allow-read -n tmux-monitor jsr:@aidevtool/tmux-monitor
+```
+
+## Usage Examples
+
+### Basic Monitoring
+
+```bash
+# Monitor current tmux session (minimum permissions)
+deno run --allow-run jsr:@aidevtool/tmux-monitor
+```
+
+### Continuous Monitoring
+
+```bash
+# Keep monitoring until interrupted
+deno run --allow-run jsr:@aidevtool/tmux-monitor --continuous
+```
+
+### Scheduled Execution
+
+```bash
+# Start monitoring at 2:30 PM
+deno run --allow-run jsr:@aidevtool/tmux-monitor --time=14:30
+```
+
+### With Instruction File
+
+Create an instruction file (`startup.txt`):
+```
+echo "Starting monitoring..."
+date
+```
+
+```bash
+# Run with instruction file (requires read permission)
+deno run --allow-run --allow-read jsr:@aidevtool/tmux-monitor --instruction=./startup.txt
+```
+
+### Terminate All Panes
+
+```bash
+# Safely terminate all tmux panes (SIGTERM first, then SIGKILL after 3 seconds)
+deno run --allow-run jsr:@aidevtool/tmux-monitor --kill-all-panes
+```
+
+## Library Usage (Advanced)
+
+For programmatic use, import the minimal API:
+
+```typescript
+import { createMonitorApp, runMonitoring } from "@aidevtool/tmux-monitor/lib";
+
+// Simple usage
+await runMonitoring();
+
+// Advanced usage
+const app = createMonitorApp();
+await app.run();
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Permission Denied**: Use appropriate permissions - `--allow-run` is essential, add `--allow-read` for instruction files
+2. **tmux Not Found**: Ensure tmux is installed and in PATH
+3. **No Sessions**: Start a tmux session first with `tmux new-session`
+4. **Keyboard Interrupt**: Any key press will stop monitoring immediately
+
+### Debug Mode
+
+```bash
+# Enable debug logging
+DENO_LOG=debug deno run --allow-run jsr:@aidevtool/tmux-monitor
+```
 
 ## Contributing
 
 Contributions are welcome! Please check the repository for contribution guidelines.
+
+## License
+
+MIT License - see LICENSE file for details.

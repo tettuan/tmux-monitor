@@ -3,8 +3,8 @@
 /**
  * tmux Monitor Tool - CLI Entry Point
  *
- * This is the command-line interface entry point for the tmux monitoring tool.
- * For library usage, import from the main module exports in mod.ts.
+ * This is the primary CLI interface for the tmux monitoring tool.
+ * Designed for direct execution from JSR with minimal library exports.
  *
  * Features:
  *   - Discovers the most active tmux session automatically
@@ -18,8 +18,12 @@
  *   - Automatic termination after 4 hours of continuous operation
  *
  * CLI Usage:
- *   # Direct execution from JSR
+ *   # Direct execution from JSR (recommended)
  *   deno run --allow-all @aidevtool/tmux-monitor
+ *
+ *   # Global installation
+ *   deno install --allow-all -n tmux-monitor @aidevtool/tmux-monitor
+ *   tmux-monitor
  *
  *   # Continuous monitoring mode
  *   deno run --allow-all @aidevtool/tmux-monitor --continuous
@@ -32,6 +36,9 @@
  *   # With instruction file
  *   deno run --allow-all @aidevtool/tmux-monitor --instruction=./file.md
  *   deno run --allow-all @aidevtool/tmux-monitor -i ./file.md
+ *
+ *   # Kill all tmux panes (safety: SIGTERM first, then SIGKILL)
+ *   deno run --allow-all @aidevtool/tmux-monitor --kill-all-panes
  *
  *   # Combined options
  *   deno run --allow-all @aidevtool/tmux-monitor -c --time=14:30 --instruction=./file.md

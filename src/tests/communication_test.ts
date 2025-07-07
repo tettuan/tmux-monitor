@@ -20,6 +20,14 @@ class MockCommandExecutor {
     }
     return Promise.resolve({ ok: false, error: "Unknown command" });
   };
+
+  executeTmuxCommand = (_command: string) => {
+    return Promise.resolve({ ok: true as const, data: "mock output" });
+  };
+
+  killAllPanes = () => {
+    return Promise.resolve({ ok: true as const, data: "mock kill all panes" });
+  };
 }
 
 // Mock PaneDetail factory

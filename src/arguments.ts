@@ -16,6 +16,7 @@ export class ArgumentParser {
     const args = Deno.args;
     let scheduledTime: Date | null = null;
     let instructionFile: string | null = null;
+    let killAllPanes = false;
 
     // Look for time parameter (--time=HH:MM or -t HH:MM)
     for (let i = 0; i < args.length; i++) {
@@ -39,6 +40,8 @@ export class ArgumentParser {
         instructionFile = filePath.trim() === "" ? null : filePath;
       } else if (arg === "-i" && i + 1 < args.length) {
         instructionFile = args[i + 1];
+      } else if (arg === "--kill-all-panes") {
+        killAllPanes = true;
       }
     }
 
@@ -47,6 +50,7 @@ export class ArgumentParser {
       continuous,
       scheduledTime,
       instructionFile,
+      killAllPanes,
     );
 
     return { ok: true, data: options };
