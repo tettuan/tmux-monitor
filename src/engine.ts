@@ -117,12 +117,6 @@ export class MonitoringEngine {
     for (let i = 0; i < allPanes.length; i++) {
       const pane = allPanes[i];
       
-      // Check for cancellation before each pane
-      if (globalCancellationToken.isCancelled()) {
-        console.log(`[DEBUG] sendEnterToAllPanesCycle: Cancellation detected before pane ${i + 1}/${allPanes.length}`);
-        return;
-      }
-      
       console.log(`[DEBUG] sendEnterToAllPanesCycle: Sending ENTER to pane ${i + 1}/${allPanes.length} (${pane.id})`);
       const result = await this.communicator.sendToPane(pane.id, "");
       if (!result.ok) {
@@ -373,17 +367,6 @@ export class MonitoringEngine {
       }
 
       // Check for cancellation before starting
-      if (globalCancellationToken.isCancelled()) {
-        this.logger.info("[DEBUG] MonitoringEngine.monitor(): Cancellation detected at start - exiting...");
-        return;
-      }
-
-      // Check for cancellation before starting
-      if (globalCancellationToken.isCancelled()) {
-        this.logger.info("Monitoring cancelled by user input. Exiting...");
-        return;
-      }
-
       // 1. Get session and panes
       const sessionResult = await this.session.findMostActiveSession();
       if (!sessionResult.ok) {
@@ -426,12 +409,6 @@ export class MonitoringEngine {
       // 3. Process all panes
       await this.processAllPanes();
 
-      // Check for cancellation
-      if (globalCancellationToken.isCancelled()) {
-        this.logger.info("Monitoring cancelled by user input. Exiting...");
-        return;
-      }
-
       // 4. Update status tracking and report changes
       await this.updateStatusTracking();
 
@@ -464,12 +441,6 @@ export class MonitoringEngine {
       await this.reportStatusChanges();
       await this.reportToMainPane();
 
-      // Check for cancellation
-      if (globalCancellationToken.isCancelled()) {
-        this.logger.info("Monitoring cancelled by user input. Exiting...");
-        return;
-      }
-
       // 8. Start 30-second ENTER sending cycle during waiting period
       const monitoringCycles = TIMING.MONITORING_CYCLE_DELAY /
         TIMING.ENTER_SEND_CYCLE_DELAY;
@@ -479,14 +450,7 @@ export class MonitoringEngine {
 
       let interrupted = false;
       for (let i = 0; i < monitoringCycles; i++) {
-        console.log(`[DEBUG] Monitoring cycle ${i + 1}/${monitoringCycles} - checking cancellation`);
-        // Check for cancellation
-        if (globalCancellationToken.isCancelled()) {
-          console.log(`[DEBUG] Cancellation detected in monitoring cycle ${i + 1}`);
-          this.logger.info("Monitoring cancelled by user input. Exiting...");
-          interrupted = true;
-          break;
-        }
+        console.log(`[DEBUG] Monitoring cycle ${i + 1}/${monitoringCycles}`);
 
         // Send ENTER to all panes (every 30 seconds)
         console.log(`[DEBUG] Starting sendEnterToAllPanesCycle for cycle ${i + 1}`);
@@ -514,23 +478,11 @@ export class MonitoringEngine {
       // 9. After 5-minute cycle: Check for DONE/IDLE panes and send clear commands
       await this.checkAndClearDoneAndIdlePanes();
 
-      // Check for cancellation
-      if (globalCancellationToken.isCancelled()) {
-        this.logger.info("Monitoring cancelled by user input. Exiting...");
-        return;
-      }
-
       // 10. Start another 30-second ENTER sending cycle after /clear commands
       this.logger.info(
         "Starting 30-second ENTER cycles after /clear commands...",
       );
       for (let i = 0; i < monitoringCycles; i++) {
-        // Check for cancellation
-        if (globalCancellationToken.isCancelled()) {
-          this.logger.info("Monitoring cancelled by user input. Exiting...");
-          interrupted = true;
-          break;
-        }
 
         // Send ENTER to all panes (every 30 seconds)
         await this.sendEnterToAllPanesCycle();
@@ -585,27 +537,9 @@ export class MonitoringEngine {
         break;
       }
 
-      // Check for cancellation
-      if (globalCancellationToken.isCancelled()) {
-        console.log(`[DEBUG] startContinuousMonitoring: Cancellation detected before cycle ${cycleCount}`);
-        this.logger.info(
-          "Continuous monitoring cancelled by user input. Exiting...",
-        );
-        break;
-      }
-
       console.log(`[DEBUG] startContinuousMonitoring: Starting monitor() for cycle ${cycleCount}`);
       await this.monitor();
       console.log(`[DEBUG] startContinuousMonitoring: Completed monitor() for cycle ${cycleCount}`);
-
-      // Check for cancellation after monitor cycle
-      if (globalCancellationToken.isCancelled()) {
-        console.log(`[DEBUG] startContinuousMonitoring: Cancellation detected after cycle ${cycleCount}`);
-        this.logger.info(
-          "Continuous monitoring cancelled by user input. Exiting...",
-        );
-        break;
-      }
 
       // After the first execution, scheduled time is cleared, so subsequent cycles use normal 5-minute intervals
       this.logger.info("Waiting for next cycle...\n");
