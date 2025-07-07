@@ -90,10 +90,12 @@ export class Application {
       return;
     }
 
-    // Log startup information
-    runtimeTracker.logStartupInfo(logger, timeManager);
-
+    // Get scheduled time before logging startup information
     const scheduledTime = options.getScheduledTime();
+
+    // Log startup information
+    runtimeTracker.logStartupInfo(logger, timeManager, scheduledTime);
+
     if (scheduledTime) {
       const timeStr = scheduledTime.toLocaleString("ja-JP", {
         timeZone: "Asia/Tokyo",

@@ -566,12 +566,21 @@ export class RuntimeTracker {
     return { ok: true, data: false };
   }
 
-  logStartupInfo(logger: Logger, timeManager: TimeManager): void {
+  logStartupInfo(
+    logger: Logger,
+    timeManager: TimeManager,
+    scheduledTime?: Date | null,
+  ): void {
     const startTimeStr = timeManager.formatTimeForDisplay(
       new Date(this.startTime),
     );
+
+    // Calculate auto-stop time from scheduled time if available, otherwise from start time
+    const autoStopBaseTime = scheduledTime
+      ? scheduledTime.getTime()
+      : this.startTime;
     const autoStopTime = timeManager.formatTimeForDisplay(
-      new Date(this.startTime + this.maxRuntime),
+      new Date(autoStopBaseTime + this.maxRuntime),
     );
 
     logger.info(`Monitor started at: ${startTimeStr} (Asia/Tokyo)`);

@@ -12,7 +12,11 @@ export interface KeyboardHandler {
 }
 
 export interface RuntimeTracker {
-  logStartupInfo(logger: unknown, timeManager: unknown): void;
+  logStartupInfo(
+    logger: unknown,
+    timeManager: unknown,
+    scheduledTime?: Date | null,
+  ): void;
 }
 
 export interface TimeManager {
