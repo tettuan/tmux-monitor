@@ -15,7 +15,7 @@
  *
  * ## Quick Start
  * ```typescript
- * import { runMonitoring, createMonitorApp } from "@your-org/tmux-monitor";
+ * import { runMonitoring, createMonitorApp } from "@aidevtool/tmux-monitor";
  * 
  * // Simple usage
  * await runMonitoring();
@@ -193,23 +193,23 @@ export function createCommandExecutor(): CommandExecutor {
  * @example
  * ```bash
  * # Run CLI directly from JSR
- * deno run --allow-all jsr:@tmux-monitor/core/main
+ * deno run --allow-all @aidevtool/tmux-monitor
  * 
  * # Install globally
- * deno install --allow-all -n tmux-monitor jsr:@tmux-monitor/core/main
+ * deno install --allow-all -n tmux-monitor @aidevtool/tmux-monitor
  * 
  * # Run with options
- * deno run --allow-all jsr:@tmux-monitor/core/main --continuous --time=14:30
+ * deno run --allow-all @aidevtool/tmux-monitor --continuous --time=14:30
  * ```
  */
 export const CLI_INFO = {
-  entryPoint: "jsr:@tmux-monitor/core/main",
-  installCommand: "deno install --allow-all -n tmux-monitor jsr:@tmux-monitor/core/main",
-  runCommand: "deno run --allow-all jsr:@tmux-monitor/core/main",
+  entryPoint: "@aidevtool/tmux-monitor",
+  installCommand: "deno install --allow-all -n tmux-monitor @aidevtool/tmux-monitor",
+  runCommand: "deno run --allow-all @aidevtool/tmux-monitor",
   examples: [
-    "deno run --allow-all jsr:@tmux-monitor/core/main",
-    "deno run --allow-all jsr:@tmux-monitor/core/main --continuous",
-    "deno run --allow-all jsr:@tmux-monitor/core/main --time=14:30",
-    "deno run --allow-all jsr:@tmux-monitor/core/main --instruction=./file.txt",
+    "deno run --allow-all @aidevtool/tmux-monitor",
+    "deno run --allow-all @aidevtool/tmux-monitor --continuous",
+    "deno run --allow-all @aidevtool/tmux-monitor --time=14:30",
+    "deno run --allow-all @aidevtool/tmux-monitor --instruction=./file.txt",
   ],
 } as const;

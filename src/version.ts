@@ -26,7 +26,7 @@ export function getVersionInfo(): {
 } {
   return {
     version: VERSION,
-    name: "@tmux-monitor/core",
+    name: "@aidevtool/tmux-monitor",
     description: "A comprehensive tmux monitoring tool with totality principles",
   };
 }

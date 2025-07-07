@@ -1,9 +1,9 @@
 {
-  "name": "@tmux-monitor/core",
+  "name": "@aidevtool/tmux-monitor",
   "version": "1.0.0",
   "description": "A comprehensive tmux monitoring tool with totality principles, real-time monitoring, and keyboard interrupt handling",
   "license": "MIT",
-  "author": "tmux-monitor",
+  "author": "aidevtool",
   "keywords": [
     "tmux",
     "monitor",
@@ -19,7 +19,8 @@
     "url": "git+https://github.com/your-username/tmux-monitor.git"
   },
   "exports": {
-    ".": "./mod.ts",
+    ".": "./main.ts",
+    "./lib": "./mod.ts",
     "./main": "./main.ts",
     "./cli": "./main.ts"
   },

@@ -1,7 +1,7 @@
-# @tmux-monitor/core
+# @aidevtool/tmux-monitor
 
-[![JSR](https://jsr.io/badges/@tmux-monitor/core)](https://jsr.io/@tmux-monitor/core)
-[![JSR Score](https://jsr.io/badges/@tmux-monitor/core/score)](https://jsr.io/@tmux-monitor/core)
+[![JSR](https://jsr.io/badges/@aidevtool/tmux-monitor)](https://jsr.io/@aidevtool/tmux-monitor)
+[![JSR Score](https://jsr.io/badges/@aidevtool/tmux-monitor/score)](https://jsr.io/@aidevtool/tmux-monitor)
 
 A comprehensive tmux monitoring tool with totality principles, real-time monitoring, and keyboard interrupt handling.
 
@@ -20,11 +20,11 @@ A comprehensive tmux monitoring tool with totality principles, real-time monitor
 
 ```bash
 # Import from JSR
-deno add @tmux-monitor/core
+deno add @aidevtool/tmux-monitor
 ```
 
 ```typescript
-import { runMonitoring, createMonitorApp } from "@tmux-monitor/core";
+import { runMonitoring, createMonitorApp } from "@aidevtool/tmux-monitor";
 ```
 
 ## Quick Start
@@ -32,7 +32,7 @@ import { runMonitoring, createMonitorApp } from "@tmux-monitor/core";
 ### Simple Usage
 
 ```typescript
-import { runMonitoring } from "@tmux-monitor/core";
+import { runMonitoring } from "@aidevtool/tmux-monitor";
 
 // Start monitoring with default configuration
 await runMonitoring();
@@ -46,7 +46,7 @@ import {
   createLogger, 
   createCommandExecutor,
   CancellationToken 
-} from "@tmux-monitor/core";
+} from "@aidevtool/tmux-monitor";
 
 // Create application instance
 const app = createMonitorApp();
@@ -68,26 +68,22 @@ if (result.ok) {
 ### Command Line Usage
 
 ```bash
-# Start monitoring
-deno run --allow-all jsr:@tmux-monitor/core/main
+# Run directly from JSR (recommended for one-time use)
+deno run --allow-all @aidevtool/tmux-monitor
 
-# Continuous monitoring
-deno run --allow-all jsr:@tmux-monitor/core/main --continuous
-
-# Scheduled monitoring
-deno run --allow-all jsr:@tmux-monitor/core/main --time=14:30
-
-# With instruction file
-deno run --allow-all jsr:@tmux-monitor/core/main --instruction=./instructions.txt
+# With options
+deno run --allow-all @aidevtool/tmux-monitor --continuous
+deno run --allow-all @aidevtool/tmux-monitor --time=14:30
+deno run --allow-all @aidevtool/tmux-monitor --instruction=./instructions.txt
 ```
 
-### CLI Installation (Alternative)
+### Global Installation
 
 ```bash
-# Install globally using deno install
-deno install --allow-all -n tmux-monitor jsr:@tmux-monitor/core/main
+# Install as global command
+deno install --allow-all -n tmux-monitor @aidevtool/tmux-monitor
 
-# Then run directly
+# Then use directly
 tmux-monitor
 tmux-monitor --continuous
 tmux-monitor --time=14:30
@@ -97,10 +93,10 @@ tmux-monitor --time=14:30
 
 ```bash
 # One-time execution
-deno run --allow-all jsr:@tmux-monitor/core/main
+deno run --allow-all @aidevtool/tmux-monitor
 
 # With arguments
-deno run --allow-all jsr:@tmux-monitor/core/main --continuous --time=14:30
+deno run --allow-all @aidevtool/tmux-monitor --continuous --time=14:30
 ```
 
 ## JSR CLI Usage
@@ -109,19 +105,19 @@ deno run --allow-all jsr:@tmux-monitor/core/main --continuous --time=14:30
 
 ```bash
 # Run directly from JSR (recommended for one-time use)
-deno run --allow-all jsr:@tmux-monitor/core/main
+deno run --allow-all @aidevtool/tmux-monitor
 
 # With options
-deno run --allow-all jsr:@tmux-monitor/core/main --continuous
-deno run --allow-all jsr:@tmux-monitor/core/main --time=14:30
-deno run --allow-all jsr:@tmux-monitor/core/main --instruction=./instructions.txt
+deno run --allow-all @aidevtool/tmux-monitor --continuous
+deno run --allow-all @aidevtool/tmux-monitor --time=14:30
+deno run --allow-all @aidevtool/tmux-monitor --instruction=./instructions.txt
 ```
 
 ### Global Installation
 
 ```bash
 # Install as global command
-deno install --allow-all -n tmux-monitor jsr:@tmux-monitor/core/main
+deno install --allow-all -n tmux-monitor @aidevtool/tmux-monitor
 
 # Then use directly
 tmux-monitor
@@ -174,7 +170,7 @@ import {
   Logger, 
   CommandExecutor,
   type Result 
-} from "@tmux-monitor/core";
+} from "@aidevtool/tmux-monitor";
 
 class MyTmuxManager {
   private logger = new Logger();
@@ -199,7 +195,7 @@ class MyTmuxManager {
 ### Custom Cancellation
 
 ```typescript
-import { CancellationToken } from "@tmux-monitor/core";
+import { CancellationToken } from "@aidevtool/tmux-monitor";
 
 const token = new CancellationToken();
 
