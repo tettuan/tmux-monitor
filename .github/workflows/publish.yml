@@ -41,57 +41,7 @@ jobs:
           cp mod.ts publish/
           cp -r src/ publish/
           cp LICENSE publish/
-
-          # Create a clean README for JSR (without development-specific content)
-          cat > publish/README.md << 'EOF'
-          # Tmux Monitor
-
-          A comprehensive tmux monitoring tool built with Deno and totality principles.
-
-          ## Features
-
-          - **Totality Principles**: Type-safe design with exhaustive error handling
-          - **tmux Integration**: Monitor tmux sessions, panes, and their status
-          - **Flexible Usage**: Use as a library or standalone application
-
-          ## Installation
-
-          ```typescript
-          // Import the entire library
-          import { createMonitorApp, runMonitoring } from "jsr:@aidevtool/tmux-monitor";
-
-          // Or import specific modules
-          import { Logger, CommandExecutor } from "jsr:@aidevtool/tmux-monitor";
-          ```
-
-          ## Usage
-
-          ### As a Library
-
-          ```typescript
-          import { createMonitorApp, runMonitoring, createLogger } from "jsr:@aidevtool/tmux-monitor";
-
-          // Simple usage
-          await runMonitoring();
-
-          // Advanced usage
-          const app = createMonitorApp();
-          await app.run();
-
-          // Use individual components
-          const logger = createLogger();
-          logger.info("Starting monitoring...");
-          ```
-
-          ## Prerequisites
-
-          - Deno 2.4.0 or higher
-          - tmux installed on your system
-
-          ## License
-
-          MIT License - see LICENSE file for details.
-          EOF
+          cp README.md publish/
 
       - name: Create JSR configuration
         run: |
