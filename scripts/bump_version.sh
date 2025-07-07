@@ -58,6 +58,14 @@ get_ts_version() {
   grep 'export const VERSION' "$VERSION_TS" | sed -E 's/.*\"([0-9.]+)\".*/\1/'
 }
 
+# Version comparison function using semantic versioning
+# Returns the lower version when comparing two versions
+version_compare() {
+  local ver1="$1"
+  local ver2="$2"
+  printf '%s\n%s\n' "$ver1" "$ver2" | sort -V | head -n1
+}
+
 # ============================================================================
 # 1. Status Checks
 # ============================================================================
@@ -108,7 +116,8 @@ else
   echo "Please verify manually that all workflows are passing before release."
 fi
 
-# 1.6 JSR Version Check
+# 1.6 JSR Version Check - Get latest published version
+echo "Fetching latest version from JSR..."
 latest_jsr_version=$(curl -s "$JSR_META_URL" 2>/dev/null | jq -r '.versions | keys | .[]' | sort -V | tail -n 1 2>/dev/null || echo "0.0.0")
 echo "Latest JSR published version: $latest_jsr_version"
 
@@ -121,14 +130,14 @@ echo "Current version in deno.json: $current_version"
 latest_tag=$(git tag --list 'v*' | sed 's/^v//' | sort -V | tail -n 1 2>/dev/null || echo "0.0.0")
 echo "Latest local tag: $latest_tag"
 
-# 1.8 Version Consistency Check
+# 1.8 Version Consistency Check with JSR as source of truth
 jsr_ver="$latest_jsr_version"
 git_tag_ver="$latest_tag"
 deno_ver=$(get_deno_version)
 ts_ver=$(get_ts_version)
 
 echo "Current versions:"
-echo "  JSR: $jsr_ver"
+echo "  JSR (source of truth): $jsr_ver"
 echo "  Git tag: $git_tag_ver"
 echo "  deno.json: $deno_ver"
 echo "  version.ts: $ts_ver"
@@ -139,13 +148,42 @@ if [[ "$deno_ver" != "$ts_ver" ]]; then
   exit 1
 fi
 
-# If we have git tags, check consistency
-if [[ "$git_tag_ver" != "0.0.0" ]]; then
-  if [[ "$git_tag_ver" != "$deno_ver" ]]; then
-    echo "Warning: Git tag ($git_tag_ver) != deno.json ($deno_ver)"
-    echo "This is normal if you're preparing a new version."
+# Check if Git tag version is greater than JSR version (problematic case)
+if [[ "$git_tag_ver" != "0.0.0" && "$jsr_ver" != "0.0.0" ]]; then
+  lowest_version=$(version_compare "$git_tag_ver" "$jsr_ver")
+  if [[ "$lowest_version" == "$jsr_ver" && "$git_tag_ver" != "$jsr_ver" ]]; then
+    echo "⚠️  Warning: Git tag version ($git_tag_ver) is greater than JSR version ($jsr_ver)"
+    echo "This indicates an inconsistent state. The Git tag should be removed."
+    
+    # Confirm deletion
+    echo "Do you want to delete the Git tag v$git_tag_ver? (y/N)"
+    read -r response
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+      echo "Deleting local Git tag v$git_tag_ver..."
+      git tag -d "v$git_tag_ver" || echo "Warning: Failed to delete local tag"
+      
+      echo "Deleting remote Git tag v$git_tag_ver..."
+      git push origin ":refs/tags/v$git_tag_ver" || echo "Warning: Failed to delete remote tag"
+      
+      # Re-fetch tags and update latest_tag
+      git fetch --tags
+      latest_tag=$(git tag --list 'v*' | sed 's/^v//' | sort -V | tail -n 1 2>/dev/null || echo "0.0.0")
+      git_tag_ver="$latest_tag"
+      echo "Updated Git tag version: $git_tag_ver"
+    else
+      echo "Git tag deletion cancelled. Please resolve version inconsistency manually."
+      echo "JSR version: $jsr_ver, Git tag: $git_tag_ver"
+      exit 1
+    fi
   fi
 fi
+
+# Final consistency check after potential tag cleanup
+echo "Final version state:"
+echo "  JSR (source of truth): $jsr_ver"
+echo "  Git tag: $git_tag_ver"  
+echo "  deno.json: $deno_ver"
+echo "  version.ts: $ts_ver"
 
 echo "✓ Version consistency check passed"
 
@@ -178,7 +216,7 @@ echo "✓ Local CI passed"
 # ============================================================================
 echo -e "\nBumping Version..."
 
-# 3.1 New Version Generation
+# 3.1 New Version Generation - Use JSR version as base
 bump_type="patch"
 if [[ $# -gt 0 ]]; then
   case "$1" in
@@ -189,16 +227,37 @@ if [[ $# -gt 0 ]]; then
   esac
 fi
 
-# Use current version as base
-current_version=$(get_deno_version)
-IFS='.' read -r major minor patch <<< "$current_version"
+# Determine base version for bumping
+# Priority: JSR version > current deno.json version > 0.0.0
+base_version="0.0.0"
+if [[ "$jsr_ver" != "0.0.0" ]]; then
+  base_version="$jsr_ver"
+  echo "Using JSR version as base: $base_version"
+elif [[ "$deno_ver" != "0.0.0" ]]; then
+  base_version="$deno_ver"
+  echo "Using deno.json version as base: $base_version"
+else
+  echo "Using default base version: $base_version"
+fi
+
+IFS='.' read -r major minor patch <<< "$base_version"
 case "$bump_type" in
   major) major=$((major + 1)); minor=0; patch=0 ;;
   minor) minor=$((minor + 1)); patch=0 ;;
   patch) patch=$((patch + 1)) ;;
 esac
 new_version="$major.$minor.$patch"
-echo "Bumping version from $current_version -> $new_version"
+echo "Bumping version from $base_version -> $new_version ($bump_type bump)"
+
+# Validate that new version is greater than current JSR version
+if [[ "$jsr_ver" != "0.0.0" ]]; then
+  lowest_version=$(version_compare "$new_version" "$jsr_ver")
+  if [[ "$lowest_version" != "$jsr_ver" ]]; then
+    echo "Error: New version ($new_version) is not greater than JSR version ($jsr_ver)"
+    echo "Please use a different bump type or check version consistency."
+    exit 1
+  fi
+fi
 
 # 3.2 Version Update (Atomic)
 tmp_deno="${DENO_JSON}.tmp"
