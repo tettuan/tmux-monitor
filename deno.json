@@ -1,6 +1,6 @@
 {
   "name": "@aidevtool/tmux-monitor",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A comprehensive tmux monitoring tool with totality principles, real-time monitoring, and keyboard interrupt handling",
   "license": "MIT",
   "author": "tettuan",
@@ -41,20 +41,42 @@
     "bump:major": "./scripts/bump_version.sh --major"
   },
   "compilerOptions": {
-    "lib": ["deno.window"],
+    "lib": [
+      "deno.window"
+    ],
     "strict": true
   },
   "fmt": {
-    "include": ["src/", "tests/", "*.ts"],
-    "exclude": ["node_modules/", "dist/"]
+    "include": [
+      "src/",
+      "tests/",
+      "*.ts"
+    ],
+    "exclude": [
+      "node_modules/",
+      "dist/"
+    ]
   },
   "lint": {
-    "include": ["src/", "tests/", "*.ts"],
-    "exclude": ["node_modules/", "dist/"]
+    "include": [
+      "src/",
+      "tests/",
+      "*.ts"
+    ],
+    "exclude": [
+      "node_modules/",
+      "dist/"
+    ]
   },
   "test": {
-    "include": ["tests/", "src/tests/"],
-    "exclude": ["node_modules/", "dist/"]
+    "include": [
+      "tests/",
+      "src/tests/"
+    ],
+    "exclude": [
+      "node_modules/",
+      "dist/"
+    ]
   },
   "publish": {
     "include": [

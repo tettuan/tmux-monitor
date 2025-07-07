@@ -5,19 +5,19 @@
  * The current version of tmux-monitor, synchronized with deno.json.
  * @module
  */
-export const VERSION = "0.0.1";
+export const VERSION = "0.0.2";
 
 /**
- * Get version information
- * @returns The current version string
+ * Returns the current version string.
+ * @returns The version string
  */
 export function getVersion(): string {
   return VERSION;
 }
 
 /**
- * Get detailed version information
- * @returns Object containing version, name, and description
+ * Returns version information object.
+ * @returns Object containing version details
  */
 export function getVersionInfo(): {
   version: string;
@@ -28,6 +28,6 @@ export function getVersionInfo(): {
     version: VERSION,
     name: "@aidevtool/tmux-monitor",
     description:
-      "A comprehensive tmux monitoring tool with totality principles",
+      "A comprehensive tmux monitoring tool designed for command-line usage",
   };
 }
