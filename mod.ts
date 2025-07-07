@@ -16,10 +16,10 @@
  * ## Quick Start
  * ```typescript
  * import { runMonitoring, createMonitorApp } from "@aidevtool/tmux-monitor/lib";
- * 
+ *
  * // Simple usage
  * await runMonitoring();
- * 
+ *
  * // Advanced usage
  * const app = createMonitorApp();
  * await app.run();
@@ -124,7 +124,10 @@ export {
 } from "./src/types.ts";
 
 // Export cancellation token classes
-export { CancellationToken, globalCancellationToken } from "./src/cancellation.ts";
+export {
+  CancellationToken,
+  globalCancellationToken,
+} from "./src/cancellation.ts";
 
 // Import classes for convenience functions
 import { Application } from "./src/application.ts";
@@ -159,10 +162,10 @@ export { VERSION } from "./src/version.ts";
 
 /**
  * Creates a new tmux monitor application instance.
- * 
+ *
  * The Application class orchestrates the entire monitoring process,
  * including argument parsing, keyboard handling, and runtime management.
- * 
+ *
  * @returns A new Application instance ready to run
  * @example
  * ```typescript
@@ -176,10 +179,10 @@ export function createMonitorApp(): Application {
 
 /**
  * Runs tmux monitoring with default configuration.
- * 
+ *
  * This is the simplest way to start monitoring tmux sessions.
  * Uses default settings and automatically handles cleanup.
- * 
+ *
  * @returns Promise that resolves when monitoring completes
  * @throws {Error} If tmux is not available or monitoring fails
  * @example
@@ -195,10 +198,10 @@ export async function runMonitoring(): Promise<void> {
 
 /**
  * Creates a logger instance for external use.
- * 
+ *
  * The Logger provides structured logging with different levels
  * (info, warn, error) and consistent formatting.
- * 
+ *
  * @returns A new Logger instance
  * @example
  * ```typescript
@@ -213,10 +216,10 @@ export function createLogger(): Logger {
 
 /**
  * Creates a command executor for external use.
- * 
+ *
  * The CommandExecutor handles system command execution with
  * proper error handling and result formatting.
- * 
+ *
  * @returns A new CommandExecutor instance
  * @example
  * ```typescript
@@ -237,22 +240,23 @@ export function createCommandExecutor(): CommandExecutor {
 
 /**
  * Information about CLI usage when importing from JSR.
- * 
+ *
  * @example
  * ```bash
  * # Run CLI directly from JSR
  * deno run --allow-all @aidevtool/tmux-monitor
- * 
+ *
  * # Install globally
  * deno install --allow-all -n tmux-monitor @aidevtool/tmux-monitor
- * 
+ *
  * # Run with options
  * deno run --allow-all @aidevtool/tmux-monitor --continuous --time=14:30
  * ```
  */
 export const CLI_INFO = {
   entryPoint: "@aidevtool/tmux-monitor",
-  installCommand: "deno install --allow-all -n tmux-monitor @aidevtool/tmux-monitor",
+  installCommand:
+    "deno install --allow-all -n tmux-monitor @aidevtool/tmux-monitor",
   runCommand: "deno run --allow-all @aidevtool/tmux-monitor",
   examples: [
     "deno run --allow-all @aidevtool/tmux-monitor",

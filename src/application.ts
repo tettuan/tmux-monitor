@@ -6,18 +6,18 @@ import { globalCancellationToken } from "./cancellation.ts";
 
 /**
  * Main Application Class - Orchestrates the entire tmux monitoring process.
- * 
+ *
  * This class serves as the entry point for the tmux monitoring application,
  * coordinating all components including argument parsing, keyboard handling,
  * session management, and monitoring execution.
- * 
+ *
  * ## Responsibilities
  * - Initialize dependency injection container
  * - Parse command-line arguments
  * - Set up keyboard interrupt handling
  * - Coordinate scheduled vs immediate execution
  * - Handle cleanup and graceful shutdown
- * 
+ *
  * @example
  * ```typescript
  * const app = new Application();
@@ -38,14 +38,14 @@ export class Application {
 
   /**
    * Runs the tmux monitoring application.
-   * 
+   *
    * This is the main entry point that orchestrates the entire monitoring process:
    * 1. Parses command-line arguments
    * 2. Sets up keyboard interrupt handling
    * 3. Handles scheduled execution if specified
    * 4. Executes monitoring (continuous or single run)
    * 5. Performs cleanup
-   * 
+   *
    * @throws {Error} If critical services fail to initialize
    * @example
    * ```typescript
@@ -103,11 +103,13 @@ export class Application {
     } finally {
       // Log cancellation state for debugging
       if (globalCancellationToken.isCancelled()) {
-        logger.info(`Monitoring stopped due to: ${globalCancellationToken.getReason()}`);
+        logger.info(
+          `Monitoring stopped due to: ${globalCancellationToken.getReason()}`,
+        );
       } else {
         logger.info("Monitoring completed normally.");
       }
-      
+
       // Clean up keyboard interrupt handler
       console.log(`[DEBUG] Application.run(): Starting cleanup`);
       keyboardHandler.cleanup();

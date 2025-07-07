@@ -30,22 +30,40 @@ Deno.test("CIManager - create", () => {
 Deno.test("CIManager - detectCIEnvironment CI環境なし", async () => {
   const manager = CIManager.create(new MockCommandExecutor(), new MockLogger());
 
-  // CI環境変数をクリア
-  const originalEnv = Deno.env.get("CI");
-  if (originalEnv) {
-    Deno.env.delete("CI");
+  // CI環境変数をクリアして保存
+  const originalVars = new Map<string, string>();
+  const ciIndicators = [
+    "CI",
+    "CONTINUOUS_INTEGRATION",
+    "GITHUB_ACTIONS",
+    "GITLAB_CI",
+    "JENKINS_URL",
+    "CIRCLECI",
+    "TRAVIS",
+    "BUILDKITE",
+    "DRONE",
+  ];
+
+  for (const indicator of ciIndicators) {
+    const value = Deno.env.get(indicator);
+    if (value) {
+      originalVars.set(indicator, value);
+      Deno.env.delete(indicator);
+    }
   }
 
-  const result = await manager.detectCIEnvironment();
+  try {
+    const result = await manager.detectCIEnvironment();
 
-  // 元の環境変数を復元
-  if (originalEnv) {
-    Deno.env.set("CI", originalEnv);
-  }
-
-  assertEquals(result.ok, true);
-  if (result.ok) {
-    assertEquals(result.data, false);
+    assertEquals(result.ok, true);
+    if (result.ok) {
+      assertEquals(result.data, false);
+    }
+  } finally {
+    // 元の環境変数を復元
+    for (const [key, value] of originalVars) {
+      Deno.env.set(key, value);
+    }
   }
 });
 

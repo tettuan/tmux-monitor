@@ -96,10 +96,7 @@ if (import.meta.main) {
 // =============================================================================
 
 // Only export essential types for CLI usage
-export type {
-  Result,
-  ValidationError,
-} from "./src/types.ts";
+export type { Result, ValidationError } from "./src/types.ts";
 
 export {
   // Core application for CLI
@@ -112,4 +109,4 @@ export {
 } from "./src/services.ts";
 
 // Export version information
-export { VERSION, getVersion, getVersionInfo } from "./src/version.ts";
+export { getVersion, getVersionInfo, VERSION } from "./src/version.ts";

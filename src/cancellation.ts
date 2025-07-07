@@ -1,29 +1,29 @@
 /**
  * Global Cancellation Token - Provides centralized cancellation management.
- * 
+ *
  * The CancellationToken class offers a robust cancellation mechanism that can be
  * shared across all modules. It supports delay operations with cancellation,
  * reason tracking, and timestamp recording.
- * 
+ *
  * ## Features
  * - Centralized cancellation state management
  * - Reason and timestamp tracking
  * - Delay operations with cancellation support
  * - Debug logging for cancellation events
  * - Race condition handling for async operations
- * 
+ *
  * @example
  * ```typescript
  * const token = new CancellationToken();
- * 
+ *
  * // Request cancellation
  * token.cancel("User requested stop");
- * 
+ *
  * // Check cancellation status
  * if (token.isCancelled()) {
  *   console.log("Operation was cancelled:", token.getReason());
  * }
- * 
+ *
  * // Use with delays
  * const interrupted = await token.delay(5000);
  * if (interrupted) {
@@ -38,10 +38,10 @@ export class CancellationToken {
 
   /**
    * Requests cancellation with a specific reason.
-   * 
+   *
    * Once cancelled, the token cannot be cancelled again with a different reason.
    * The first cancellation reason and timestamp are preserved.
-   * 
+   *
    * @param reason - The reason for cancellation
    * @example
    * ```typescript
@@ -50,20 +50,24 @@ export class CancellationToken {
    */
   cancel(reason: string): void {
     if (this.cancelled) {
-      console.log(`[DEBUG] CancellationToken.cancel(): Already cancelled (reason: ${this.reason}), ignoring new reason: ${reason}`);
+      console.log(
+        `[DEBUG] CancellationToken.cancel(): Already cancelled (reason: ${this.reason}), ignoring new reason: ${reason}`,
+      );
       return;
     }
 
     this.cancelled = true;
     this.reason = reason;
     this.timestamp = Date.now();
-    
-    console.log(`[DEBUG] CancellationToken.cancel(): Cancellation requested - reason: ${reason}, timestamp: ${this.timestamp}`);
+
+    console.log(
+      `[DEBUG] CancellationToken.cancel(): Cancellation requested - reason: ${reason}, timestamp: ${this.timestamp}`,
+    );
   }
 
   /**
    * Checks if cancellation has been requested.
-   * 
+   *
    * @returns True if cancellation has been requested, false otherwise
    * @example
    * ```typescript
@@ -74,7 +78,9 @@ export class CancellationToken {
    */
   isCancelled(): boolean {
     if (this.cancelled) {
-      console.log(`[DEBUG] CancellationToken.isCancelled(): TRUE - reason: ${this.reason}, timestamp: ${this.timestamp}`);
+      console.log(
+        `[DEBUG] CancellationToken.isCancelled(): TRUE - reason: ${this.reason}, timestamp: ${this.timestamp}`,
+      );
     }
     return this.cancelled;
   }
@@ -101,9 +107,11 @@ export class CancellationToken {
     this.cancelled = false;
     this.reason = null;
     this.timestamp = null;
-    
+
     if (wasCanelled) {
-      console.log(`[DEBUG] CancellationToken.reset(): Cancellation state reset`);
+      console.log(
+        `[DEBUG] CancellationToken.reset(): Cancellation state reset`,
+      );
     }
   }
 
@@ -126,19 +134,25 @@ export class CancellationToken {
 
     while (Date.now() - startTime < ms) {
       if (this.isCancelled()) {
-        console.log(`[DEBUG] CancellationToken.delay(): Cancelled after ${Date.now() - startTime}ms`);
+        console.log(
+          `[DEBUG] CancellationToken.delay(): Cancelled after ${
+            Date.now() - startTime
+          }ms`,
+        );
         return true; // Cancelled
       }
 
       const remainingTime = ms - (Date.now() - startTime);
       const sleepTime = Math.min(checkInterval, remainingTime);
-      
+
       if (sleepTime > 0) {
-        await new Promise(resolve => setTimeout(resolve, sleepTime));
+        await new Promise((resolve) => setTimeout(resolve, sleepTime));
       }
     }
 
-    console.log(`[DEBUG] CancellationToken.delay(): Completed ${ms}ms delay without cancellation`);
+    console.log(
+      `[DEBUG] CancellationToken.delay(): Completed ${ms}ms delay without cancellation`,
+    );
     return false; // Not cancelled
   }
 
@@ -152,7 +166,7 @@ export class CancellationToken {
 
       const checkCancellation = () => {
         if (resolved) return;
-        
+
         if (this.isCancelled()) {
           resolved = true;
           if (timeoutId) {
@@ -161,12 +175,12 @@ export class CancellationToken {
           reject(new Error(`Operation cancelled: ${this.reason}`));
           return;
         }
-        
+
         timeoutId = setTimeout(checkCancellation, 100);
       };
 
       checkCancellation();
-      
+
       promise.then((result) => {
         if (!resolved) {
           resolved = true;
@@ -191,4 +205,5 @@ export class CancellationToken {
 /**
  * Global cancellation token instance
  */
-export const globalCancellationToken = new CancellationToken();
+export const globalCancellationToken: CancellationToken =
+  new CancellationToken();

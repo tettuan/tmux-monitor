@@ -116,8 +116,12 @@ export class MonitoringEngine {
 
     for (let i = 0; i < allPanes.length; i++) {
       const pane = allPanes[i];
-      
-      console.log(`[DEBUG] sendEnterToAllPanesCycle: Sending ENTER to pane ${i + 1}/${allPanes.length} (${pane.id})`);
+
+      console.log(
+        `[DEBUG] sendEnterToAllPanesCycle: Sending ENTER to pane ${
+          i + 1
+        }/${allPanes.length} (${pane.id})`,
+      );
       const result = await this.communicator.sendToPane(pane.id, "");
       if (!result.ok) {
         this.logger.warn(
@@ -453,18 +457,28 @@ export class MonitoringEngine {
         console.log(`[DEBUG] Monitoring cycle ${i + 1}/${monitoringCycles}`);
 
         // Send ENTER to all panes (every 30 seconds)
-        console.log(`[DEBUG] Starting sendEnterToAllPanesCycle for cycle ${i + 1}`);
+        console.log(
+          `[DEBUG] Starting sendEnterToAllPanesCycle for cycle ${i + 1}`,
+        );
         await this.sendEnterToAllPanesCycle();
-        console.log(`[DEBUG] Completed sendEnterToAllPanesCycle for cycle ${i + 1}`);
+        console.log(
+          `[DEBUG] Completed sendEnterToAllPanesCycle for cycle ${i + 1}`,
+        );
 
         // Wait 30 seconds with cancellation check
-        console.log(`[DEBUG] Starting 30-second sleep with cancellation check for cycle ${i + 1}`);
+        console.log(
+          `[DEBUG] Starting 30-second sleep with cancellation check for cycle ${
+            i + 1
+          }`,
+        );
         interrupted = await this.keyboardHandler.sleepWithCancellation(
           TIMING.ENTER_SEND_CYCLE_DELAY,
           this.timeManager,
         );
         if (interrupted) {
-          console.log(`[DEBUG] Sleep interrupted by cancellation in cycle ${i + 1}`);
+          console.log(
+            `[DEBUG] Sleep interrupted by cancellation in cycle ${i + 1}`,
+          );
           this.logger.info("Monitoring cancelled by user input. Exiting...");
           break;
         }
@@ -483,7 +497,6 @@ export class MonitoringEngine {
         "Starting 30-second ENTER cycles after /clear commands...",
       );
       for (let i = 0; i < monitoringCycles; i++) {
-
         // Send ENTER to all panes (every 30 seconds)
         await this.sendEnterToAllPanesCycle();
 
@@ -525,21 +538,29 @@ export class MonitoringEngine {
     let cycleCount = 0;
     while (true) {
       cycleCount++;
-      console.log(`[DEBUG] startContinuousMonitoring: Starting cycle ${cycleCount}`);
-      
+      console.log(
+        `[DEBUG] startContinuousMonitoring: Starting cycle ${cycleCount}`,
+      );
+
       // Check for 4-hour runtime limit
       const limitCheck = this.runtimeTracker.hasExceededLimit();
       if (!limitCheck.ok) {
-        console.log(`[DEBUG] startContinuousMonitoring: Runtime limit exceeded after ${cycleCount} cycles`);
+        console.log(
+          `[DEBUG] startContinuousMonitoring: Runtime limit exceeded after ${cycleCount} cycles`,
+        );
         this.logger.info(
           "Automatic termination due to 4-hour runtime limit. Exiting...",
         );
         break;
       }
 
-      console.log(`[DEBUG] startContinuousMonitoring: Starting monitor() for cycle ${cycleCount}`);
+      console.log(
+        `[DEBUG] startContinuousMonitoring: Starting monitor() for cycle ${cycleCount}`,
+      );
       await this.monitor();
-      console.log(`[DEBUG] startContinuousMonitoring: Completed monitor() for cycle ${cycleCount}`);
+      console.log(
+        `[DEBUG] startContinuousMonitoring: Completed monitor() for cycle ${cycleCount}`,
+      );
 
       // After the first execution, scheduled time is cleared, so subsequent cycles use normal 5-minute intervals
       this.logger.info("Waiting for next cycle...\n");

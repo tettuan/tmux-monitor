@@ -7,11 +7,11 @@ import { globalCancellationToken } from "./cancellation.ts";
 
 /**
  * Executes system commands with proper error handling and result formatting.
- * 
+ *
  * This class provides a safe interface for executing system commands,
  * particularly tmux commands, with comprehensive error handling and
  * structured result types.
- * 
+ *
  * @example
  * ```typescript
  * const executor = new CommandExecutor();
@@ -26,7 +26,7 @@ import { globalCancellationToken } from "./cancellation.ts";
 export class CommandExecutor {
   /**
    * Executes a command with the given arguments.
-   * 
+   *
    * @param args - Array of command arguments, where args[0] is the command name
    * @returns Promise resolving to a Result containing stdout or error information
    * @example
@@ -78,7 +78,7 @@ export class CommandExecutor {
 
   /**
    * Executes a tmux command through bash shell.
-   * 
+   *
    * @param command - The complete tmux command string to execute
    * @returns Promise resolving to a Result containing command output or error
    * @example
@@ -127,10 +127,10 @@ export class CommandExecutor {
 
 /**
  * Provides structured logging with different levels and consistent formatting.
- * 
+ *
  * The Logger class offers a simple interface for application logging with
  * different severity levels (info, warn, error) and structured output format.
- * 
+ *
  * @example
  * ```typescript
  * const logger = new Logger();
@@ -142,7 +142,7 @@ export class CommandExecutor {
 export class Logger {
   /**
    * Logs an informational message.
-   * 
+   *
    * @param message - The message to log
    */
   info(message: string): void {
@@ -151,7 +151,7 @@ export class Logger {
 
   /**
    * Logs a warning message.
-   * 
+   *
    * @param message - The warning message to log
    */
   warn(message: string): void {
@@ -160,7 +160,7 @@ export class Logger {
 
   /**
    * Logs an error message with optional error object.
-   * 
+   *
    * @param message - The error message to log
    * @param error - Optional error object for additional context
    */
@@ -171,10 +171,10 @@ export class Logger {
 
 /**
  * Manages time-related operations including delays, formatting, and scheduling.
- * 
+ *
  * The TimeManager class provides utilities for time manipulation, scheduling,
  * and time formatting with proper timezone handling.
- * 
+ *
  * @example
  * ```typescript
  * const timeManager = new TimeManager();
@@ -238,23 +238,23 @@ export class TimeManager {
 
 /**
  * Handles keyboard interrupt detection and cancellation management.
- * 
+ *
  * This class provides comprehensive keyboard interrupt handling, including
  * both Ctrl+C signal detection and any key press detection. It integrates
  * with the global cancellation system to provide immediate application exit.
- * 
+ *
  * ## Features
  * - Detects Ctrl+C (SIGINT) signals
  * - Monitors for any key press in raw terminal mode
  * - Integrates with global cancellation token
  * - Provides immediate application exit on interrupt
  * - Handles terminal cleanup properly
- * 
+ *
  * @example
  * ```typescript
  * const handler = new KeyboardInterruptHandler();
  * handler.setup(); // Start monitoring for interrupts
- * 
+ *
  * // Later, cleanup
  * handler.cleanup();
  * ```
@@ -269,13 +269,15 @@ export class KeyboardInterruptHandler {
     }
 
     this.isSetup = true;
-    
+
     try {
       // Handle Ctrl+C using Deno's signal API
       Deno.addSignalListener("SIGINT", () => {
-        console.log(`\n[DEBUG] KeyboardInterruptHandler.setup(): Ctrl+C detected - stopping monitoring...`);
+        console.log(
+          `\n[DEBUG] KeyboardInterruptHandler.setup(): Ctrl+C detected - stopping monitoring...`,
+        );
         globalCancellationToken.cancel("Ctrl+C signal received");
-        
+
         // Force immediate exit on Ctrl+C
         this.cleanup();
         console.log(`[INFO] Monitoring stopped by Ctrl+C. Exiting...`);
@@ -295,42 +297,50 @@ export class KeyboardInterruptHandler {
 
   private async startKeyListener(): Promise<void> {
     const buffer = new Uint8Array(1024); // Larger buffer for better key detection
-    
-    console.log(`[DEBUG] KeyboardInterruptHandler.startKeyListener(): Starting key listener`);
-    
+
+    console.log(
+      `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Starting key listener`,
+    );
+
     try {
       while (this.isSetup && !globalCancellationToken.isCancelled()) {
         try {
           const bytesRead = await Deno.stdin.read(buffer);
-          
+
           if (bytesRead === null) {
             // EOF, wait a bit and continue
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise((resolve) => setTimeout(resolve, 50));
             continue;
           }
 
           if (bytesRead === 0) {
             // No data, wait a bit and continue
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise((resolve) => setTimeout(resolve, 50));
             continue;
           }
 
           // Any key press triggers cancellation
           if (bytesRead > 0) {
-            console.log(`\n[DEBUG] KeyboardInterruptHandler.startKeyListener(): Key press detected (${bytesRead} bytes) - stopping monitoring...`);
+            console.log(
+              `\n[DEBUG] KeyboardInterruptHandler.startKeyListener(): Key press detected (${bytesRead} bytes) - stopping monitoring...`,
+            );
             globalCancellationToken.cancel("Key press detected");
-            
+
             // Force immediate exit
-            console.log(`[DEBUG] KeyboardInterruptHandler.startKeyListener(): Force exiting application...`);
+            console.log(
+              `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Force exiting application...`,
+            );
             this.cleanup();
             console.log(`[INFO] Monitoring stopped by user input. Exiting...`);
             Deno.exit(0);
           }
         } catch (readError) {
           // Handle read errors gracefully
-          console.log(`[DEBUG] KeyboardInterruptHandler.startKeyListener(): Read error: ${readError}`);
+          console.log(
+            `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Read error: ${readError}`,
+          );
           if (this.isSetup && !globalCancellationToken.isCancelled()) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise((resolve) => setTimeout(resolve, 100));
           } else {
             break;
           }
@@ -339,12 +349,16 @@ export class KeyboardInterruptHandler {
     } catch (_error) {
       // Ignore errors during cleanup
       if (this.isSetup && !globalCancellationToken.isCancelled()) {
-        console.log(`\n[DEBUG] KeyboardInterruptHandler.startKeyListener(): Keyboard input interrupted - stopping monitoring...`);
+        console.log(
+          `\n[DEBUG] KeyboardInterruptHandler.startKeyListener(): Keyboard input interrupted - stopping monitoring...`,
+        );
         globalCancellationToken.cancel("Keyboard input interrupted");
       }
     }
-    
-    console.log(`[DEBUG] KeyboardInterruptHandler.startKeyListener(): Key listener exited (isSetup: ${this.isSetup}, cancelled: ${globalCancellationToken.isCancelled()})`);
+
+    console.log(
+      `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Key listener exited (isSetup: ${this.isSetup}, cancelled: ${globalCancellationToken.isCancelled()})`,
+    );
   }
 
   cleanup(): void {
@@ -359,7 +373,9 @@ export class KeyboardInterruptHandler {
     if (Deno.stdin.isTerminal()) {
       try {
         Deno.stdin.setRaw(false);
-        console.log(`[DEBUG] KeyboardInterruptHandler.cleanup(): Terminal reset to normal mode`);
+        console.log(
+          `[DEBUG] KeyboardInterruptHandler.cleanup(): Terminal reset to normal mode`,
+        );
       } catch (_error) {
         // Ignore errors during cleanup
       }
@@ -367,11 +383,15 @@ export class KeyboardInterruptHandler {
 
     // Wait for key listener to finish
     if (this.keyListenerPromise) {
-      console.log(`[DEBUG] KeyboardInterruptHandler.cleanup(): Waiting for key listener to finish`);
+      console.log(
+        `[DEBUG] KeyboardInterruptHandler.cleanup(): Waiting for key listener to finish`,
+      );
       // The key listener will exit naturally when isSetup becomes false
     }
 
-    console.log(`[DEBUG] KeyboardInterruptHandler.cleanup(): Cleanup completed`);
+    console.log(
+      `[DEBUG] KeyboardInterruptHandler.cleanup(): Cleanup completed`,
+    );
   }
 
   isCancellationRequested(): boolean {
@@ -394,10 +414,10 @@ export class KeyboardInterruptHandler {
 
 /**
  * Tracks application runtime and enforces maximum runtime limits.
- * 
+ *
  * The RuntimeTracker class monitors how long the application has been running
  * and can enforce maximum runtime limits to prevent runaway processes.
- * 
+ *
  * @example
  * ```typescript
  * const tracker = new RuntimeTracker(3600000); // 1 hour limit

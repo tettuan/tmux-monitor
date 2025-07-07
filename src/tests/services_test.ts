@@ -196,22 +196,23 @@ Deno.test("TimeManager.formatTimeForDisplay - valid date", () => {
   const date = new Date(2025, 0, 1, 14, 30, 0); // January 1, 2025, 14:30:00
   const formatted = timeManager.formatTimeForDisplay(date);
 
-  // Should be in Japanese format
-  assertEquals(formatted.includes("2025"), true);
-  assertEquals(formatted.includes("14"), true);
-  assertEquals(formatted.includes("30"), true);
-});
+  // Should be in Japanese format - more robust test
+  console.log("Formatted output:", JSON.stringify(formatted));
 
-// TimeManager doesn't have getCurrentTime method
-Deno.test("TimeManager.formatTimeForDisplay - valid date", () => {
-  const timeManager = new TimeManager();
-  const date = new Date(2025, 0, 1, 14, 30, 0); // January 1, 2025, 14:30:00
-  const formatted = timeManager.formatTimeForDisplay(date);
+  // Test that it contains basic time components
+  // The exact format may vary by environment, but should contain these elements
+  const hasYear = formatted.includes("2025");
+  const hasHour = formatted.includes("14");
+  const hasMinute = formatted.includes("30");
 
-  // Should be in Japanese format
-  assertEquals(formatted.includes("2025"), true);
-  assertEquals(formatted.includes("14"), true);
-  assertEquals(formatted.includes("30"), true);
+  // If any of these fail, log the actual output for debugging
+  if (!hasYear || !hasHour || !hasMinute) {
+    console.log("Format test failed - actual output:", formatted);
+  }
+
+  assertEquals(hasYear, true, `Expected year 2025 in: ${formatted}`);
+  assertEquals(hasHour, true, `Expected hour 14 in: ${formatted}`);
+  assertEquals(hasMinute, true, `Expected minute 30 in: ${formatted}`);
 });
 
 // =============================================================================
