@@ -42,3 +42,6 @@ node_modules/
 # Temporary folders
 tmp/
 temp/
+
+# Coverage reports
+coverage/
