@@ -58,10 +58,10 @@ jobs:
 
           ```typescript
           // Import the entire library
-          import { createMonitorApp, runMonitoring } from "jsr:@tmux-monitor/core";
+          import { createMonitorApp, runMonitoring } from "jsr:@aidevtool/tmux-monitor";
 
           // Or import specific modules
-          import { Logger, CommandExecutor } from "jsr:@tmux-monitor/core";
+          import { Logger, CommandExecutor } from "jsr:@aidevtool/tmux-monitor";
           ```
 
           ## Usage
@@ -69,7 +69,7 @@ jobs:
           ### As a Library
 
           ```typescript
-          import { createMonitorApp, runMonitoring, createLogger } from "jsr:@tmux-monitor/core";
+          import { createMonitorApp, runMonitoring, createLogger } from "jsr:@aidevtool/tmux-monitor";
 
           // Simple usage
           await runMonitoring();
@@ -96,19 +96,39 @@ jobs:
       - name: Create JSR configuration
         run: |
           cd publish
-          cat > deno.json << 'EOF'
+          # Extract version from tag (remove 'v' prefix if present)
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          VERSION=${VERSION#v}
+          
+          cat > deno.json << EOF
           {
-            "name": "@tmux-monitor/core",
-            "version": "${{ github.event.inputs.version || github.ref_name }}",
-            "description": "A comprehensive tmux monitoring tool with totality principles",
+            "name": "@aidevtool/tmux-monitor",
+            "version": "$VERSION",
+            "description": "A comprehensive tmux monitoring tool with totality principles, real-time monitoring, and keyboard interrupt handling",
             "license": "MIT",
+            "author": "tettuan",
+            "keywords": [
+              "tmux",
+              "monitor",
+              "terminal",
+              "session",
+              "pane",
+              "typescript",
+              "deno",
+              "cli"
+            ],
             "repository": {
               "type": "git",
               "url": "git+https://github.com/${{ github.repository }}.git"
             },
             "exports": {
-              ".": "./mod.ts",
-              "./main": "./main.ts"
+              ".": "./main.ts",
+              "./lib": "./mod.ts",
+              "./main": "./main.ts",
+              "./cli": "./main.ts"
+            },
+            "bin": {
+              "tmux-monitor": "./main.ts"
             },
             "compilerOptions": {
               "lib": ["deno.window"],
@@ -146,15 +166,15 @@ jobs:
         run: |
           cd publish
           deno publish --allow-dirty
-        env:
-          DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
 
       - name: Create release summary
         run: |
           echo "## 🚀 Published to JSR" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Package**: \`@tmux-monitor/core\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Version**: \`${{ github.event.inputs.version || github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Package**: \`@aidevtool/tmux-monitor\`" >> $GITHUB_STEP_SUMMARY
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          VERSION=${VERSION#v}
+          echo "**Version**: \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Files included:" >> $GITHUB_STEP_SUMMARY
           echo "- \`main.ts\` - Main application entry point" >> $GITHUB_STEP_SUMMARY
@@ -165,5 +185,5 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Usage:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`typescript" >> $GITHUB_STEP_SUMMARY
-          echo "import { createMonitorApp } from \"jsr:@tmux-monitor/core\";" >> $GITHUB_STEP_SUMMARY
+          echo "import { createMonitorApp } from \"jsr:@aidevtool/tmux-monitor\";" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
