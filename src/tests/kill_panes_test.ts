@@ -13,8 +13,13 @@ Deno.test("MonitoringOptions - default kill all panes to false", () => {
 
 Deno.test("MonitoringOptions - kill all panes with other options", () => {
   const scheduledTime = new Date();
-  const options = MonitoringOptions.create(true, scheduledTime, "test.txt", true);
-  
+  const options = MonitoringOptions.create(
+    true,
+    scheduledTime,
+    "test.txt",
+    true,
+  );
+
   assertEquals(options.shouldKillAllPanes(), true);
   assertEquals(options.isContinuous(), true);
   assertEquals(options.isScheduled(), true);

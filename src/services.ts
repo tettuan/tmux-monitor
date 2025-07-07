@@ -136,10 +136,14 @@ export class CommandExecutor {
    * }
    * ```
    */
-  async killAllPanes(): Promise<Result<string, ValidationError & { message: string }>> {
+  async killAllPanes(): Promise<
+    Result<string, ValidationError & { message: string }>
+  > {
     try {
       // First, get all pane IDs
-      const listResult = await this.executeTmuxCommand("tmux list-panes -a -F '#{pane_id}'");
+      const listResult = await this.executeTmuxCommand(
+        "tmux list-panes -a -F '#{pane_id}'",
+      );
       if (!listResult.ok) {
         return {
           ok: false,
@@ -151,7 +155,9 @@ export class CommandExecutor {
         };
       }
 
-      const paneIds = listResult.data.split('\n').filter(id => id.trim() !== '');
+      const paneIds = listResult.data.split("\n").filter((id) =>
+        id.trim() !== ""
+      );
       if (paneIds.length === 0) {
         return { ok: true, data: "No panes to kill" };
       }
@@ -159,7 +165,9 @@ export class CommandExecutor {
       console.log(`[INFO] Found ${paneIds.length} panes to terminate`);
 
       // Step 1: Send SIGTERM to all panes (graceful termination)
-      console.log("[INFO] Sending SIGTERM to all panes for graceful termination...");
+      console.log(
+        "[INFO] Sending SIGTERM to all panes for graceful termination...",
+      );
       for (const paneId of paneIds) {
         const killResult = await this.execute([
           "tmux",
@@ -175,19 +183,25 @@ export class CommandExecutor {
 
       // Wait 3 seconds for graceful termination
       console.log("[INFO] Waiting 3 seconds for graceful termination...");
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       // Step 2: Check which panes are still alive
-      const remainingResult = await this.executeTmuxCommand("tmux list-panes -a -F '#{pane_id}'");
+      const remainingResult = await this.executeTmuxCommand(
+        "tmux list-panes -a -F '#{pane_id}'",
+      );
       if (remainingResult.ok) {
-        const remainingPanes = remainingResult.data.split('\n').filter(id => id.trim() !== '');
-        
+        const remainingPanes = remainingResult.data.split("\n").filter((id) =>
+          id.trim() !== ""
+        );
+
         if (remainingPanes.length === 0) {
           return { ok: true, data: "All panes terminated gracefully" };
         }
 
         // Step 3: Force kill remaining panes
-        console.log(`[INFO] Force killing ${remainingPanes.length} remaining panes...`);
+        console.log(
+          `[INFO] Force killing ${remainingPanes.length} remaining panes...`,
+        );
         for (const paneId of remainingPanes) {
           const killResult = await this.execute([
             "tmux",
@@ -198,13 +212,14 @@ export class CommandExecutor {
           if (killResult.ok) {
             console.log(`[INFO] Force killed pane ${paneId}`);
           } else {
-            console.log(`[WARN] Failed to kill pane ${paneId}: ${killResult.error.message}`);
+            console.log(
+              `[WARN] Failed to kill pane ${paneId}: ${killResult.error.message}`,
+            );
           }
         }
       }
 
       return { ok: true, data: `Terminated ${paneIds.length} panes` };
-
     } catch (error) {
       return {
         ok: false,

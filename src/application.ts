@@ -1,4 +1,4 @@
-import type { Logger, CommandExecutor } from "./services.ts";
+import type { CommandExecutor, Logger } from "./services.ts";
 import type { ArgumentParser } from "./arguments.ts";
 import type { KeyboardHandler, RuntimeTracker, TimeManager } from "./types.ts";
 import { DIContainer } from "./container.ts";
@@ -72,16 +72,20 @@ export class Application {
 
     // Handle kill-all-panes option early
     if (options.shouldKillAllPanes()) {
-      logger.info("Kill all panes option detected - terminating all tmux panes...");
-      const commandExecutor = this.container.get<CommandExecutor>("commandExecutor");
+      logger.info(
+        "Kill all panes option detected - terminating all tmux panes...",
+      );
+      const commandExecutor = this.container.get<CommandExecutor>(
+        "commandExecutor",
+      );
       const killResult = await commandExecutor.killAllPanes();
-      
+
       if (killResult.ok) {
         logger.info(`Pane termination completed: ${killResult.data}`);
       } else {
         logger.error(`Failed to kill panes: ${killResult.error.message}`);
       }
-      
+
       // Exit early after killing panes
       return;
     }
