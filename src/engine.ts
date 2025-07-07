@@ -1,10 +1,12 @@
 import { TIMING } from "./config.ts";
-import { Pane } from "./models.ts";
+import { Pane, type WorkerStatus } from "./models.ts";
 import type { TmuxSession } from "./session.ts";
-import type { PaneManager } from "./panes.ts";
+import type { PaneManager, PaneStatusManager, PaneDataProcessor, StatusAnalyzer } from "./panes.ts";
 import { MessageGenerator, type PaneCommunicator } from "./communication.ts";
 import type { PaneDisplayer } from "./display.ts";
 import type { CIManager } from "./ci.ts";
+import type { TimeManager, RuntimeTracker, KeyboardHandler } from "./types.ts";
+import type { Logger } from "./services.ts";
 import { globalCancellationToken } from "./cancellation.ts";
 
 /**
@@ -19,22 +21,15 @@ export class MonitoringEngine {
     private paneManager: PaneManager,
     private communicator: PaneCommunicator,
     private displayer: PaneDisplayer,
-    // deno-lint-ignore no-explicit-any
-    private statusManager: any,
+    private statusManager: PaneStatusManager,
     private ciManager: CIManager,
-    // deno-lint-ignore no-explicit-any
-    private timeManager: any,
-    // deno-lint-ignore no-explicit-any
-    private runtimeTracker: any,
-    // deno-lint-ignore no-explicit-any
-    private keyboardHandler: any,
-    // deno-lint-ignore no-explicit-any
-    private paneDataProcessor: any,
-    // deno-lint-ignore no-explicit-any
-    private statusAnalyzer: any,
+    private timeManager: TimeManager,
+    private runtimeTracker: RuntimeTracker,
+    private keyboardHandler: KeyboardHandler,
+    private paneDataProcessor: PaneDataProcessor,
+    private statusAnalyzer: StatusAnalyzer,
     private messageGenerator: MessageGenerator,
-    // deno-lint-ignore no-explicit-any
-    private logger: any,
+    private logger: Logger,
     scheduledTime?: Date | null,
     instructionFile?: string | null,
   ) {
@@ -149,12 +144,12 @@ export class MonitoringEngine {
     const targetPanes = this.paneManager.getTargetPanes();
 
     for (const pane of targetPanes) {
-      const paneDetail = await this.paneDataProcessor.getPaneDetail(
+      const paneDetailResult = await this.paneDataProcessor.getPaneDetail(
         pane.id,
         this.logger,
       );
-      if (paneDetail) {
-        const currentStatus = this.statusAnalyzer.determineStatus(paneDetail);
+      if (paneDetailResult.ok) {
+        const currentStatus = this.statusAnalyzer.determineStatus(paneDetailResult.data);
         this.statusManager.updateStatus(pane.id, currentStatus);
       }
     }
@@ -244,13 +239,13 @@ export class MonitoringEngine {
     const targetPanes = this.paneManager.getTargetPanes();
 
     for (const pane of targetPanes) {
-      const paneDetail = await this.paneDataProcessor.getPaneDetail(
+      const paneDetailResult = await this.paneDataProcessor.getPaneDetail(
         pane.id,
         this.logger,
       );
-      if (paneDetail) {
+      if (paneDetailResult.ok) {
         const currentStatus = this.statusAnalyzer.extractStatusFromTitle(
-          paneDetail.title,
+          paneDetailResult.data.title,
         );
         this.statusManager.updateStatus(pane.id, currentStatus);
       }
@@ -295,10 +290,9 @@ export class MonitoringEngine {
     const activePanes = mainPane ? [mainPane] : [];
 
     // Get current status for each pane
-    // deno-lint-ignore no-explicit-any
-    const statusResults: Array<{ pane: any; status: string }> = [];
+    const statusResults: Array<{ pane: Pane; status: WorkerStatus }> = [];
     for (const pane of targetPanes) {
-      const status = this.statusManager.getStatus(pane.id) || "UNKNOWN";
+      const status = this.statusManager.getStatus(pane.id) || { kind: "UNKNOWN" as const };
       statusResults.push({ pane, status });
     }
 
@@ -339,10 +333,32 @@ export class MonitoringEngine {
       startCommand: "",
     }));
 
+    // Convert statusResults to the expected format
+    const formattedStatusResults = statusResults.map(({ pane, status }) => ({
+      pane: {
+        paneId: pane.id,
+        title: pane.getTitle() || "untitled",
+        currentCommand: pane.getCommand() || "unknown",
+        sessionName: "",
+        windowIndex: "",
+        windowName: "",
+        paneIndex: "",
+        tty: "",
+        pid: "",
+        currentPath: "",
+        active: pane.isActive() ? "1" : "0",
+        zoomed: "",
+        width: "",
+        height: "",
+        startCommand: "",
+      },
+      status: status.kind,
+    }));
+
     const message = MessageGenerator.generateStatusMessage(
       activePaneDetails,
       targetPaneDetails,
-      statusResults,
+      formattedStatusResults,
     );
     const result = await this.communicator.sendToPane(mainPane.id, message);
     if (!result.ok) {
@@ -355,8 +371,6 @@ export class MonitoringEngine {
     if (this.scheduledTime) {
       const interrupted = await this.timeManager.waitUntilScheduledTime(
         this.scheduledTime,
-        this.logger,
-        this.keyboardHandler,
       );
       if (interrupted) {
         this.logger.info("Monitoring cancelled by user input. Exiting...");
@@ -480,7 +494,6 @@ export class MonitoringEngine {
         );
         interrupted = await this.keyboardHandler.sleepWithCancellation(
           TIMING.ENTER_SEND_CYCLE_DELAY,
-          this.timeManager,
         );
         if (interrupted) {
           console.log(
@@ -510,7 +523,6 @@ export class MonitoringEngine {
         // Wait 30 seconds with cancellation check
         interrupted = await this.keyboardHandler.sleepWithCancellation(
           TIMING.ENTER_SEND_CYCLE_DELAY,
-          this.timeManager,
         );
         if (interrupted) {
           this.logger.info("Monitoring cancelled by user input. Exiting...");
@@ -575,7 +587,6 @@ export class MonitoringEngine {
       // Wait for the configured interval with cancellation support
       const cancelled = await this.keyboardHandler.sleepWithCancellation(
         TIMING.MONITORING_CYCLE_DELAY,
-        this.timeManager,
       );
       if (cancelled) {
         this.logger.info(

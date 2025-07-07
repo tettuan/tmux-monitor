@@ -9,19 +9,29 @@ export type Result<T, E> = { ok: true; data: T } | { ok: false; error: E };
 export interface KeyboardHandler {
   setup(): void;
   cleanup(): void;
+  sleepWithCancellation(milliseconds: number): Promise<boolean>;
 }
 
 export interface RuntimeTracker {
   logStartupInfo(
-    logger: unknown,
-    timeManager: unknown,
+    logger: Logger,
+    timeManager: TimeManager,
     scheduledTime?: Date | null,
   ): void;
+  hasExceededLimit(): Result<boolean, ValidationError & { message: string }>;
 }
 
 export interface TimeManager {
   getCurrentTime(): Date;
   formatTime(date: Date): string;
+  sleep(milliseconds: number): Promise<void>;
+  waitUntilScheduledTime(scheduledTime: Date): Promise<boolean>;
+}
+
+export interface Logger {
+  info(message: string, ...args: unknown[]): void;
+  warn(message: string, ...args: unknown[]): void;
+  error(message: string, ...args: unknown[]): void;
 }
 
 // Common validation error types
