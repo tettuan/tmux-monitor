@@ -55,8 +55,10 @@ export class Application {
    */
   async run(): Promise<void> {
     const logger = this.container.get<Logger>("logger");
-    logger.info(`[DEBUG] Application.run(): Started, cancellation state = ${globalCancellationToken.isCancelled()}`);
-    
+    logger.info(
+      `[DEBUG] Application.run(): Started, cancellation state = ${globalCancellationToken.isCancelled()}`,
+    );
+
     const argumentParser = this.container.get<ArgumentParser>("argumentParser");
     const keyboardHandler = this.container.get<KeyboardHandler>(
       "keyboardHandler",
@@ -119,16 +121,26 @@ export class Application {
     try {
       const monitor = this.container.createMonitoringEngine(options);
 
-      logger.info(`[DEBUG] Application.run(): About to start monitoring, continuous = ${options.isContinuous()}`);
-      logger.info(`[DEBUG] Application.run(): cancellation state before monitoring = ${globalCancellationToken.isCancelled()}`);
-      
+      logger.info(
+        `[DEBUG] Application.run(): About to start monitoring, continuous = ${options.isContinuous()}`,
+      );
+      logger.info(
+        `[DEBUG] Application.run(): cancellation state before monitoring = ${globalCancellationToken.isCancelled()}`,
+      );
+
       if (options.isContinuous()) {
-        logger.info(`[DEBUG] Application.run(): Starting continuous monitoring`);
+        logger.info(
+          `[DEBUG] Application.run(): Starting continuous monitoring`,
+        );
         await monitor.startContinuousMonitoring();
       } else {
-        logger.info(`[DEBUG] Application.run(): Starting single run monitoring`);
+        logger.info(
+          `[DEBUG] Application.run(): Starting single run monitoring`,
+        );
         await monitor.monitor();
-        logger.info(`[DEBUG] Application.run(): Single run monitoring completed`);
+        logger.info(
+          `[DEBUG] Application.run(): Single run monitoring completed`,
+        );
       }
     } finally {
       // Log cancellation state for debugging

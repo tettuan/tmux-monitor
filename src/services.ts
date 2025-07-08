@@ -341,16 +341,26 @@ export class TimeManager {
       } minutes. Press any key to cancel and exit.`,
     );
 
-    logger.info(`[DEBUG] TimeManager.waitUntilScheduledTime: Starting wait for ${msUntilScheduled}ms`);
-    logger.info(`[DEBUG] TimeManager.waitUntilScheduledTime: Current cancellation state = ${globalCancellationToken.isCancelled()}`);
-    
+    logger.info(
+      `[DEBUG] TimeManager.waitUntilScheduledTime: Starting wait for ${msUntilScheduled}ms`,
+    );
+    logger.info(
+      `[DEBUG] TimeManager.waitUntilScheduledTime: Current cancellation state = ${globalCancellationToken.isCancelled()}`,
+    );
+
     const interrupted = await globalCancellationToken.delay(msUntilScheduled);
-    
-    logger.info(`[DEBUG] TimeManager.waitUntilScheduledTime: delay completed, interrupted = ${interrupted}`);
-    logger.info(`[DEBUG] TimeManager.waitUntilScheduledTime: Post-delay cancellation state = ${globalCancellationToken.isCancelled()}`);
-    
+
+    logger.info(
+      `[DEBUG] TimeManager.waitUntilScheduledTime: delay completed, interrupted = ${interrupted}`,
+    );
+    logger.info(
+      `[DEBUG] TimeManager.waitUntilScheduledTime: Post-delay cancellation state = ${globalCancellationToken.isCancelled()}`,
+    );
+
     if (interrupted) {
-      logger.info("[DEBUG] TimeManager.waitUntilScheduledTime: Returning failure due to interruption");
+      logger.info(
+        "[DEBUG] TimeManager.waitUntilScheduledTime: Returning failure due to interruption",
+      );
       return {
         ok: false,
         error: createError({
@@ -360,7 +370,9 @@ export class TimeManager {
       };
     }
 
-    logger.info("[DEBUG] TimeManager.waitUntilScheduledTime: Returning success");
+    logger.info(
+      "[DEBUG] TimeManager.waitUntilScheduledTime: Returning success",
+    );
     return { ok: true, data: undefined };
   }
 }

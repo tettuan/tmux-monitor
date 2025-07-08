@@ -1,11 +1,16 @@
 import { TIMING } from "./config.ts";
 import { Pane, type WorkerStatus } from "./models.ts";
 import type { TmuxSession } from "./session.ts";
-import type { PaneManager, PaneStatusManager, PaneDataProcessor, StatusAnalyzer } from "./panes.ts";
+import type {
+  PaneDataProcessor,
+  PaneManager,
+  PaneStatusManager,
+  StatusAnalyzer,
+} from "./panes.ts";
 import { MessageGenerator, type PaneCommunicator } from "./communication.ts";
 import type { PaneDisplayer } from "./display.ts";
 import type { CIManager } from "./ci.ts";
-import type { TimeManager, RuntimeTracker, KeyboardHandler } from "./types.ts";
+import type { KeyboardHandler, RuntimeTracker, TimeManager } from "./types.ts";
 import type { Logger } from "./services.ts";
 import { globalCancellationToken } from "./cancellation.ts";
 
@@ -38,14 +43,22 @@ export class MonitoringEngine {
   }
 
   async sendInstructionFileToMainPane(): Promise<void> {
-    this.logger.info(`[DEBUG] sendInstructionFileToMainPane: instructionFile = ${this.instructionFile}`);
+    this.logger.info(
+      `[DEBUG] sendInstructionFileToMainPane: instructionFile = ${this.instructionFile}`,
+    );
     if (!this.instructionFile) {
-      this.logger.info(`[DEBUG] sendInstructionFileToMainPane: No instruction file specified`);
+      this.logger.info(
+        `[DEBUG] sendInstructionFileToMainPane: No instruction file specified`,
+      );
       return;
     }
 
     const mainPane = this.paneManager.getMainPane();
-    this.logger.info(`[DEBUG] sendInstructionFileToMainPane: mainPane = ${mainPane ? mainPane.id : 'null'}`);
+    this.logger.info(
+      `[DEBUG] sendInstructionFileToMainPane: mainPane = ${
+        mainPane ? mainPane.id : "null"
+      }`,
+    );
     if (!mainPane) {
       this.logger.error("Main pane not found for instruction file");
       return;
@@ -152,7 +165,9 @@ export class MonitoringEngine {
         this.logger,
       );
       if (paneDetailResult.ok) {
-        const currentStatus = this.statusAnalyzer.determineStatus(paneDetailResult.data);
+        const currentStatus = this.statusAnalyzer.determineStatus(
+          paneDetailResult.data,
+        );
         this.statusManager.updateStatus(pane.id, currentStatus);
       }
     }
@@ -295,7 +310,8 @@ export class MonitoringEngine {
     // Get current status for each pane
     const statusResults: Array<{ pane: Pane; status: WorkerStatus }> = [];
     for (const pane of targetPanes) {
-      const status = this.statusManager.getStatus(pane.id) || { kind: "UNKNOWN" as const };
+      const status = this.statusManager.getStatus(pane.id) ||
+        { kind: "UNKNOWN" as const };
       statusResults.push({ pane, status });
     }
 
@@ -370,25 +386,35 @@ export class MonitoringEngine {
   }
 
   async monitor(): Promise<void> {
-    this.logger.info(`[DEBUG] monitor() started: cancellation state = ${globalCancellationToken.isCancelled()}`);
-    
+    this.logger.info(
+      `[DEBUG] monitor() started: cancellation state = ${globalCancellationToken.isCancelled()}`,
+    );
+
     // If scheduled time is set, wait for it first
     if (this.scheduledTime) {
-      this.logger.info(`[DEBUG] Before waitUntilScheduledTime: cancellation state = ${globalCancellationToken.isCancelled()}`);
+      this.logger.info(
+        `[DEBUG] Before waitUntilScheduledTime: cancellation state = ${globalCancellationToken.isCancelled()}`,
+      );
       try {
         const waitResult = await this.timeManager.waitUntilScheduledTime(
           this.scheduledTime,
           this.logger,
           this.keyboardHandler,
         );
-        this.logger.info(`[DEBUG] After waitUntilScheduledTime: waitResult.ok = ${waitResult.ok}, cancellation state = ${globalCancellationToken.isCancelled()}`);
+        this.logger.info(
+          `[DEBUG] After waitUntilScheduledTime: waitResult.ok = ${waitResult.ok}, cancellation state = ${globalCancellationToken.isCancelled()}`,
+        );
         if (!waitResult.ok) {
-          this.logger.info(`[DEBUG] waitResult failed with error: ${waitResult.error.message}`);
+          this.logger.info(
+            `[DEBUG] waitResult failed with error: ${waitResult.error.message}`,
+          );
           this.logger.info("Monitoring cancelled by user input. Exiting...");
           return;
         }
       } catch (error) {
-        this.logger.error(`[DEBUG] waitUntilScheduledTime threw exception: ${error}`);
+        this.logger.error(
+          `[DEBUG] waitUntilScheduledTime threw exception: ${error}`,
+        );
         return;
       }
       this.scheduledTime = null; // Clear after first use
@@ -435,18 +461,26 @@ export class MonitoringEngine {
       );
 
       // Check for cancellation
-      this.logger.info(`[DEBUG] Before cancellation check: cancellation state = ${globalCancellationToken.isCancelled()}, reason = ${globalCancellationToken.getReason()}`);
+      this.logger.info(
+        `[DEBUG] Before cancellation check: cancellation state = ${globalCancellationToken.isCancelled()}, reason = ${globalCancellationToken.getReason()}`,
+      );
       if (globalCancellationToken.isCancelled()) {
         this.logger.info("Monitoring cancelled by user input. Exiting...");
         return;
       }
 
       // 2. Send instruction file to main pane (only once)
-      this.logger.info(`[DEBUG] Checking instruction file: instructionFile = ${this.instructionFile}`);
+      this.logger.info(
+        `[DEBUG] Checking instruction file: instructionFile = ${this.instructionFile}`,
+      );
       if (this.instructionFile) {
         this.logger.info(`[DEBUG] About to send instruction file to main pane`);
         const mainPaneBeforeSend = this.paneManager.getMainPane();
-        this.logger.info(`[DEBUG] Main pane before send: ${mainPaneBeforeSend ? mainPaneBeforeSend.id : 'null'}`);
+        this.logger.info(
+          `[DEBUG] Main pane before send: ${
+            mainPaneBeforeSend ? mainPaneBeforeSend.id : "null"
+          }`,
+        );
         await this.sendInstructionFileToMainPane();
         this.instructionFile = null;
         this.logger.info(`[DEBUG] Instruction file sent and cleared`);
