@@ -133,6 +133,7 @@ export class DIContainer {
       this.get("paneDataProcessor"),
       this.get("statusAnalyzer"),
       this.get("messageGenerator"),
+      this.get("commandExecutor"),
       this.get("logger"),
       scheduledTime,
       instructionFile,

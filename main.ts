@@ -37,6 +37,9 @@
  *
  * # With instruction file (requires read permission)
  * deno run --allow-run --allow-read jsr:@aidevtool/tmux-monitor --instruction=./startup.txt
+ *
+ * # With clear command for Node.js panes (requires run permission)
+ * deno run --allow-run jsr:@aidevtool/tmux-monitor --clear
  * ```
  *
  * ### Global Installation
@@ -49,6 +52,7 @@
  * tmux-monitor --onetime
  * tmux-monitor --time=14:30
  * tmux-monitor --instruction=./startup.txt
+ * tmux-monitor --clear
  * ```
  *
  * ## CLI Options
@@ -56,6 +60,7 @@
  * - `--time=HH:MM` or `-t HH:MM`: Schedule monitoring start time
  * - `--instruction=PATH` or `-i PATH`: Load instruction file with startup commands
  * - `--kill-all-panes`: Safely terminate all tmux panes (SIGTERM first, then SIGKILL)
+ * - `--clear`: Send "/clear" command to Node.js panes only (one-time execution then exit)
  *
  * ## Default Behavior
  * - **Continuous Monitoring**: Runs 5-minute monitoring cycles for 4 hours (as per requirements.md)

@@ -94,6 +94,19 @@ export class Application {
       return;
     }
 
+    // Handle clear-panes option early
+    if (options.shouldClearPanes()) {
+      logger.info(
+        "Clear panes option detected - sending /clear commands to Node.js panes...",
+      );
+      const engine = this.container.createMonitoringEngine(options);
+      await engine.clearNodePanes();
+      
+      logger.info("Clear panes operation completed");
+      // Exit early after clearing panes
+      return;
+    }
+
     // Get scheduled time before logging startup information
     const scheduledTime = options.getScheduledTime();
 

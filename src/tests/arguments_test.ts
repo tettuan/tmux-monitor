@@ -308,3 +308,62 @@ Deno.test("ArgumentParser: parse() - onetime with time flag", () => {
 
   restoreMockArgs();
 });
+
+Deno.test("ArgumentParser: parse() - clear flag --clear", () => {
+  setupMockArgs(["--clear"]);
+
+  const timeManager = new MockTimeManager();
+  const logger = new MockLogger();
+  const parser = new ArgumentParser(timeManager, logger);
+
+  const result = parser.parse();
+
+  assert(result.ok);
+  assert(!result.data.isContinuous()); // --clear forces one-time mode
+  assertEquals(result.data.shouldClearPanes(), true);
+  assertEquals(result.data.shouldKillAllPanes(), false);
+  assertEquals(result.data.getScheduledTime(), null);
+  assertEquals(result.data.getInstructionFile(), null);
+
+  restoreMockArgs();
+});
+
+Deno.test("ArgumentParser: parse() - clear with other options", () => {
+  setupMockArgs(["--clear", "--time=16:30", "--instruction=test.txt"]);
+
+  const timeManager = new MockTimeManager();
+  const logger = new MockLogger();
+  const parser = new ArgumentParser(timeManager, logger);
+
+  const result = parser.parse();
+
+  assert(result.ok);
+  assert(!result.data.isContinuous()); // --clear forces one-time mode
+  assertEquals(result.data.shouldClearPanes(), true);
+  assertEquals(result.data.shouldKillAllPanes(), false);
+  
+  const scheduledTime = result.data.getScheduledTime();
+  assertExists(scheduledTime);
+  assertEquals(scheduledTime.getHours(), 16);
+  assertEquals(scheduledTime.getMinutes(), 30);
+  assertEquals(result.data.getInstructionFile(), "test.txt");
+
+  restoreMockArgs();
+});
+
+Deno.test("ArgumentParser: parse() - clear and kill-all-panes together", () => {
+  setupMockArgs(["--clear", "--kill-all-panes"]);
+
+  const timeManager = new MockTimeManager();
+  const logger = new MockLogger();
+  const parser = new ArgumentParser(timeManager, logger);
+
+  const result = parser.parse();
+
+  assert(result.ok);
+  assert(!result.data.isContinuous()); // --clear forces one-time mode
+  assertEquals(result.data.shouldClearPanes(), true);
+  assertEquals(result.data.shouldKillAllPanes(), true);
+
+  restoreMockArgs();
+});

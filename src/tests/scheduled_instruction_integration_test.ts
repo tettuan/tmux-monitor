@@ -115,6 +115,8 @@ Deno.test("MonitoringOptions - スケジュール実行+指示書の設定", () 
     false,
     scheduledTime,
     instructionFile,
+    false, // killAllPanes
+    false, // clearPanes
   );
 
   assertEquals(options.mode.kind, "Scheduled");
@@ -132,6 +134,8 @@ Deno.test("MonitoringOptions - 継続監視+スケジュール+指示書", () =>
     true,
     scheduledTime,
     instructionFile,
+    false, // killAllPanes  
+    false, // clearPanes
   );
 
   assertEquals(options.mode.kind, "ScheduledContinuous");

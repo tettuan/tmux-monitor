@@ -11,7 +11,7 @@ import { MessageGenerator, type PaneCommunicator } from "./communication.ts";
 import type { PaneDisplayer } from "./display.ts";
 import type { CIManager } from "./ci.ts";
 import type { KeyboardHandler, RuntimeTracker, TimeManager } from "./types.ts";
-import type { Logger } from "./services.ts";
+import type { CommandExecutor, Logger } from "./services.ts";
 import { globalCancellationToken } from "./cancellation.ts";
 
 /**
@@ -34,6 +34,7 @@ export class MonitoringEngine {
     private paneDataProcessor: PaneDataProcessor,
     private statusAnalyzer: StatusAnalyzer,
     private messageGenerator: MessageGenerator,
+    private commandExecutor: CommandExecutor,
     private logger: Logger,
     scheduledTime?: Date | null,
     instructionFile?: string | null,
@@ -752,6 +753,106 @@ export class MonitoringEngine {
       this.logger.info("One-time monitoring completed successfully");
     } catch (error) {
       this.logger.error("One-time monitoring error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear Node.js panes by sending /clear command followed by Enter
+   * This method only targets panes running Node.js processes (where Claude is likely running)
+   */
+  async clearNodePanes(): Promise<void> {
+    this.logger.info("Starting Node.js pane clearing process...");
+
+    try {
+      // 1. Get session and panes
+      const sessionResult = await this.session.findMostActiveSession();
+      if (!sessionResult.ok) {
+        this.logger.error(
+          `Failed to find session: ${sessionResult.error.message}`,
+        );
+        return;
+      }
+
+      const panesResult = await this.session.getAllPanes(sessionResult.data);
+      if (!panesResult.ok) {
+        this.logger.error(`Failed to get panes: ${panesResult.error.message}`);
+        return;
+      }
+
+      this.paneManager.separate(
+        panesResult.data.map((pd) => {
+          const paneResult = Pane.create(
+            pd.paneId,
+            pd.active === "1",
+            pd.currentCommand,
+            pd.title,
+          );
+          return paneResult.ok ? paneResult.data : null;
+        }).filter((p): p is Pane => p !== null),
+      );
+
+      const allPanes = this.paneManager.getTargetPanes();
+      const mainPane = this.paneManager.getMainPane();
+
+      // Add main pane to the list if it exists
+      if (mainPane) {
+        allPanes.push(mainPane);
+      }
+
+      // 2. Filter for Node.js panes
+      const nodePanes: string[] = [];
+      for (const pane of allPanes) {
+        const command = pane.getCommand() || "";
+        if (this.statusAnalyzer.isNodeCommand(command)) {
+          nodePanes.push(pane.id);
+          this.logger.info(`Found Node.js pane ${pane.id} running: ${command}`);
+        } else {
+          this.logger.info(`Skipping non-Node.js pane ${pane.id} running: ${command}`);
+        }
+      }
+
+      if (nodePanes.length === 0) {
+        this.logger.info("No Node.js panes found - nothing to clear");
+        return;
+      }
+
+      this.logger.info(`Found ${nodePanes.length} Node.js panes to clear: ${nodePanes.join(", ")}`);
+
+      // 3. Send /clear command to each Node.js pane
+      for (const paneId of nodePanes) {
+        this.logger.info(`Sending /clear to pane ${paneId}...`);
+        
+        // Send /clear command
+        const clearResult = await this.communicator.sendToPane(paneId, "/clear");
+        if (!clearResult.ok) {
+          this.logger.warn(
+            `Failed to send /clear to pane ${paneId}: ${clearResult.error.message}`,
+          );
+          continue;
+        }
+
+        // Send Enter key separately using CommandExecutor
+        const enterResult = await this.commandExecutor.execute([
+          "tmux",
+          "send-keys",
+          "-t",
+          paneId,
+          "Enter",
+        ]);
+        if (!enterResult.ok) {
+          this.logger.warn(
+            `Failed to send Enter to pane ${paneId}: ${enterResult.error.message}`,
+          );
+        } else {
+          this.logger.info(`Successfully sent /clear + Enter to pane ${paneId}`);
+        }
+      }
+
+      this.logger.info(`Clear operation completed for ${nodePanes.length} Node.js panes`);
+
+    } catch (error) {
+      this.logger.error("Error during Node.js pane clearing:", error);
       throw error;
     }
   }

@@ -384,6 +384,7 @@ Deno.test("MonitoringOptions.create - single run", () => {
   assertEquals(options.isContinuous(), false);
   assertEquals(options.isScheduled(), false);
   assertEquals(options.shouldKillAllPanes(), false);
+  assertEquals(options.shouldClearPanes(), false);
   assertEquals(options.getScheduledTime(), null);
   assertEquals(options.getInstructionFile(), null);
 });
@@ -395,6 +396,7 @@ Deno.test("MonitoringOptions.create - continuous", () => {
   assertEquals(options.isContinuous(), true);
   assertEquals(options.isScheduled(), false);
   assertEquals(options.shouldKillAllPanes(), false);
+  assertEquals(options.shouldClearPanes(), false);
   assertEquals(options.getScheduledTime(), null);
   assertEquals(options.getInstructionFile(), null);
 });
@@ -407,6 +409,7 @@ Deno.test("MonitoringOptions.create - scheduled", () => {
   assertEquals(options.isContinuous(), false);
   assertEquals(options.isScheduled(), true);
   assertEquals(options.shouldKillAllPanes(), false);
+  assertEquals(options.shouldClearPanes(), false);
   assertEquals(options.getScheduledTime(), scheduledTime);
   assertEquals(options.getInstructionFile(), null);
 });
@@ -419,6 +422,7 @@ Deno.test("MonitoringOptions.create - scheduled continuous", () => {
   assertEquals(options.isContinuous(), true);
   assertEquals(options.isScheduled(), true);
   assertEquals(options.shouldKillAllPanes(), false);
+  assertEquals(options.shouldClearPanes(), false);
   assertEquals(options.getScheduledTime(), scheduledTime);
   assertEquals(options.getInstructionFile(), null);
 });
@@ -430,6 +434,7 @@ Deno.test("MonitoringOptions.create - with instruction file", () => {
   assertEquals(options.isContinuous(), false);
   assertEquals(options.isScheduled(), false);
   assertEquals(options.shouldKillAllPanes(), false);
+  assertEquals(options.shouldClearPanes(), false);
   assertEquals(options.getScheduledTime(), null);
   assertEquals(options.getInstructionFile(), "test.md");
 });
@@ -442,6 +447,7 @@ Deno.test("MonitoringOptions.create - all options", () => {
   assertEquals(options.isContinuous(), true);
   assertEquals(options.isScheduled(), true);
   assertEquals(options.shouldKillAllPanes(), false);
+  assertEquals(options.shouldClearPanes(), false);
   assertEquals(options.getScheduledTime(), scheduledTime);
   assertEquals(options.getInstructionFile(), "test.md");
 });

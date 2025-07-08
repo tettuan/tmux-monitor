@@ -222,6 +222,7 @@ export class MonitoringOptions {
     readonly mode: MonitoringMode,
     readonly instruction: InstructionConfig,
     readonly killAllPanes: boolean = false,
+    readonly clearPanes: boolean = false,
   ) {}
 
   static create(
@@ -229,6 +230,7 @@ export class MonitoringOptions {
     scheduledTime: Date | null,
     instructionFile: string | null,
     killAllPanes: boolean = false,
+    clearPanes: boolean = false,
   ): MonitoringOptions {
     let mode: MonitoringMode;
     if (scheduledTime) {
@@ -243,7 +245,7 @@ export class MonitoringOptions {
       ? { kind: "WithFile", filePath: instructionFile }
       : { kind: "None" };
 
-    return new MonitoringOptions(mode, instruction, killAllPanes);
+    return new MonitoringOptions(mode, instruction, killAllPanes, clearPanes);
   }
 
   isContinuous(): boolean {
@@ -258,6 +260,10 @@ export class MonitoringOptions {
 
   shouldKillAllPanes(): boolean {
     return this.killAllPanes;
+  }
+
+  shouldClearPanes(): boolean {
+    return this.clearPanes;
   }
 
   getScheduledTime(): Date | null {
