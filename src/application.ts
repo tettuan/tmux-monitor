@@ -141,7 +141,7 @@ export class Application {
         // logger.info(
         //   `[DEBUG] Application.run(): Single run monitoring completed`,
         // );
-        
+
         // For onetime mode, explicitly signal completion
         // logger.info("[DEBUG] Application.run(): Signaling immediate exit for onetime mode");
         globalCancellationToken.cancel("Onetime monitoring completed");
@@ -160,7 +160,7 @@ export class Application {
       // console.log(`[DEBUG] Application.run(): Starting cleanup`);
       keyboardHandler.cleanup();
       // console.log(`[DEBUG] Application.run(): Cleanup completed`);
-      
+
       // For onetime mode, ensure immediate exit after cleanup
       if (!options.isContinuous()) {
         // console.log(`[DEBUG] Application.run(): Onetime mode - forcing immediate exit`);

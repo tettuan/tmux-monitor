@@ -47,7 +47,7 @@ export class ArgumentParser {
 
     // Check for one-time mode override (--onetime)
     const oneTime = args.includes("--onetime") || args.includes("-o");
-    
+
     // Default to continuous monitoring mode unless --onetime is specified
     const continuous = !oneTime;
     const options = MonitoringOptions.create(

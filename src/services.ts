@@ -533,7 +533,7 @@ export class KeyboardInterruptHandler {
     // console.log(
     //   `[DEBUG] KeyboardInterruptHandler.cleanup(): Cleanup completed`,
     // );
-    
+
     // For onetime mode, force cleanup of any remaining listeners
     if (globalCancellationToken.isCancelled()) {
       // console.log(

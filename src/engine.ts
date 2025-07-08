@@ -665,7 +665,9 @@ export class MonitoringEngine {
       // 1. Get session and panes
       const sessionResult = await this.session.findMostActiveSession();
       if (!sessionResult.ok) {
-        this.logger.error(`Failed to find session: ${sessionResult.error.message}`);
+        this.logger.error(
+          `Failed to find session: ${sessionResult.error.message}`,
+        );
         return;
       }
 
@@ -689,7 +691,9 @@ export class MonitoringEngine {
 
       // Check for cancellation
       if (globalCancellationToken.isCancelled()) {
-        this.logger.info("One-time monitoring cancelled by user input. Exiting...");
+        this.logger.info(
+          "One-time monitoring cancelled by user input. Exiting...",
+        );
         return;
       }
 

@@ -61,41 +61,9 @@ Deno.test("ArgumentParser: parse() - no arguments", () => {
   const result = parser.parse();
 
   assert(result.ok);
-  assert(!result.data.isContinuous());
+  assert(result.data.isContinuous()); // Default is now continuous mode
   assertEquals(result.data.getScheduledTime(), null);
   assertEquals(result.data.getInstructionFile(), null);
-
-  restoreMockArgs();
-});
-
-Deno.test("ArgumentParser: parse() - continuous flag --continuous", () => {
-  setupMockArgs(["--continuous"]);
-
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
-
-  const result = parser.parse();
-
-  assert(result.ok);
-  assert(result.data.isContinuous());
-  assertEquals(result.data.getScheduledTime(), null);
-  assertEquals(result.data.getInstructionFile(), null);
-
-  restoreMockArgs();
-});
-
-Deno.test("ArgumentParser: parse() - continuous flag -c", () => {
-  setupMockArgs(["-c"]);
-
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
-
-  const result = parser.parse();
-
-  assert(result.ok);
-  assert(result.data.isContinuous());
 
   restoreMockArgs();
 });
@@ -110,7 +78,7 @@ Deno.test("ArgumentParser: parse() - time flag --time=HH:MM", () => {
   const result = parser.parse();
 
   assert(result.ok);
-  assert(!result.data.isContinuous());
+  assert(result.data.isContinuous()); // Default is continuous mode unless --onetime specified
 
   const scheduledTime = result.data.getScheduledTime();
   assertExists(scheduledTime);
@@ -283,6 +251,60 @@ Deno.test("ArgumentParser: parse() - edge case empty instruction string", () => 
 
   assert(result.ok);
   assertEquals(result.data.getInstructionFile(), null);
+
+  restoreMockArgs();
+});
+
+Deno.test("ArgumentParser: parse() - onetime flag --onetime", () => {
+  setupMockArgs(["--onetime"]);
+
+  const timeManager = new MockTimeManager();
+  const logger = new MockLogger();
+  const parser = new ArgumentParser(timeManager, logger);
+
+  const result = parser.parse();
+
+  assert(result.ok);
+  assert(!result.data.isContinuous()); // --onetime overrides default continuous mode
+  assertEquals(result.data.getScheduledTime(), null);
+  assertEquals(result.data.getInstructionFile(), null);
+
+  restoreMockArgs();
+});
+
+Deno.test("ArgumentParser: parse() - onetime flag -o", () => {
+  setupMockArgs(["-o"]);
+
+  const timeManager = new MockTimeManager();
+  const logger = new MockLogger();
+  const parser = new ArgumentParser(timeManager, logger);
+
+  const result = parser.parse();
+
+  assert(result.ok);
+  assert(!result.data.isContinuous()); // -o overrides default continuous mode
+  assertEquals(result.data.getScheduledTime(), null);
+  assertEquals(result.data.getInstructionFile(), null);
+
+  restoreMockArgs();
+});
+
+Deno.test("ArgumentParser: parse() - onetime with time flag", () => {
+  setupMockArgs(["--onetime", "--time=15:45"]);
+
+  const timeManager = new MockTimeManager();
+  const logger = new MockLogger();
+  const parser = new ArgumentParser(timeManager, logger);
+
+  const result = parser.parse();
+
+  assert(result.ok);
+  assert(!result.data.isContinuous()); // --onetime overrides continuous mode
+
+  const scheduledTime = result.data.getScheduledTime();
+  assertExists(scheduledTime);
+  assertEquals(scheduledTime.getHours(), 15);
+  assertEquals(scheduledTime.getMinutes(), 45);
 
   restoreMockArgs();
 });

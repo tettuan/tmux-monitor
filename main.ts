@@ -105,7 +105,7 @@ async function main(): Promise<void> {
     await app.run();
 
     logger.info("Application completed successfully");
-    
+
     // Force exit for CLI to ensure clean termination
     // This is necessary because some async handlers might keep the process alive
     // logger.info("[DEBUG] Forcing process exit for clean CLI termination");
