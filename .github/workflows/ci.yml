@@ -30,6 +30,9 @@ jobs:
       - name: Type check
         run: deno check mod.ts main.ts
 
+      - name: Install tmux for testing
+        run: sudo apt-get update && sudo apt-get install -y tmux
+
       - name: Run tests
         run: deno test --allow-all --coverage=coverage/
 

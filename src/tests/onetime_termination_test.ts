@@ -19,10 +19,16 @@ Deno.test("onetime option - confirms normal termination within timeout", async (
 
   const startTime = Date.now();
 
+  // Check if we're in CI environment
+  const isCI = Deno.env.get("CI") === "true" ||
+    Deno.env.get("GITHUB_ACTIONS") === "true" ||
+    Deno.env.get("CONTINUOUS_INTEGRATION") === "true";
+
   const command = new Deno.Command("deno", {
-    args: ["run", "--allow-run", "main.ts", "--onetime"],
+    args: ["run", "--allow-run", "--allow-env", "main.ts", "--onetime"],
     stdout: "piped",
     stderr: "piped",
+    env: isCI ? { "CI": "true" } : undefined, // Ensure CI env is set in CI
   });
 
   const child = command.spawn();
@@ -77,17 +83,25 @@ Deno.test("onetime option - confirms normal termination within timeout", async (
     // Check output contains expected messages
     const decoder = new TextDecoder();
     const stdout = decoder.decode(result.stdout);
+    const stderr = decoder.decode(result.stderr);
+
+    console.log(`[TEST] STDOUT: ${JSON.stringify(stdout)}`);
+    console.log(`[TEST] STDERR: ${JSON.stringify(stderr)}`);
 
     assertEquals(
       stdout.includes("One-time monitoring completed successfully"),
       true,
-      "Output should contain onetime completion message",
+      `Output should contain onetime completion message. Actual stdout: ${
+        JSON.stringify(stdout)
+      }`,
     );
 
     assertEquals(
       stdout.includes("Application completed successfully"),
       true,
-      "Output should contain application completion message",
+      `Output should contain application completion message. Actual stdout: ${
+        JSON.stringify(stdout)
+      }`,
     );
 
     console.log(
@@ -120,7 +134,7 @@ Deno.test("continuous mode verification - should NOT exit quickly", async () => 
   const startTime = Date.now();
 
   const command = new Deno.Command("deno", {
-    args: ["run", "--allow-run", "main.ts"], // default continuous mode (no --onetime)
+    args: ["run", "--allow-run", "--allow-env", "main.ts"], // default continuous mode (no --onetime)
     stdout: "piped",
     stderr: "piped",
   });
@@ -223,6 +237,8 @@ Deno.test("time and instruction options - compatibility test", async () => {
         "run",
         "--allow-run",
         "--allow-read",
+        "--allow-write",
+        "--allow-env",
         "main.ts",
         "--onetime",
         timeArg,
@@ -291,24 +307,34 @@ Deno.test("time and instruction options - compatibility test", async () => {
       // Check output contains expected messages
       const decoder = new TextDecoder();
       const stdout = decoder.decode(result.stdout);
+      const stderr = decoder.decode(result.stderr);
+
+      console.log(`[TEST] STDOUT: ${JSON.stringify(stdout)}`);
+      console.log(`[TEST] STDERR: ${JSON.stringify(stderr)}`);
 
       assertEquals(
         stdout.includes("Scheduled execution time:") ||
           stdout.includes("Scheduled time has already passed"),
         true,
-        "Output should contain scheduled time message or past time message",
+        `Output should contain scheduled time message or past time message. Actual stdout: ${
+          JSON.stringify(stdout)
+        }`,
       );
 
       assertEquals(
         stdout.includes("Instruction file specified:"),
         true,
-        "Output should contain instruction file message",
+        `Output should contain instruction file message. Actual stdout: ${
+          JSON.stringify(stdout)
+        }`,
       );
 
       assertEquals(
         stdout.includes("One-time monitoring completed successfully"),
         true,
-        "Output should contain onetime completion message",
+        `Output should contain onetime completion message. Actual stdout: ${
+          JSON.stringify(stdout)
+        }`,
       );
 
       console.log(
@@ -358,7 +384,14 @@ Deno.test("time option - past time gets scheduled for next day", async () => {
   const startTime = Date.now();
 
   const command = new Deno.Command("deno", {
-    args: ["run", "--allow-run", "main.ts", "--onetime", timeArg],
+    args: [
+      "run",
+      "--allow-run",
+      "--allow-env",
+      "main.ts",
+      "--onetime",
+      timeArg,
+    ],
     stdout: "piped",
     stderr: "piped",
   });
