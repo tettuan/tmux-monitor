@@ -153,23 +153,31 @@ if [[ "$git_tag_ver" != "0.0.0" && "$jsr_ver" != "0.0.0" ]]; then
   lowest_version=$(version_compare "$git_tag_ver" "$jsr_ver")
   if [[ "$lowest_version" == "$jsr_ver" && "$git_tag_ver" != "$jsr_ver" ]]; then
     echo "⚠️  Warning: Git tag version ($git_tag_ver) is greater than JSR version ($jsr_ver)"
-    echo "This indicates an inconsistent state. The Git tag should be removed."
+    echo "This indicates an inconsistent state. The Git tag should be removed from both local and remote repositories."
     
-    # Confirm deletion
-    echo "Do you want to delete the Git tag v$git_tag_ver? (y/N)"
+    # Confirm deletion of both local and remote tags
+    echo "Do you want to delete the Git tag v$git_tag_ver from both local and remote repositories? (y/N)"
     read -r response
     if [[ "$response" =~ ^[Yy]$ ]]; then
       echo "Deleting local Git tag v$git_tag_ver..."
-      git tag -d "v$git_tag_ver" || echo "Warning: Failed to delete local tag"
+      if git tag -d "v$git_tag_ver"; then
+        echo "✓ Local Git tag v$git_tag_ver deleted successfully"
+      else
+        echo "⚠️ Warning: Failed to delete local tag v$git_tag_ver"
+      fi
       
       echo "Deleting remote Git tag v$git_tag_ver..."
-      git push origin ":refs/tags/v$git_tag_ver" || echo "Warning: Failed to delete remote tag"
+      if git push origin ":refs/tags/v$git_tag_ver"; then
+        echo "✓ Remote Git tag v$git_tag_ver deleted successfully"
+      else
+        echo "⚠️ Warning: Failed to delete remote tag v$git_tag_ver (it may not exist on remote)"
+      fi
       
       # Re-fetch tags and update latest_tag
       git fetch --tags
       latest_tag=$(git tag --list 'v*' | sed 's/^v//' | sort -V | tail -n 1 2>/dev/null || echo "0.0.0")
       git_tag_ver="$latest_tag"
-      echo "Updated Git tag version: $git_tag_ver"
+      echo "Updated Git tag version after cleanup: $git_tag_ver"
     else
       echo "Git tag deletion cancelled. Please resolve version inconsistency manually."
       echo "JSR version: $jsr_ver, Git tag: $git_tag_ver"
