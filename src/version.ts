@@ -5,7 +5,7 @@
  * The current version of tmux-monitor, synchronized with deno.json.
  * @module
  */
-export const VERSION = "1.0.3";
+export const VERSION = "1.0.4";
 
 /**
  * Returns the current version string.
