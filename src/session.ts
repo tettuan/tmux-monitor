@@ -18,7 +18,7 @@ export class TmuxSession {
   async findMostActiveSession(): Promise<
     Result<string, ValidationError & { message: string }>
   > {
-    // Get all sessions
+    // Get all sessions with their pane counts
     const sessionsResult = await this.commandExecutor.execute([
       "tmux",
       "list-sessions",
@@ -44,20 +44,59 @@ export class TmuxSession {
       return { ok: false, error: createError({ kind: "EmptyInput" }) };
     }
 
-    let bestSession = "";
-    let maxScore = -1;
+    // Get pane count for each session
+    const sessionPaneCounts = new Map<string, number>();
 
     for (const session of sessions) {
-      const [name, windows, attached] = session.split(":");
-      const windowCount = parseInt(windows) || 0;
-      const attachedCount = parseInt(attached) || 0;
+      const [name] = session.split(":");
+      const panesResult = await this.commandExecutor.execute([
+        "tmux",
+        "list-panes",
+        "-t",
+        name,
+        "-F",
+        "#{pane_id}",
+      ]);
 
-      // Score: prioritize attached sessions and window count
-      const score = (attachedCount * 1000) + windowCount;
+      if (panesResult.ok) {
+        const paneCount = panesResult.data.split("\n").filter((line: string) =>
+          line.trim() !== ""
+        ).length;
+        sessionPaneCounts.set(name, paneCount);
+        this.logger.info(`Session "${name}" has ${paneCount} panes`);
+      } else {
+        sessionPaneCounts.set(name, 0);
+        this.logger.warn(
+          `Failed to get pane count for session "${name}": ${panesResult.error.message}`,
+        );
+      }
+    }
 
-      if (score > maxScore) {
-        maxScore = score;
-        bestSession = name;
+    // Find session with most panes, prefer newer session names if tied
+    let bestSession = "";
+    let maxPaneCount = -1;
+
+    // Sort sessions by name (newer sessions typically have higher names)
+    const sortedSessions = Array.from(sessionPaneCounts.entries()).sort(
+      ([a], [b]) => {
+        // Try to parse as numbers first for proper numeric sorting
+        const aNum = parseInt(a);
+        const bNum = parseInt(b);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return bNum - aNum; // Descending numeric order (newer first)
+        }
+        return b.localeCompare(a); // Descending lexicographic order for non-numeric names
+      },
+    );
+
+    for (const [sessionName, paneCount] of sortedSessions) {
+      if (paneCount > maxPaneCount) {
+        maxPaneCount = paneCount;
+        bestSession = sessionName;
+      } else if (paneCount === maxPaneCount && paneCount > 0) {
+        // Same pane count - keep the first one (which is newer due to sorting)
+        // bestSession is already set to the newer session
+        continue;
       }
     }
 
@@ -72,20 +111,42 @@ export class TmuxSession {
       };
     }
 
+    this.logger.info(
+      `Selected session "${bestSession}" with ${maxPaneCount} panes`,
+    );
     return { ok: true, data: bestSession };
   }
 
   async getAllPanes(
     sessionName: string,
   ): Promise<Result<PaneDetail[], ValidationError & { message: string }>> {
-    const result = await this.commandExecutor.execute([
+    // First, try to get all panes across all sessions to ensure comprehensive detection
+    let result = await this.commandExecutor.execute([
       "tmux",
       "list-panes",
-      "-t",
-      sessionName,
+      "-a", // All sessions
       "-F",
       "#{session_name}:#{window_index}:#{window_name}:#{pane_id}:#{pane_index}:#{pane_tty}:#{pane_pid}:#{pane_current_command}:#{pane_current_path}:#{pane_title}:#{pane_active}:#{window_zoomed_flag}:#{pane_width}:#{pane_height}:#{pane_start_command}",
     ]);
+
+    if (result.ok) {
+      this.logger.info(
+        `Using all panes across all sessions for comprehensive monitoring`,
+      );
+    } else {
+      // Fallback to session-specific if all-sessions fails
+      this.logger.warn(
+        `Failed to get all panes, falling back to session-specific: ${result.error.message}`,
+      );
+      result = await this.commandExecutor.execute([
+        "tmux",
+        "list-panes",
+        "-t",
+        sessionName,
+        "-F",
+        "#{session_name}:#{window_index}:#{window_name}:#{pane_id}:#{pane_index}:#{pane_tty}:#{pane_pid}:#{pane_current_command}:#{pane_current_path}:#{pane_title}:#{pane_active}:#{window_zoomed_flag}:#{pane_width}:#{pane_height}:#{pane_start_command}",
+      ]);
+    }
 
     if (!result.ok) {
       return {
