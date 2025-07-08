@@ -25,7 +25,11 @@ export interface TimeManager {
   getCurrentTime(): Date;
   formatTime(date: Date): string;
   sleep(milliseconds: number): Promise<void>;
-  waitUntilScheduledTime(scheduledTime: Date): Promise<boolean>;
+  waitUntilScheduledTime(
+    scheduledTime: Date,
+    logger: Logger,
+    keyboardHandler: KeyboardHandler,
+  ): Promise<Result<void, ValidationError & { message: string }>>;
 }
 
 export interface Logger {

@@ -38,11 +38,14 @@ export class MonitoringEngine {
   }
 
   async sendInstructionFileToMainPane(): Promise<void> {
+    this.logger.info(`[DEBUG] sendInstructionFileToMainPane: instructionFile = ${this.instructionFile}`);
     if (!this.instructionFile) {
+      this.logger.info(`[DEBUG] sendInstructionFileToMainPane: No instruction file specified`);
       return;
     }
 
     const mainPane = this.paneManager.getMainPane();
+    this.logger.info(`[DEBUG] sendInstructionFileToMainPane: mainPane = ${mainPane ? mainPane.id : 'null'}`);
     if (!mainPane) {
       this.logger.error("Main pane not found for instruction file");
       return;
@@ -367,13 +370,25 @@ export class MonitoringEngine {
   }
 
   async monitor(): Promise<void> {
+    this.logger.info(`[DEBUG] monitor() started: cancellation state = ${globalCancellationToken.isCancelled()}`);
+    
     // If scheduled time is set, wait for it first
     if (this.scheduledTime) {
-      const interrupted = await this.timeManager.waitUntilScheduledTime(
-        this.scheduledTime,
-      );
-      if (interrupted) {
-        this.logger.info("Monitoring cancelled by user input. Exiting...");
+      this.logger.info(`[DEBUG] Before waitUntilScheduledTime: cancellation state = ${globalCancellationToken.isCancelled()}`);
+      try {
+        const waitResult = await this.timeManager.waitUntilScheduledTime(
+          this.scheduledTime,
+          this.logger,
+          this.keyboardHandler,
+        );
+        this.logger.info(`[DEBUG] After waitUntilScheduledTime: waitResult.ok = ${waitResult.ok}, cancellation state = ${globalCancellationToken.isCancelled()}`);
+        if (!waitResult.ok) {
+          this.logger.info(`[DEBUG] waitResult failed with error: ${waitResult.error.message}`);
+          this.logger.info("Monitoring cancelled by user input. Exiting...");
+          return;
+        }
+      } catch (error) {
+        this.logger.error(`[DEBUG] waitUntilScheduledTime threw exception: ${error}`);
         return;
       }
       this.scheduledTime = null; // Clear after first use
@@ -420,15 +435,23 @@ export class MonitoringEngine {
       );
 
       // Check for cancellation
+      this.logger.info(`[DEBUG] Before cancellation check: cancellation state = ${globalCancellationToken.isCancelled()}, reason = ${globalCancellationToken.getReason()}`);
       if (globalCancellationToken.isCancelled()) {
         this.logger.info("Monitoring cancelled by user input. Exiting...");
         return;
       }
 
       // 2. Send instruction file to main pane (only once)
+      this.logger.info(`[DEBUG] Checking instruction file: instructionFile = ${this.instructionFile}`);
       if (this.instructionFile) {
+        this.logger.info(`[DEBUG] About to send instruction file to main pane`);
+        const mainPaneBeforeSend = this.paneManager.getMainPane();
+        this.logger.info(`[DEBUG] Main pane before send: ${mainPaneBeforeSend ? mainPaneBeforeSend.id : 'null'}`);
         await this.sendInstructionFileToMainPane();
         this.instructionFile = null;
+        this.logger.info(`[DEBUG] Instruction file sent and cleared`);
+      } else {
+        this.logger.info(`[DEBUG] No instruction file to send`);
       }
 
       // 3. Process all panes

@@ -291,6 +291,18 @@ export class Logger {
  * ```
  */
 export class TimeManager {
+  getCurrentTime(): Date {
+    return new Date();
+  }
+
+  formatTime(date: Date): string {
+    return date.toLocaleString("ja-JP", {
+      timeZone: "Asia/Tokyo",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
   async sleep(ms: number): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -329,8 +341,16 @@ export class TimeManager {
       } minutes. Press any key to cancel and exit.`,
     );
 
+    logger.info(`[DEBUG] TimeManager.waitUntilScheduledTime: Starting wait for ${msUntilScheduled}ms`);
+    logger.info(`[DEBUG] TimeManager.waitUntilScheduledTime: Current cancellation state = ${globalCancellationToken.isCancelled()}`);
+    
     const interrupted = await globalCancellationToken.delay(msUntilScheduled);
+    
+    logger.info(`[DEBUG] TimeManager.waitUntilScheduledTime: delay completed, interrupted = ${interrupted}`);
+    logger.info(`[DEBUG] TimeManager.waitUntilScheduledTime: Post-delay cancellation state = ${globalCancellationToken.isCancelled()}`);
+    
     if (interrupted) {
+      logger.info("[DEBUG] TimeManager.waitUntilScheduledTime: Returning failure due to interruption");
       return {
         ok: false,
         error: createError({
@@ -340,6 +360,7 @@ export class TimeManager {
       };
     }
 
+    logger.info("[DEBUG] TimeManager.waitUntilScheduledTime: Returning success");
     return { ok: true, data: undefined };
   }
 }

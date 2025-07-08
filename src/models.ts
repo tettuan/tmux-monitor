@@ -202,8 +202,9 @@ export class ValidatedTime {
     const scheduledTime = new Date();
     scheduledTime.setHours(hours, minutes, 0, 0);
 
-    // If the scheduled time has already passed today, schedule for tomorrow
-    if (scheduledTime <= now) {
+    // If the scheduled time has already passed today (with small buffer), schedule for tomorrow
+    const bufferTime = 30 * 1000; // 30 second buffer
+    if (scheduledTime.getTime() <= now.getTime() + bufferTime) {
       scheduledTime.setDate(scheduledTime.getDate() + 1);
     }
 

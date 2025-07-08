@@ -151,7 +151,7 @@ export class CancellationToken {
     }
 
     console.log(
-      `[DEBUG] CancellationToken.delay(): Completed ${ms}ms delay without cancellation`,
+      `[DEBUG] CancellationToken.delay(): Completed ${ms}ms delay without cancellation, final state = ${this.cancelled}`,
     );
     return false; // Not cancelled
   }
