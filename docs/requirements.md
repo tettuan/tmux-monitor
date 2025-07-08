@@ -44,6 +44,7 @@ AI開発において、CLIツーによるコーディングを行っているが
 - **自動セッション発見**: 最もアクティブなtmuxセッションを自動的に選択、id番号が小さい準にmain,manager1,manager2,secretary,workrs*9
 - **WorkerStatus追跡**: WORKING/IDLE/DONE/UNKNOWNの自動判定
 - **スケジュール実行**: Tokyo時間（`--time=HH:MM`）、直近到来する時刻
+- **単発実行**: `--onetime`オプションで初回起動のみで終了
 
 ### 表示・ログ
 - **リアルタイム表示**: ペイン一覧・状態・詳細情報

@@ -341,26 +341,26 @@ export class TimeManager {
       } minutes. Press any key to cancel and exit.`,
     );
 
-    logger.info(
-      `[DEBUG] TimeManager.waitUntilScheduledTime: Starting wait for ${msUntilScheduled}ms`,
-    );
-    logger.info(
-      `[DEBUG] TimeManager.waitUntilScheduledTime: Current cancellation state = ${globalCancellationToken.isCancelled()}`,
-    );
+    // logger.info(
+    //   `[DEBUG] TimeManager.waitUntilScheduledTime: Starting wait for ${msUntilScheduled}ms`,
+    // );
+    // logger.info(
+    //   `[DEBUG] TimeManager.waitUntilScheduledTime: Current cancellation state = ${globalCancellationToken.isCancelled()}`,
+    // );
 
     const interrupted = await globalCancellationToken.delay(msUntilScheduled);
 
-    logger.info(
-      `[DEBUG] TimeManager.waitUntilScheduledTime: delay completed, interrupted = ${interrupted}`,
-    );
-    logger.info(
-      `[DEBUG] TimeManager.waitUntilScheduledTime: Post-delay cancellation state = ${globalCancellationToken.isCancelled()}`,
-    );
+    // logger.info(
+    //   `[DEBUG] TimeManager.waitUntilScheduledTime: delay completed, interrupted = ${interrupted}`,
+    // );
+    // logger.info(
+    //   `[DEBUG] TimeManager.waitUntilScheduledTime: Post-delay cancellation state = ${globalCancellationToken.isCancelled()}`,
+    // );
 
     if (interrupted) {
-      logger.info(
-        "[DEBUG] TimeManager.waitUntilScheduledTime: Returning failure due to interruption",
-      );
+      // logger.info(
+      //   "[DEBUG] TimeManager.waitUntilScheduledTime: Returning failure due to interruption",
+      // );
       return {
         ok: false,
         error: createError({
@@ -370,9 +370,9 @@ export class TimeManager {
       };
     }
 
-    logger.info(
-      "[DEBUG] TimeManager.waitUntilScheduledTime: Returning success",
-    );
+    // logger.info(
+    //   "[DEBUG] TimeManager.waitUntilScheduledTime: Returning success",
+    // );
     return { ok: true, data: undefined };
   }
 }
@@ -414,9 +414,9 @@ export class KeyboardInterruptHandler {
     try {
       // Handle Ctrl+C using Deno's signal API
       Deno.addSignalListener("SIGINT", () => {
-        console.log(
-          `\n[DEBUG] KeyboardInterruptHandler.setup(): Ctrl+C detected - stopping monitoring...`,
-        );
+        // console.log(
+        //   `\n[DEBUG] KeyboardInterruptHandler.setup(): Ctrl+C detected - stopping monitoring...`,
+        // );
         globalCancellationToken.cancel("Ctrl+C signal received");
 
         // Force immediate exit on Ctrl+C
@@ -439,9 +439,9 @@ export class KeyboardInterruptHandler {
   private async startKeyListener(): Promise<void> {
     const buffer = new Uint8Array(1024); // Larger buffer for better key detection
 
-    console.log(
-      `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Starting key listener`,
-    );
+    // console.log(
+    //   `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Starting key listener`,
+    // );
 
     try {
       while (this.isSetup && !globalCancellationToken.isCancelled()) {
@@ -462,24 +462,24 @@ export class KeyboardInterruptHandler {
 
           // Any key press triggers cancellation
           if (bytesRead > 0) {
-            console.log(
-              `\n[DEBUG] KeyboardInterruptHandler.startKeyListener(): Key press detected (${bytesRead} bytes) - stopping monitoring...`,
-            );
+            // console.log(
+            //   `\n[DEBUG] KeyboardInterruptHandler.startKeyListener(): Key press detected (${bytesRead} bytes) - stopping monitoring...`,
+            // );
             globalCancellationToken.cancel("Key press detected");
 
             // Force immediate exit
-            console.log(
-              `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Force exiting application...`,
-            );
+            // console.log(
+            //   `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Force exiting application...`,
+            // );
             this.cleanup();
             console.log(`[INFO] Monitoring stopped by user input. Exiting...`);
             Deno.exit(0);
           }
-        } catch (readError) {
+        } catch (_readError) {
           // Handle read errors gracefully
-          console.log(
-            `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Read error: ${readError}`,
-          );
+          // console.log(
+          //   `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Read error: ${_readError}`,
+          // );
           if (this.isSetup && !globalCancellationToken.isCancelled()) {
             await new Promise((resolve) => setTimeout(resolve, 100));
           } else {
@@ -490,16 +490,16 @@ export class KeyboardInterruptHandler {
     } catch (_error) {
       // Ignore errors during cleanup
       if (this.isSetup && !globalCancellationToken.isCancelled()) {
-        console.log(
-          `\n[DEBUG] KeyboardInterruptHandler.startKeyListener(): Keyboard input interrupted - stopping monitoring...`,
-        );
+        // console.log(
+        //   `\n[DEBUG] KeyboardInterruptHandler.startKeyListener(): Keyboard input interrupted - stopping monitoring...`,
+        // );
         globalCancellationToken.cancel("Keyboard input interrupted");
       }
     }
 
-    console.log(
-      `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Key listener exited (isSetup: ${this.isSetup}, cancelled: ${globalCancellationToken.isCancelled()})`,
-    );
+    // console.log(
+    //   `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Key listener exited (isSetup: ${this.isSetup}, cancelled: ${globalCancellationToken.isCancelled()})`,
+    // );
   }
 
   cleanup(): void {
@@ -507,16 +507,16 @@ export class KeyboardInterruptHandler {
       return;
     }
 
-    console.log(`[DEBUG] KeyboardInterruptHandler.cleanup(): Starting cleanup`);
+    // console.log(`[DEBUG] KeyboardInterruptHandler.cleanup(): Starting cleanup`);
     this.isSetup = false;
 
     // Reset terminal
     if (Deno.stdin.isTerminal()) {
       try {
         Deno.stdin.setRaw(false);
-        console.log(
-          `[DEBUG] KeyboardInterruptHandler.cleanup(): Terminal reset to normal mode`,
-        );
+        // console.log(
+        //   `[DEBUG] KeyboardInterruptHandler.cleanup(): Terminal reset to normal mode`,
+        // );
       } catch (_error) {
         // Ignore errors during cleanup
       }
@@ -524,15 +524,27 @@ export class KeyboardInterruptHandler {
 
     // Wait for key listener to finish
     if (this.keyListenerPromise) {
-      console.log(
-        `[DEBUG] KeyboardInterruptHandler.cleanup(): Waiting for key listener to finish`,
-      );
+      // console.log(
+      //   `[DEBUG] KeyboardInterruptHandler.cleanup(): Waiting for key listener to finish`,
+      // );
       // The key listener will exit naturally when isSetup becomes false
     }
 
-    console.log(
-      `[DEBUG] KeyboardInterruptHandler.cleanup(): Cleanup completed`,
-    );
+    // console.log(
+    //   `[DEBUG] KeyboardInterruptHandler.cleanup(): Cleanup completed`,
+    // );
+    
+    // For onetime mode, force cleanup of any remaining listeners
+    if (globalCancellationToken.isCancelled()) {
+      // console.log(
+      //   `[DEBUG] KeyboardInterruptHandler.cleanup(): Force terminating for immediate exit`,
+      // );
+      // Clear any remaining timers/listeners that might keep the process alive
+      setTimeout(() => {
+        // console.log(`[DEBUG] Final force exit after cleanup delay`);
+        Deno.exit(0);
+      }, 100);
+    }
   }
 
   isCancellationRequested(): boolean {
@@ -548,7 +560,7 @@ export class KeyboardInterruptHandler {
     ms: number,
     _timeManager: TimeManager,
   ): Promise<boolean> {
-    console.log(`[DEBUG] sleepWithCancellation: Starting ${ms}ms sleep`);
+    // console.log(`[DEBUG] sleepWithCancellation: Starting ${ms}ms sleep`);
     return await globalCancellationToken.delay(ms);
   }
 }

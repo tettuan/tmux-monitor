@@ -26,13 +26,13 @@
  *
  * ### Direct Execution from JSR
  * ```bash
- * # Basic monitoring (minimum permissions)
+ * # Basic continuous monitoring (default - 5-minute cycles for 4 hours)
  * deno run --allow-run jsr:@aidevtool/tmux-monitor
  *
- * # Continuous monitoring
- * deno run --allow-run jsr:@aidevtool/tmux-monitor --continuous
+ * # Single run monitoring (one-time discovery and ENTER send then exit)
+ * deno run --allow-run jsr:@aidevtool/tmux-monitor --onetime
  *
- * # Scheduled execution
+ * # Scheduled execution (continuous monitoring starts at specified time)
  * deno run --allow-run jsr:@aidevtool/tmux-monitor --time=14:30
  *
  * # With instruction file (requires read permission)
@@ -46,16 +46,21 @@
  *
  * # Then use anywhere
  * tmux-monitor
- * tmux-monitor --continuous
+ * tmux-monitor --onetime
  * tmux-monitor --time=14:30
  * tmux-monitor --instruction=./startup.txt
  * ```
  *
  * ## CLI Options
- * - `--continuous` or `-c`: Run in continuous monitoring mode
+ * - `--onetime` or `-o`: One-time monitoring (discovery and single ENTER send then exit)
  * - `--time=HH:MM` or `-t HH:MM`: Schedule monitoring start time
  * - `--instruction=PATH` or `-i PATH`: Load instruction file with startup commands
  * - `--kill-all-panes`: Safely terminate all tmux panes (SIGTERM first, then SIGKILL)
+ *
+ * ## Default Behavior
+ * - **Continuous Monitoring**: Runs 5-minute monitoring cycles for 4 hours (as per requirements.md)
+ * - **30-second ENTER cycles**: Keeps panes active during each 5-minute monitoring period
+ * - **Automatic DONE/IDLE cleanup**: Clears completed panes to optimize memory usage
  *
  * ## Required Permissions
  * - `--allow-run`: Execute tmux commands (essential)
@@ -100,6 +105,11 @@ async function main(): Promise<void> {
     await app.run();
 
     logger.info("Application completed successfully");
+    
+    // Force exit for CLI to ensure clean termination
+    // This is necessary because some async handlers might keep the process alive
+    // logger.info("[DEBUG] Forcing process exit for clean CLI termination");
+    Deno.exit(0);
   } catch (error) {
     // This should never happen due to totality principles,
     // but we handle it just in case

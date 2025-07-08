@@ -43,22 +43,22 @@ export class MonitoringEngine {
   }
 
   async sendInstructionFileToMainPane(): Promise<void> {
-    this.logger.info(
-      `[DEBUG] sendInstructionFileToMainPane: instructionFile = ${this.instructionFile}`,
-    );
+    // this.logger.info(
+    //   `[DEBUG] sendInstructionFileToMainPane: instructionFile = ${this.instructionFile}`,
+    // );
     if (!this.instructionFile) {
-      this.logger.info(
-        `[DEBUG] sendInstructionFileToMainPane: No instruction file specified`,
-      );
+      // this.logger.info(
+      //   `[DEBUG] sendInstructionFileToMainPane: No instruction file specified`,
+      // );
       return;
     }
 
     const mainPane = this.paneManager.getMainPane();
-    this.logger.info(
-      `[DEBUG] sendInstructionFileToMainPane: mainPane = ${
-        mainPane ? mainPane.id : "null"
-      }`,
-    );
+    // this.logger.info(
+    //   `[DEBUG] sendInstructionFileToMainPane: mainPane = ${
+    //     mainPane ? mainPane.id : "null"
+    //   }`,
+    // );
     if (!mainPane) {
       this.logger.error("Main pane not found for instruction file");
       return;
@@ -122,7 +122,7 @@ export class MonitoringEngine {
   }
 
   async sendEnterToAllPanesCycle(): Promise<void> {
-    console.log(`[DEBUG] sendEnterToAllPanesCycle: Starting`);
+    // console.log(`[DEBUG] sendEnterToAllPanesCycle: Starting`);
     this.logger.info("Starting 30-second ENTER sending cycle to all panes...");
 
     const targetPanes = this.paneManager.getTargetPanes();
@@ -134,11 +134,11 @@ export class MonitoringEngine {
     for (let i = 0; i < allPanes.length; i++) {
       const pane = allPanes[i];
 
-      console.log(
-        `[DEBUG] sendEnterToAllPanesCycle: Sending ENTER to pane ${
-          i + 1
-        }/${allPanes.length} (${pane.id})`,
-      );
+      // console.log(
+      //   `[DEBUG] sendEnterToAllPanesCycle: Sending ENTER to pane ${
+      //     i + 1
+      //   }/${allPanes.length} (${pane.id})`,
+      // );
       const result = await this.communicator.sendToPane(pane.id, "");
       if (!result.ok) {
         this.logger.warn(
@@ -147,7 +147,7 @@ export class MonitoringEngine {
       }
     }
 
-    console.log(`[DEBUG] sendEnterToAllPanesCycle: Completed successfully`);
+    // console.log(`[DEBUG] sendEnterToAllPanesCycle: Completed successfully`);
     this.logger.info(`ENTER sent to ${allPanes.length} panes`);
   }
 
@@ -386,35 +386,35 @@ export class MonitoringEngine {
   }
 
   async monitor(): Promise<void> {
-    this.logger.info(
-      `[DEBUG] monitor() started: cancellation state = ${globalCancellationToken.isCancelled()}`,
-    );
+    // this.logger.info(
+    //   `[DEBUG] monitor() started: cancellation state = ${globalCancellationToken.isCancelled()}`,
+    // );
 
     // If scheduled time is set, wait for it first
     if (this.scheduledTime) {
-      this.logger.info(
-        `[DEBUG] Before waitUntilScheduledTime: cancellation state = ${globalCancellationToken.isCancelled()}`,
-      );
+      // this.logger.info(
+      //   `[DEBUG] Before waitUntilScheduledTime: cancellation state = ${globalCancellationToken.isCancelled()}`,
+      // );
       try {
         const waitResult = await this.timeManager.waitUntilScheduledTime(
           this.scheduledTime,
           this.logger,
           this.keyboardHandler,
         );
-        this.logger.info(
-          `[DEBUG] After waitUntilScheduledTime: waitResult.ok = ${waitResult.ok}, cancellation state = ${globalCancellationToken.isCancelled()}`,
-        );
+        // this.logger.info(
+        //   `[DEBUG] After waitUntilScheduledTime: waitResult.ok = ${waitResult.ok}, cancellation state = ${globalCancellationToken.isCancelled()}`,
+        // );
         if (!waitResult.ok) {
-          this.logger.info(
-            `[DEBUG] waitResult failed with error: ${waitResult.error.message}`,
-          );
+          // this.logger.info(
+          //   `[DEBUG] waitResult failed with error: ${waitResult.error.message}`,
+          // );
           this.logger.info("Monitoring cancelled by user input. Exiting...");
           return;
         }
-      } catch (error) {
-        this.logger.error(
-          `[DEBUG] waitUntilScheduledTime threw exception: ${error}`,
-        );
+      } catch (_error) {
+        // this.logger.error(
+        //   `[DEBUG] waitUntilScheduledTime threw exception: ${_error}`,
+        // );
         return;
       }
       this.scheduledTime = null; // Clear after first use
@@ -470,22 +470,22 @@ export class MonitoringEngine {
       }
 
       // 2. Send instruction file to main pane (only once)
-      this.logger.info(
-        `[DEBUG] Checking instruction file: instructionFile = ${this.instructionFile}`,
-      );
+      // this.logger.info(
+      //   `[DEBUG] Checking instruction file: instructionFile = ${this.instructionFile}`,
+      // );
       if (this.instructionFile) {
-        this.logger.info(`[DEBUG] About to send instruction file to main pane`);
-        const mainPaneBeforeSend = this.paneManager.getMainPane();
-        this.logger.info(
-          `[DEBUG] Main pane before send: ${
-            mainPaneBeforeSend ? mainPaneBeforeSend.id : "null"
-          }`,
-        );
+        // this.logger.info(`[DEBUG] About to send instruction file to main pane`);
+        // const mainPaneBeforeSend = this.paneManager.getMainPane();
+        // this.logger.info(
+        //   `[DEBUG] Main pane before send: ${
+        //     mainPaneBeforeSend ? mainPaneBeforeSend.id : "null"
+        //   }`,
+        // );
         await this.sendInstructionFileToMainPane();
         this.instructionFile = null;
-        this.logger.info(`[DEBUG] Instruction file sent and cleared`);
+        // this.logger.info(`[DEBUG] Instruction file sent and cleared`);
       } else {
-        this.logger.info(`[DEBUG] No instruction file to send`);
+        // this.logger.info(`[DEBUG] No instruction file to send`);
       }
 
       // 3. Process all panes
@@ -532,23 +532,23 @@ export class MonitoringEngine {
 
       let interrupted = false;
       for (let i = 0; i < monitoringCycles; i++) {
-        console.log(`[DEBUG] Monitoring cycle ${i + 1}/${monitoringCycles}`);
+        // console.log(`[DEBUG] Monitoring cycle ${i + 1}/${monitoringCycles}`);
 
         // Send ENTER to all panes (every 30 seconds)
-        console.log(
-          `[DEBUG] Starting sendEnterToAllPanesCycle for cycle ${i + 1}`,
-        );
+        // console.log(
+        //   `[DEBUG] Starting sendEnterToAllPanesCycle for cycle ${i + 1}`,
+        // );
         await this.sendEnterToAllPanesCycle();
-        console.log(
-          `[DEBUG] Completed sendEnterToAllPanesCycle for cycle ${i + 1}`,
-        );
+        // console.log(
+        //   `[DEBUG] Completed sendEnterToAllPanesCycle for cycle ${i + 1}`,
+        // );
 
         // Wait 30 seconds with cancellation check
-        console.log(
-          `[DEBUG] Starting 30-second sleep with cancellation check for cycle ${
-            i + 1
-          }`,
-        );
+        // console.log(
+        //   `[DEBUG] Starting 30-second sleep with cancellation check for cycle ${
+        //     i + 1
+        //   }`,
+        // );
         interrupted = await this.keyboardHandler.sleepWithCancellation(
           TIMING.ENTER_SEND_CYCLE_DELAY,
         );
@@ -606,7 +606,7 @@ export class MonitoringEngine {
   }
 
   async startContinuousMonitoring(): Promise<void> {
-    console.log(`[DEBUG] startContinuousMonitoring: Starting continuous mode`);
+    // console.log(`[DEBUG] startContinuousMonitoring: Starting continuous mode`);
     this.logger.info(
       "Starting continuous monitoring mode (Press any key to stop, auto-stop after 4 hours)",
     );
@@ -614,29 +614,29 @@ export class MonitoringEngine {
     let cycleCount = 0;
     while (true) {
       cycleCount++;
-      console.log(
-        `[DEBUG] startContinuousMonitoring: Starting cycle ${cycleCount}`,
-      );
+      // console.log(
+      //   `[DEBUG] startContinuousMonitoring: Starting cycle ${cycleCount}`,
+      // );
 
       // Check for 4-hour runtime limit
       const limitCheck = this.runtimeTracker.hasExceededLimit();
       if (!limitCheck.ok) {
-        console.log(
-          `[DEBUG] startContinuousMonitoring: Runtime limit exceeded after ${cycleCount} cycles`,
-        );
+        // console.log(
+        //   `[DEBUG] startContinuousMonitoring: Runtime limit exceeded after ${cycleCount} cycles`,
+        // );
         this.logger.info(
           "Automatic termination due to 4-hour runtime limit. Exiting...",
         );
         break;
       }
 
-      console.log(
-        `[DEBUG] startContinuousMonitoring: Starting monitor() for cycle ${cycleCount}`,
-      );
+      // console.log(
+      //   `[DEBUG] startContinuousMonitoring: Starting monitor() for cycle ${cycleCount}`,
+      // );
       await this.monitor();
-      console.log(
-        `[DEBUG] startContinuousMonitoring: Completed monitor() for cycle ${cycleCount}`,
-      );
+      // console.log(
+      //   `[DEBUG] startContinuousMonitoring: Completed monitor() for cycle ${cycleCount}`,
+      // );
 
       // After the first execution, scheduled time is cleared, so subsequent cycles use normal 5-minute intervals
       this.logger.info("Waiting for next cycle...\n");
@@ -651,6 +651,96 @@ export class MonitoringEngine {
         );
         break;
       }
+    }
+  }
+
+  /**
+   * One-time monitoring execution - minimal run that exits quickly
+   * Performs only: pane discovery, status update, one ENTER send, then exits
+   */
+  async oneTimeMonitor(): Promise<void> {
+    // this.logger.info("[DEBUG] oneTimeMonitor() started: One-time execution mode");
+
+    try {
+      // 1. Get session and panes
+      const sessionResult = await this.session.findMostActiveSession();
+      if (!sessionResult.ok) {
+        this.logger.error(`Failed to find session: ${sessionResult.error.message}`);
+        return;
+      }
+
+      const panesResult = await this.session.getAllPanes(sessionResult.data);
+      if (!panesResult.ok) {
+        this.logger.error(`Failed to get panes: ${panesResult.error.message}`);
+        return;
+      }
+
+      this.paneManager.separate(
+        panesResult.data.map((pd) => {
+          const paneResult = Pane.create(
+            pd.paneId,
+            pd.active === "1",
+            pd.currentCommand,
+            pd.title,
+          );
+          return paneResult.ok ? paneResult.data : null;
+        }).filter((p): p is Pane => p !== null),
+      );
+
+      // Check for cancellation
+      if (globalCancellationToken.isCancelled()) {
+        this.logger.info("One-time monitoring cancelled by user input. Exiting...");
+        return;
+      }
+
+      // 2. Send instruction file to main pane (only once)
+      if (this.instructionFile) {
+        // this.logger.info(`[DEBUG] About to send instruction file to main pane`);
+        await this.sendInstructionFileToMainPane();
+        this.instructionFile = null;
+        // this.logger.info(`[DEBUG] Instruction file sent and cleared`);
+      }
+
+      // 3. Process all panes (send status update instructions)
+      await this.processAllPanes();
+
+      // 4. Update status tracking and report changes
+      await this.updateStatusTracking();
+
+      // 5. Display pane list
+      const targetPanes = this.paneManager.getTargetPanes();
+      const mainPane = this.paneManager.getMainPane();
+      const allPanes = mainPane ? [mainPane, ...targetPanes] : targetPanes;
+
+      this.displayer.displayPaneList(allPanes.map((p) => ({
+        paneId: p.id,
+        title: p.getTitle() || "untitled",
+        currentCommand: p.getCommand() || "unknown",
+        sessionName: "",
+        windowIndex: "",
+        windowName: "",
+        paneIndex: "",
+        tty: "",
+        pid: "",
+        currentPath: "",
+        active: p.isActive() ? "1" : "0",
+        zoomed: "",
+        width: "",
+        height: "",
+        startCommand: "",
+      })));
+
+      // 6. Send one round of ENTER to all panes
+      this.logger.info("Sending one-time ENTER to all panes...");
+      await this.sendEnterToAllPanesCycle();
+
+      // 7. Report to main pane
+      await this.reportToMainPane();
+
+      this.logger.info("One-time monitoring completed successfully");
+    } catch (error) {
+      this.logger.error("One-time monitoring error:", error);
+      throw error;
     }
   }
 }

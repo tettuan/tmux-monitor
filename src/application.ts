@@ -55,9 +55,9 @@ export class Application {
    */
   async run(): Promise<void> {
     const logger = this.container.get<Logger>("logger");
-    logger.info(
-      `[DEBUG] Application.run(): Started, cancellation state = ${globalCancellationToken.isCancelled()}`,
-    );
+    // logger.info(
+    //   `[DEBUG] Application.run(): Started, cancellation state = ${globalCancellationToken.isCancelled()}`,
+    // );
 
     const argumentParser = this.container.get<ArgumentParser>("argumentParser");
     const keyboardHandler = this.container.get<KeyboardHandler>(
@@ -121,26 +121,30 @@ export class Application {
     try {
       const monitor = this.container.createMonitoringEngine(options);
 
-      logger.info(
-        `[DEBUG] Application.run(): About to start monitoring, continuous = ${options.isContinuous()}`,
-      );
-      logger.info(
-        `[DEBUG] Application.run(): cancellation state before monitoring = ${globalCancellationToken.isCancelled()}`,
-      );
+      // logger.info(
+      //   `[DEBUG] Application.run(): About to start monitoring, continuous = ${options.isContinuous()}`,
+      // );
+      // logger.info(
+      //   `[DEBUG] Application.run(): cancellation state before monitoring = ${globalCancellationToken.isCancelled()}`,
+      // );
 
       if (options.isContinuous()) {
-        logger.info(
-          `[DEBUG] Application.run(): Starting continuous monitoring`,
-        );
+        // logger.info(
+        //   `[DEBUG] Application.run(): Starting continuous monitoring`,
+        // );
         await monitor.startContinuousMonitoring();
       } else {
-        logger.info(
-          `[DEBUG] Application.run(): Starting single run monitoring`,
-        );
-        await monitor.monitor();
-        logger.info(
-          `[DEBUG] Application.run(): Single run monitoring completed`,
-        );
+        // logger.info(
+        //   `[DEBUG] Application.run(): Starting one-time monitoring`,
+        // );
+        await monitor.oneTimeMonitor();
+        // logger.info(
+        //   `[DEBUG] Application.run(): Single run monitoring completed`,
+        // );
+        
+        // For onetime mode, explicitly signal completion
+        // logger.info("[DEBUG] Application.run(): Signaling immediate exit for onetime mode");
+        globalCancellationToken.cancel("Onetime monitoring completed");
       }
     } finally {
       // Log cancellation state for debugging
@@ -153,9 +157,18 @@ export class Application {
       }
 
       // Clean up keyboard interrupt handler
-      console.log(`[DEBUG] Application.run(): Starting cleanup`);
+      // console.log(`[DEBUG] Application.run(): Starting cleanup`);
       keyboardHandler.cleanup();
-      console.log(`[DEBUG] Application.run(): Cleanup completed`);
+      // console.log(`[DEBUG] Application.run(): Cleanup completed`);
+      
+      // For onetime mode, ensure immediate exit after cleanup
+      if (!options.isContinuous()) {
+        // console.log(`[DEBUG] Application.run(): Onetime mode - forcing immediate exit`);
+        setTimeout(() => {
+          // console.log(`[DEBUG] Application.run(): Final exit timeout triggered`);
+          Deno.exit(0);
+        }, 200);
+      }
     }
   }
 }

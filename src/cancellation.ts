@@ -50,9 +50,9 @@ export class CancellationToken {
    */
   cancel(reason: string): void {
     if (this.cancelled) {
-      console.log(
-        `[DEBUG] CancellationToken.cancel(): Already cancelled (reason: ${this.reason}), ignoring new reason: ${reason}`,
-      );
+      // console.log(
+      //   `[DEBUG] CancellationToken.cancel(): Already cancelled (reason: ${this.reason}), ignoring new reason: ${reason}`,
+      // );
       return;
     }
 
@@ -60,9 +60,9 @@ export class CancellationToken {
     this.reason = reason;
     this.timestamp = Date.now();
 
-    console.log(
-      `[DEBUG] CancellationToken.cancel(): Cancellation requested - reason: ${reason}, timestamp: ${this.timestamp}`,
-    );
+    // console.log(
+    //   `[DEBUG] CancellationToken.cancel(): Cancellation requested - reason: ${reason}, timestamp: ${this.timestamp}`,
+    // );
   }
 
   /**
@@ -78,9 +78,9 @@ export class CancellationToken {
    */
   isCancelled(): boolean {
     if (this.cancelled) {
-      console.log(
-        `[DEBUG] CancellationToken.isCancelled(): TRUE - reason: ${this.reason}, timestamp: ${this.timestamp}`,
-      );
+      // console.log(
+      //   `[DEBUG] CancellationToken.isCancelled(): TRUE - reason: ${this.reason}, timestamp: ${this.timestamp}`,
+      // );
     }
     return this.cancelled;
   }
@@ -109,9 +109,9 @@ export class CancellationToken {
     this.timestamp = null;
 
     if (wasCanelled) {
-      console.log(
-        `[DEBUG] CancellationToken.reset(): Cancellation state reset`,
-      );
+      // console.log(
+      //   `[DEBUG] CancellationToken.reset(): Cancellation state reset`,
+      // );
     }
   }
 
@@ -128,17 +128,17 @@ export class CancellationToken {
    * Create a timeout that respects cancellation
    */
   async delay(ms: number): Promise<boolean> {
-    console.log(`[DEBUG] CancellationToken.delay(): Starting ${ms}ms delay`);
+    // console.log(`[DEBUG] CancellationToken.delay(): Starting ${ms}ms delay`);
     const startTime = Date.now();
     const checkInterval = 200; // Check every 200ms
 
     while (Date.now() - startTime < ms) {
       if (this.isCancelled()) {
-        console.log(
-          `[DEBUG] CancellationToken.delay(): Cancelled after ${
-            Date.now() - startTime
-          }ms`,
-        );
+        // console.log(
+        //   `[DEBUG] CancellationToken.delay(): Cancelled after ${
+        //     Date.now() - startTime
+        //   }ms`,
+        // );
         return true; // Cancelled
       }
 
@@ -150,9 +150,9 @@ export class CancellationToken {
       }
     }
 
-    console.log(
-      `[DEBUG] CancellationToken.delay(): Completed ${ms}ms delay without cancellation, final state = ${this.cancelled}`,
-    );
+    // console.log(
+    //   `[DEBUG] CancellationToken.delay(): Completed ${ms}ms delay without cancellation, final state = ${this.cancelled}`,
+    // );
     return false; // Not cancelled
   }
 
