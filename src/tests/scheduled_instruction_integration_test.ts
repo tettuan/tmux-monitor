@@ -44,16 +44,17 @@ Deno.test("ValidatedTime - Tokyo時間での時刻指定", () => {
 
   if (result.ok) {
     const date = result.data.getDate();
+
+    // ValidatedTimeは指定した時刻をローカル時間で設定する
+    // （システムタイムゾーンに関係なく、時分は指定した値になる）
     assertEquals(date.getHours(), 14);
     assertEquals(date.getMinutes(), 30);
 
-    // Tokyo時間で正しく設定されているか確認
-    const tokyoTime = date.toLocaleString("ja-JP", {
-      timeZone: "Asia/Tokyo",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    assertEquals(tokyoTime, "14:30");
+    // 時刻文字列での確認（タイムゾーン非依存）
+    const timeString = `${date.getHours().toString().padStart(2, "0")}:${
+      date.getMinutes().toString().padStart(2, "0")
+    }`;
+    assertEquals(timeString, "14:30");
   }
 });
 
@@ -235,7 +236,17 @@ Deno.test("Requirements - Tokyo時間でのスケジュール実行確認", () =
     minute: "2-digit",
   });
 
+  // UTC時間5:30がJST 14:30であることを確認（タイムゾーン非依存）
   assertEquals(tokyoTime, "14:30");
+
+  // UTCでは5:30であることも確認
+  const utcTime = scheduledTime.toLocaleString("en-US", {
+    timeZone: "UTC",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  assertEquals(utcTime, "05:30");
 
   // 詳細な時刻表示の確認
   const detailedTime = scheduledTime.toLocaleString("ja-JP", {
