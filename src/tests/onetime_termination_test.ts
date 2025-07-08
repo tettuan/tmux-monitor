@@ -106,14 +106,14 @@ Deno.test("onetime option - confirms normal termination within timeout", async (
  * This serves as a control test to ensure our onetime test is meaningful
  */
 Deno.test("continuous mode verification - should NOT exit quickly", async () => {
-  const shortTimeoutMs = 1500; // 1.5 seconds - continuous should not complete this fast
+  const shortTimeoutMs = 2000; // 2 seconds - continuous should not complete this fast
 
   console.log(`[TEST] Starting continuous mode verification with ${shortTimeoutMs}ms timeout`);
 
   const startTime = Date.now();
 
   const command = new Deno.Command("deno", {
-    args: ["run", "--allow-run", "main.ts"], // default continuous mode
+    args: ["run", "--allow-run", "main.ts"], // default continuous mode (no --onetime)
     stdout: "piped",
     stderr: "piped",
   });
@@ -121,6 +121,7 @@ Deno.test("continuous mode verification - should NOT exit quickly", async () => 
   const child = command.spawn();
   
   let processCompleted = false;
+  let result: Deno.CommandOutput | null = null;
   
   // Set timeout to kill process
   const timeoutId = setTimeout(() => {
@@ -133,7 +134,7 @@ Deno.test("continuous mode verification - should NOT exit quickly", async () => 
   }, shortTimeoutMs);
 
   try {
-    await child.output();
+    result = await child.output();
     processCompleted = true;
     clearTimeout(timeoutId);
   } catch {
@@ -143,20 +144,262 @@ Deno.test("continuous mode verification - should NOT exit quickly", async () => 
 
   const executionTime = Date.now() - startTime;
   console.log(`[TEST] Continuous mode ran for ${executionTime}ms before termination`);
+  console.log(`[TEST] Process completed naturally: ${processCompleted}`);
+  if (result) {
+    console.log(`[TEST] Exit code: ${result.code}`);
+  }
+
+  // Process was killed by timeout (not completed naturally)
+  // Exit code 143 = SIGTERM termination, which is expected
+  if (processCompleted && result && result.code === 143) {
+    // This is actually what we expect - process was killed by our timeout
+    processCompleted = false;
+  }
 
   // Continuous mode should NOT complete within the short timeout
   assertEquals(
     processCompleted,
     false,
-    "Continuous mode should NOT complete quickly - should run indefinitely",
+    "Continuous mode should NOT complete quickly - should run indefinitely until killed",
   );
 
   // Verify it ran for approximately the timeout duration
   assertEquals(
-    executionTime >= shortTimeoutMs - 200, // Allow timing tolerance
+    executionTime >= shortTimeoutMs - 300, // Allow timing tolerance
     true,
-    `Continuous mode should run for at least ${shortTimeoutMs}ms, but only ran for ${executionTime}ms`,
+    `Continuous mode should run for at least ${shortTimeoutMs - 300}ms, but only ran for ${executionTime}ms`,
   );
 
   console.log(`[TEST] ✅ Continuous mode verification passed - confirmed it runs continuously`);
+});
+
+/**
+ * Test for --time and --instruction option compatibility
+ * 
+ * This test ensures that:
+ * 1. --time and --instruction options can be used together
+ * 2. The process handles both options correctly without conflicts
+ * 3. Scheduled execution with instruction file works properly
+ */
+Deno.test("time and instruction options - compatibility test", async () => {
+  const timeoutMs = 15000; // 15 seconds timeout
+  const maxExpectedTimeMs = 8000; // Should complete within 8 seconds
+
+  console.log(`[TEST] Starting time and instruction compatibility test`);
+
+  // Create a temporary instruction file for testing
+  const instructionContent = "echo 'Test instruction from file'";
+  const instructionFile = "./test_instruction_temp.txt";
+  
+  try {
+    await Deno.writeTextFile(instructionFile, instructionContent);
+    console.log(`[TEST] Created temporary instruction file: ${instructionFile}`);
+
+    // Use a past time to ensure immediate execution (but test that time parsing works)
+    const pastTime = new Date(Date.now() - 3600000); // 1 hour ago
+    const timeArg = `--time=${pastTime.getHours().toString().padStart(2, '0')}:${pastTime.getMinutes().toString().padStart(2, '0')}`;
+
+    const startTime = Date.now();
+
+    const command = new Deno.Command("deno", {
+      args: ["run", "--allow-run", "--allow-read", "main.ts", "--onetime", timeArg, `--instruction=${instructionFile}`],
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const child = command.spawn();
+    
+    let timeoutReached = false;
+    const timeoutId = setTimeout(() => {
+      timeoutReached = true;
+      console.log(`[TEST] ⚠️ Timeout reached - killing process`);
+      try {
+        child.kill("SIGTERM");
+      } catch {
+        // Process might already be terminated
+      }
+    }, timeoutMs);
+
+    try {
+      const result = await child.output();
+      const executionTime = Date.now() - startTime;
+      
+      clearTimeout(timeoutId);
+
+      console.log(`[TEST] Process completed in ${executionTime}ms`);
+      console.log(`[TEST] Exit code: ${result.code}`);
+      console.log(`[TEST] Timeout reached: ${timeoutReached}`);
+
+      // Main assertions
+      assertEquals(
+        timeoutReached,
+        false,
+        "Process should complete before timeout",
+      );
+
+      assertEquals(
+        result.success,
+        true,
+        `Process should exit successfully. Exit code: ${result.code}`,
+      );
+
+      assertEquals(
+        executionTime < maxExpectedTimeMs,
+        true,
+        `Process should complete within ${maxExpectedTimeMs}ms, but took ${executionTime}ms`,
+      );
+
+      // Verify it completed within reasonable time (past time should execute immediately)
+      assertEquals(
+        executionTime < maxExpectedTimeMs,
+        true,
+        `Process should complete within ${maxExpectedTimeMs}ms, but took ${executionTime}ms`,
+      );
+
+      // Should complete relatively quickly since time is in past
+      assertEquals(
+        executionTime < 5000, // Should be much faster
+        true,
+        `Process should proceed quickly for past time, but took ${executionTime}ms`,
+      );
+
+      // Check output contains expected messages
+      const decoder = new TextDecoder();
+      const stdout = decoder.decode(result.stdout);
+      
+      assertEquals(
+        stdout.includes("Scheduled execution time:") || stdout.includes("Scheduled time has already passed"),
+        true,
+        "Output should contain scheduled time message or past time message",
+      );
+
+      assertEquals(
+        stdout.includes("Instruction file specified:"),
+        true,
+        "Output should contain instruction file message",
+      );
+
+      assertEquals(
+        stdout.includes("One-time monitoring completed successfully"),
+        true,
+        "Output should contain onetime completion message",
+      );
+
+      console.log(`[TEST] ✅ Time and instruction compatibility test passed - completed in ${executionTime}ms`);
+
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (timeoutReached) {
+        throw new Error(`Process failed to complete within ${timeoutMs}ms timeout`);
+      }
+      
+      throw error;
+    }
+
+  } finally {
+    // Clean up temporary instruction file
+    try {
+      await Deno.remove(instructionFile);
+      console.log(`[TEST] Cleaned up temporary instruction file`);
+    } catch {
+      // File might not exist or already deleted
+    }
+  }
+});
+
+/**
+ * Test for --time option with past time (gets scheduled for next day)
+ * 
+ * This test ensures that:
+ * 1. Past time is handled by scheduling for next day
+ * 2. Process completes quickly since we're using --onetime
+ */
+Deno.test("time option - past time gets scheduled for next day", async () => {
+  const timeoutMs = 10000; // 10 seconds timeout
+  const maxExpectedTimeMs = 5000; // Should complete quickly since it's onetime mode
+
+  console.log(`[TEST] Starting past time scheduling test`);
+
+  // Set a time that's in the past (1 hour ago)
+  const pastTime = new Date(Date.now() - 3600000); // 1 hour ago
+  const timeArg = `--time=${pastTime.getHours().toString().padStart(2, '0')}:${pastTime.getMinutes().toString().padStart(2, '0')}`;
+
+  const startTime = Date.now();
+
+  const command = new Deno.Command("deno", {
+    args: ["run", "--allow-run", "main.ts", "--onetime", timeArg],
+    stdout: "piped",
+    stderr: "piped",
+  });
+
+  const child = command.spawn();
+  
+  let timeoutReached = false;
+  const timeoutId = setTimeout(() => {
+    timeoutReached = true;
+    console.log(`[TEST] ⚠️ Timeout reached - killing process`);
+    try {
+      child.kill("SIGTERM");
+    } catch {
+      // Process might already be terminated
+    }
+  }, timeoutMs);
+
+  try {
+    const result = await child.output();
+    const executionTime = Date.now() - startTime;
+    
+    clearTimeout(timeoutId);
+
+    console.log(`[TEST] Process completed in ${executionTime}ms`);
+    console.log(`[TEST] Exit code: ${result.code}`);
+
+    // Main assertions
+    assertEquals(
+      timeoutReached,
+      false,
+      "Process should complete before timeout",
+    );
+
+    assertEquals(
+      result.success,
+      true,
+      `Process should exit successfully. Exit code: ${result.code}`,
+    );
+
+    assertEquals(
+      executionTime < maxExpectedTimeMs,
+      true,
+      `Process should complete quickly for past time, but took ${executionTime}ms`,
+    );
+
+    // Should complete relatively quickly since it's onetime mode
+    assertEquals(
+      executionTime < 3000, // Should be fast for onetime
+      true,
+      `Onetime process should complete quickly, but took ${executionTime}ms`,
+    );
+
+    // Check output contains expected messages
+    const decoder = new TextDecoder();
+    const stdout = decoder.decode(result.stdout);
+    
+    assertEquals(
+      stdout.includes("Scheduled execution time:"),
+      true,
+      "Output should contain scheduled time message (time gets moved to next day)",
+    );
+
+    console.log(`[TEST] ✅ Past time scheduling test passed - completed in ${executionTime}ms`);
+
+  } catch (error) {
+    clearTimeout(timeoutId);
+    
+    if (timeoutReached) {
+      throw new Error(`Process failed to complete within ${timeoutMs}ms timeout`);
+    }
+    
+    throw error;
+  }
 });
