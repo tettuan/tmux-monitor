@@ -160,23 +160,11 @@ export class MonitoringEngine {
       "Checking for DONE and IDLE panes and sending clear commands...",
     );
 
-    // Update status tracking for all panes first
-    const targetPanes = this.paneManager.getTargetPanes();
+    // NOTE: Status tracking was already updated in updateStatusTracking()
+    // We use the current status instead of re-fetching to maintain consistency
+    // with the displayed pane list
 
-    for (const pane of targetPanes) {
-      const paneDetailResult = await this.paneDataProcessor.getPaneDetail(
-        pane.id,
-        this.logger,
-      );
-      if (paneDetailResult.ok) {
-        const currentStatus = this.statusAnalyzer.determineStatus(
-          paneDetailResult.data,
-        );
-        this.statusManager.updateStatus(pane.id, currentStatus);
-      }
-    }
-
-    // Get all panes with DONE or IDLE status
+    // Get all panes with DONE or IDLE status (using current status)
     const clearTargetPanes = this.statusManager.getDoneAndIdlePanes();
 
     if (clearTargetPanes.length > 0) {
@@ -260,18 +248,23 @@ export class MonitoringEngine {
   async updateStatusTracking(): Promise<void> {
     const targetPanes = this.paneManager.getTargetPanes();
 
+    this.logger.info("[DEBUG] Updating status tracking for all panes...");
     for (const pane of targetPanes) {
       const paneDetailResult = await this.paneDataProcessor.getPaneDetail(
         pane.id,
         this.logger,
       );
       if (paneDetailResult.ok) {
-        const currentStatus = this.statusAnalyzer.extractStatusFromTitle(
-          paneDetailResult.data.title,
+        const currentStatus = this.statusAnalyzer.determineStatus(
+          paneDetailResult.data,
         );
-        this.statusManager.updateStatus(pane.id, currentStatus);
+        const updated = this.statusManager.updateStatus(pane.id, currentStatus);
+        this.logger.info(`[DEBUG]   Pane ${pane.id}: ${currentStatus.kind} (updated: ${updated})`);
+      } else {
+        this.logger.warn(`[DEBUG]   Failed to get details for pane ${pane.id}: ${paneDetailResult.error.message}`);
       }
     }
+    this.logger.info("[DEBUG] Status tracking update completed");
   }
 
   async reportStatusChanges(): Promise<void> {
@@ -525,6 +518,14 @@ export class MonitoringEngine {
         startCommand: "",
       })));
 
+      // Additional status display for DONE/IDLE tracking
+      this.logger.info("[INFO] Current pane status tracking:");
+      for (const pane of targetPanes) {
+        const status = this.statusManager.getStatus(pane.id);
+        const statusKind = status ? status.kind : "NO_STATUS";
+        this.logger.info(`[INFO]   Pane ${pane.id}: ${statusKind}`);
+      }
+
       // 6. Send additional Enter to all panes
       await this.sendAdditionalEnterToAllPanes();
 
@@ -576,6 +577,15 @@ export class MonitoringEngine {
       }
 
       // 9. After 5-minute cycle: Check for DONE/IDLE panes and send clear commands
+      // Debug: Show current status for all panes before clearing decision
+      this.logger.info("[DEBUG] Current pane status before clearing decision:");
+      const debugTargetPanes = this.paneManager.getTargetPanes();
+      for (const pane of debugTargetPanes) {
+        const status = this.statusManager.getStatus(pane.id);
+        const statusKind = status ? status.kind : "NO_STATUS";
+        this.logger.info(`[DEBUG]   Pane ${pane.id}: ${statusKind}`);
+      }
+      
       await this.checkAndClearDoneAndIdlePanes();
 
       // 10. Start another 30-second ENTER sending cycle after /clear commands
