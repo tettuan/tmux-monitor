@@ -22,17 +22,20 @@ The primary way to use tmux-monitor is through the CLI interface:
 ### Direct Execution from JSR
 
 ```bash
-# Basic monitoring (minimum permissions)
+# Basic monitoring (continuous mode by default)
 deno run --allow-run jsr:@aidevtool/tmux-monitor
 
-# With continuous monitoring
-deno run --allow-run jsr:@aidevtool/tmux-monitor --continuous
+# One-time monitoring (single cycle then exit)
+deno run --allow-run jsr:@aidevtool/tmux-monitor --onetime
 
 # Scheduled execution
 deno run --allow-run jsr:@aidevtool/tmux-monitor --time=14:30
 
 # With instruction file (requires read permission)
 deno run --allow-run --allow-read jsr:@aidevtool/tmux-monitor --instruction=./startup.txt
+
+# Scheduled execution with instruction file (common combination)
+deno run --allow-run --allow-read jsr:@aidevtool/tmux-monitor --time=14:30 --instruction=./startup.txt
 ```
 
 ### Global Installation
@@ -43,17 +46,20 @@ deno install --allow-run --allow-read -n tmux-monitor jsr:@aidevtool/tmux-monito
 
 # Then use anywhere
 tmux-monitor
-tmux-monitor --continuous
+tmux-monitor --onetime
 tmux-monitor --time=14:30
 tmux-monitor --instruction=./startup.txt
+tmux-monitor --time=14:30 --instruction=./startup.txt
 ```
 
 ### Available CLI Options
 
-- `--continuous` or `-c`: Run in continuous monitoring mode
+- `--onetime` or `-o`: Run single monitoring cycle then exit (overrides default continuous mode)
 - `--time=HH:MM` or `-t HH:MM`: Schedule monitoring start time
 - `--instruction=PATH` or `-i PATH`: Load instruction file with startup commands
 - `--kill-all-panes`: Safely terminate all tmux panes (SIGTERM first, then SIGKILL)
+- `--start-claude`: Start Claude (`cld` command) if not already running in any pane
+- `--clear`: Send "/clear" command to Node.js panes only (one-time execution then exit)
 
 ## How It Works
 
@@ -117,6 +123,9 @@ deno run --allow-run jsr:@aidevtool/tmux-monitor --continuous
 ```bash
 # Start monitoring at 2:30 PM
 deno run --allow-run jsr:@aidevtool/tmux-monitor --time=14:30
+
+# Scheduled execution with instruction file (common workflow)
+deno run --allow-run --allow-read jsr:@aidevtool/tmux-monitor --time=14:30 --instruction=./startup.txt
 ```
 
 ### With Instruction File
@@ -137,6 +146,17 @@ deno run --allow-run --allow-read jsr:@aidevtool/tmux-monitor --instruction=./st
 ```bash
 # Safely terminate all tmux panes (SIGTERM first, then SIGKILL after 3 seconds)
 deno run --allow-run jsr:@aidevtool/tmux-monitor --kill-all-panes
+```
+
+### Start Claude if Not Running
+
+```bash
+# Check if Claude is running and start it with 'cld' command if not found
+# (Continuous monitoring is the default behavior)
+deno run --allow-run jsr:@aidevtool/tmux-monitor --start-claude
+
+# For one-time execution only (exit after single check)
+deno run --allow-run jsr:@aidevtool/tmux-monitor --start-claude --onetime
 ```
 
 ## Library Usage (Advanced)

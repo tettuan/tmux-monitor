@@ -101,7 +101,7 @@ export class Application {
       );
       const engine = this.container.createMonitoringEngine(options);
       await engine.clearNodePanes();
-      
+
       logger.info("Clear panes operation completed");
       // Exit early after clearing panes
       return;

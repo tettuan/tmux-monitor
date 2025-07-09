@@ -18,6 +18,7 @@ export class ArgumentParser {
     let instructionFile: string | null = null;
     let killAllPanes = false;
     let clearPanes = false;
+    let startClaude = false;
 
     // Look for time parameter (--time=HH:MM or -t HH:MM)
     for (let i = 0; i < args.length; i++) {
@@ -45,11 +46,14 @@ export class ArgumentParser {
         killAllPanes = true;
       } else if (arg === "--clear") {
         clearPanes = true;
+      } else if (arg === "--start-claude") {
+        startClaude = true;
       }
     }
 
     // Check for one-time mode override (--onetime or --clear)
-    const oneTime = args.includes("--onetime") || args.includes("-o") || clearPanes;
+    const oneTime = args.includes("--onetime") || args.includes("-o") ||
+      clearPanes;
 
     // Default to continuous monitoring mode unless --onetime or --clear is specified
     const continuous = !oneTime;
@@ -59,6 +63,7 @@ export class ArgumentParser {
       instructionFile,
       killAllPanes,
       clearPanes,
+      startClaude,
     );
 
     return { ok: true, data: options };

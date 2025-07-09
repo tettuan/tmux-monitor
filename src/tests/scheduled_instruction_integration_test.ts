@@ -134,7 +134,7 @@ Deno.test("MonitoringOptions - 継続監視+スケジュール+指示書", () =>
     true,
     scheduledTime,
     instructionFile,
-    false, // killAllPanes  
+    false, // killAllPanes
     false, // clearPanes
   );
 

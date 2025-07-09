@@ -210,4 +210,60 @@ export class PaneCommunicator {
 
     return { ok: true, data: undefined };
   }
+
+  /**
+   * Claudeが立ち上がっているかを検出する
+   */
+  isClaudeRunning(panes: PaneDetail[]): boolean {
+    for (const pane of panes) {
+      const command = pane.currentCommand.toLowerCase();
+      if (command.includes("claude") || command.includes("cld")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Claudeが立ち上がっていない場合、各ペインでcldコマンドを実行
+   */
+  async startClaudeIfNotRunning(panes: PaneDetail[]): Promise<void> {
+    const claudeRunning = this.isClaudeRunning(panes);
+
+    if (claudeRunning) {
+      this.logger.info("Claude is already running, skipping cld command");
+      return;
+    }
+
+    this.logger.info("Claude not detected, sending cld command to all panes");
+
+    for (const pane of panes) {
+      // zshシェルのペインにのみcldコマンドを送信
+      if (pane.currentCommand.toLowerCase().includes("zsh")) {
+        this.logger.info(`Sending cld command to pane ${pane.paneId}`);
+
+        const result = await this.commandExecutor.execute([
+          "tmux",
+          "send-keys",
+          "-t",
+          pane.paneId,
+          "cld",
+          "Enter",
+        ]);
+
+        if (!result.ok) {
+          this.logger.warn(
+            `Failed to send cld command to pane ${pane.paneId}: ${result.error}`,
+          );
+        } else {
+          this.logger.info(
+            `Successfully sent cld command to pane ${pane.paneId}`,
+          );
+        }
+
+        // 少し待機してから次のペインへ
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+  }
 }

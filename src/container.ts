@@ -137,6 +137,7 @@ export class DIContainer {
       this.get("logger"),
       scheduledTime,
       instructionFile,
+      options.shouldStartClaude(),
     );
   }
 }

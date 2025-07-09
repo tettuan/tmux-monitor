@@ -341,7 +341,7 @@ Deno.test("ArgumentParser: parse() - clear with other options", () => {
   assert(!result.data.isContinuous()); // --clear forces one-time mode
   assertEquals(result.data.shouldClearPanes(), true);
   assertEquals(result.data.shouldKillAllPanes(), false);
-  
+
   const scheduledTime = result.data.getScheduledTime();
   assertExists(scheduledTime);
   assertEquals(scheduledTime.getHours(), 16);

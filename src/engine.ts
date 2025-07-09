@@ -20,6 +20,7 @@ import { globalCancellationToken } from "./cancellation.ts";
 export class MonitoringEngine {
   private scheduledTime: Date | null = null;
   private instructionFile: string | null = null;
+  private shouldStartClaude: boolean = false;
 
   constructor(
     private session: TmuxSession,
@@ -38,9 +39,11 @@ export class MonitoringEngine {
     private logger: Logger,
     scheduledTime?: Date | null,
     instructionFile?: string | null,
+    shouldStartClaude?: boolean,
   ) {
     this.scheduledTime = scheduledTime || null;
     this.instructionFile = instructionFile || null;
+    this.shouldStartClaude = shouldStartClaude || false;
   }
 
   async sendInstructionFileToMainPane(): Promise<void> {
@@ -489,6 +492,11 @@ export class MonitoringEngine {
         // this.logger.info(`[DEBUG] No instruction file to send`);
       }
 
+      // 2.5. Check and start Claude if needed (only if --start-claude flag is used)
+      if (this.shouldStartClaude) {
+        await this.communicator.startClaudeIfNotRunning(panesResult.data);
+      }
+
       // 3. Process all panes
       await this.processAllPanes();
 
@@ -714,6 +722,11 @@ export class MonitoringEngine {
         // this.logger.info(`[DEBUG] Instruction file sent and cleared`);
       }
 
+      // 2.5. Check and start Claude if needed (only if --start-claude flag is used)
+      if (this.shouldStartClaude) {
+        await this.communicator.startClaudeIfNotRunning(panesResult.data);
+      }
+
       // 3. Process all panes (send status update instructions)
       await this.processAllPanes();
 
@@ -808,7 +821,9 @@ export class MonitoringEngine {
           nodePanes.push(pane.id);
           this.logger.info(`Found Node.js pane ${pane.id} running: ${command}`);
         } else {
-          this.logger.info(`Skipping non-Node.js pane ${pane.id} running: ${command}`);
+          this.logger.info(
+            `Skipping non-Node.js pane ${pane.id} running: ${command}`,
+          );
         }
       }
 
@@ -817,14 +832,21 @@ export class MonitoringEngine {
         return;
       }
 
-      this.logger.info(`Found ${nodePanes.length} Node.js panes to clear: ${nodePanes.join(", ")}`);
+      this.logger.info(
+        `Found ${nodePanes.length} Node.js panes to clear: ${
+          nodePanes.join(", ")
+        }`,
+      );
 
       // 3. Send /clear command to each Node.js pane
       for (const paneId of nodePanes) {
         this.logger.info(`Sending /clear to pane ${paneId}...`);
-        
+
         // Send /clear command
-        const clearResult = await this.communicator.sendToPane(paneId, "/clear");
+        const clearResult = await this.communicator.sendToPane(
+          paneId,
+          "/clear",
+        );
         if (!clearResult.ok) {
           this.logger.warn(
             `Failed to send /clear to pane ${paneId}: ${clearResult.error.message}`,
@@ -845,12 +867,15 @@ export class MonitoringEngine {
             `Failed to send Enter to pane ${paneId}: ${enterResult.error.message}`,
           );
         } else {
-          this.logger.info(`Successfully sent /clear + Enter to pane ${paneId}`);
+          this.logger.info(
+            `Successfully sent /clear + Enter to pane ${paneId}`,
+          );
         }
       }
 
-      this.logger.info(`Clear operation completed for ${nodePanes.length} Node.js panes`);
-
+      this.logger.info(
+        `Clear operation completed for ${nodePanes.length} Node.js panes`,
+      );
     } catch (error) {
       this.logger.error("Error during Node.js pane clearing:", error);
       throw error;
