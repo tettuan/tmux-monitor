@@ -259,9 +259,13 @@ export class MonitoringEngine {
           paneDetailResult.data,
         );
         const updated = this.statusManager.updateStatus(pane.id, currentStatus);
-        this.logger.info(`[DEBUG]   Pane ${pane.id}: ${currentStatus.kind} (updated: ${updated})`);
+        this.logger.info(
+          `[DEBUG]   Pane ${pane.id}: ${currentStatus.kind} (updated: ${updated})`,
+        );
       } else {
-        this.logger.warn(`[DEBUG]   Failed to get details for pane ${pane.id}: ${paneDetailResult.error.message}`);
+        this.logger.warn(
+          `[DEBUG]   Failed to get details for pane ${pane.id}: ${paneDetailResult.error.message}`,
+        );
       }
     }
     this.logger.info("[DEBUG] Status tracking update completed");
@@ -585,7 +589,7 @@ export class MonitoringEngine {
         const statusKind = status ? status.kind : "NO_STATUS";
         this.logger.info(`[DEBUG]   Pane ${pane.id}: ${statusKind}`);
       }
-      
+
       await this.checkAndClearDoneAndIdlePanes();
 
       // 10. Start another 30-second ENTER sending cycle after /clear commands
