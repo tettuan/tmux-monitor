@@ -203,8 +203,9 @@ echo "✓ Status Checks passed"
 echo -e "\nRunning Local CI..."
 
 # 2.1 Local CI Check
-if ! bash scripts/local_ci.sh; then
-  echo "Error: Local CI failed. Aborting version bump."
+echo "Running CI with JSR package..."
+if ! deno task ci; then
+  echo "Error: CI check failed. Aborting version bump."
   exit 1
 fi
 
