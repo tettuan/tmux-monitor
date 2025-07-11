@@ -15,7 +15,22 @@ import type { CommandExecutor, Logger } from "./services.ts";
 import { globalCancellationToken } from "./cancellation.ts";
 
 /**
- * Monitoring Engine Class - Single Responsibility: Core Monitoring Logic
+ * Core monitoring engine that orchestrates tmux session monitoring operations.
+ *
+ * The MonitoringEngine coordinates all monitoring activities including session discovery,
+ * pane management, communication, status tracking, and display operations. It implements
+ * the main monitoring loop and handles all operational modes.
+ *
+ * @example
+ * ```typescript
+ * const engine = new MonitoringEngine(
+ *   session, paneManager, communicator, displayer, statusManager,
+ *   ciManager, timeManager, runtimeTracker, keyboardHandler,
+ *   paneDataProcessor, statusAnalyzer, messageGenerator,
+ *   commandExecutor, logger, scheduledTime, instructionFile, shouldStartClaude
+ * );
+ * await engine.run();
+ * ```
  */
 export class MonitoringEngine {
   private scheduledTime: Date | null = null;

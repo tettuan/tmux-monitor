@@ -3,7 +3,19 @@ import { PaneDetail } from "./models.ts";
 import type { CommandExecutor, Logger } from "./services.ts";
 
 /**
- * Tmux Session Management Class - Single Responsibility: Session Discovery and Management
+ * Tmux session management class for session discovery and pane enumeration.
+ *
+ * Handles tmux session discovery, finding the most active session, and
+ * retrieving detailed pane information for monitoring operations.
+ *
+ * @example
+ * ```typescript
+ * const session = TmuxSession.create(commandExecutor, logger);
+ * const activeSessionResult = await session.findMostActiveSession();
+ * if (activeSessionResult.ok) {
+ *   const panesResult = await session.listPaneDetails(activeSessionResult.data);
+ * }
+ * ```
  */
 export class TmuxSession {
   private constructor(

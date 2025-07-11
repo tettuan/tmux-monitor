@@ -6,6 +6,23 @@ import type { Logger, TimeManager } from "./services.ts";
 // Command Line Argument Processing
 // =============================================================================
 
+/**
+ * Command line argument parser for tmux monitoring application.
+ *
+ * Parses and validates command line arguments, converting them into
+ * strongly-typed MonitoringOptions with comprehensive validation and error handling.
+ *
+ * @example
+ * ```typescript
+ * const parser = new ArgumentParser(timeManager, logger);
+ * const result = parser.parse();
+ * if (result.ok) {
+ *   console.log("Parsed options:", result.data);
+ * } else {
+ *   console.error("Parse error:", result.error.message);
+ * }
+ * ```
+ */
 export class ArgumentParser {
   constructor(
     private timeManager: TimeManager,

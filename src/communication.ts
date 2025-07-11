@@ -2,7 +2,18 @@ import { createError, type Result, type ValidationError } from "./types.ts";
 import type { PaneDetail } from "./models.ts";
 
 /**
- * Message Generator Class - Single Responsibility: Message Generation
+ * Message generator for creating formatted monitoring and status messages.
+ *
+ * Generates structured messages for status reports, pane listings, and other
+ * monitoring communications with consistent formatting and timestamps.
+ *
+ * @example
+ * ```typescript
+ * const statusMessage = MessageGenerator.generateStatusMessage(
+ *   activePanes, inactivePanes, statusResults
+ * );
+ * const paneListMessage = MessageGenerator.generatePaneListMessage(allPanes);
+ * ```
  */
 export class MessageGenerator {
   static generateStatusMessage(
@@ -52,7 +63,17 @@ export class MessageGenerator {
 }
 
 /**
- * Pane Communication Class - Single Responsibility: Pane Communication
+ * Pane communication manager for sending commands and instructions to tmux panes.
+ *
+ * Handles all communication with tmux panes including sending status update requests,
+ * instruction files, and other commands with proper error handling and validation.
+ *
+ * @example
+ * ```typescript
+ * const communicator = PaneCommunicator.create(commandExecutor, logger);
+ * const result = await communicator.sendStatusUpdateToPane("pane1");
+ * const instructionResult = await communicator.sendInstructionFile("pane1", "./startup.txt");
+ * ```
  */
 export class PaneCommunicator {
   private constructor(

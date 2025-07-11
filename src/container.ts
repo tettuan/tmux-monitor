@@ -20,7 +20,18 @@ import { TmuxSession } from "./session.ts";
 import { MonitoringEngine } from "./engine.ts";
 
 /**
- * Dependency Injection Container - Single Responsibility: Dependency Management
+ * Dependency injection container for managing application dependencies.
+ *
+ * Implements singleton pattern for centralized dependency management with
+ * lazy initialization and factory-based registration for all application services.
+ *
+ * @example
+ * ```typescript
+ * const container = DIContainer.getInstance();
+ * container.initialize();
+ * const logger = container.get<Logger>("logger");
+ * const engine = container.createMonitoringEngine(options);
+ * ```
  */
 export class DIContainer {
   private static instance: DIContainer;

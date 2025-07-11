@@ -4,6 +4,17 @@ import { createError, type Result, type ValidationError } from "./types.ts";
 // Domain Models with Totality Principles
 // =============================================================================
 
+/**
+ * Worker status discriminated union representing all possible pane worker states.
+ *
+ * Uses discriminated union pattern for type safety and exhaustive pattern matching.
+ * Each status variant contains relevant contextual information specific to that state.
+ *
+ * @example
+ * ```typescript
+ * const status: WorkerStatus = { kind: "WORKING", details: "Processing data" };
+ * ```
+ */
 // Worker status as discriminated union instead of string literals
 export type WorkerStatus =
   | { kind: "IDLE" }
@@ -13,12 +24,34 @@ export type WorkerStatus =
   | { kind: "TERMINATED"; reason?: string }
   | { kind: "UNKNOWN"; lastKnownState?: string };
 
+/**
+ * Pane state discriminated union representing tmux pane activity states.
+ *
+ * Provides type-safe representation of whether a pane is active, inactive, or
+ * in an unknown state, along with relevant contextual information.
+ *
+ * @example
+ * ```typescript
+ * const state: PaneState = { kind: "Active", command: "vim", title: "editor" };
+ * ```
+ */
 // Pane state as discriminated union instead of optional properties
 export type PaneState =
   | { kind: "Active"; command: string; title: string }
   | { kind: "Inactive"; command: string; title: string }
   | { kind: "Unknown" };
 
+/**
+ * Monitoring mode discriminated union defining how monitoring should operate.
+ *
+ * Supports various monitoring patterns including single runs, continuous monitoring,
+ * and scheduled operations with proper type safety for each mode's requirements.
+ *
+ * @example
+ * ```typescript
+ * const mode: MonitoringMode = { kind: "Scheduled", scheduledTime: new Date() };
+ * ```
+ */
 // Monitoring mode as discriminated union instead of nullable properties
 export type MonitoringMode =
   | { kind: "SingleRun" }
@@ -26,6 +59,17 @@ export type MonitoringMode =
   | { kind: "Scheduled"; scheduledTime: Date }
   | { kind: "ScheduledContinuous"; scheduledTime: Date };
 
+/**
+ * Instruction configuration discriminated union for startup instructions.
+ *
+ * Defines whether monitoring should send startup instructions from a file
+ * or operate without additional instructions.
+ *
+ * @example
+ * ```typescript
+ * const config: InstructionConfig = { kind: "WithFile", filePath: "./startup.txt" };
+ * ```
+ */
 export type InstructionConfig =
   | { kind: "None" }
   | { kind: "WithFile"; filePath: string };
@@ -34,6 +78,20 @@ export type InstructionConfig =
 // Smart Constructors
 // =============================================================================
 
+/**
+ * Pane smart constructor with validation and type-safe creation.
+ *
+ * Creates validated Pane instances with proper state management and error handling.
+ * Uses smart constructor pattern to ensure all panes are created in valid states.
+ *
+ * @example
+ * ```typescript
+ * const result = Pane.create("pane1", true, "vim", "Editor");
+ * if (result.ok) {
+ *   console.log("Created pane:", result.data);
+ * }
+ * ```
+ */
 // Pane smart constructor
 export class Pane {
   private constructor(
@@ -96,6 +154,24 @@ export class Pane {
   }
 }
 
+/**
+ * Detailed pane information value object with comprehensive tmux pane data.
+ *
+ * Contains all relevant information about a tmux pane including session details,
+ * window information, process details, and display properties. Uses smart constructor
+ * pattern for validation and safe creation.
+ *
+ * @example
+ * ```typescript
+ * const result = PaneDetail.create(
+ *   "session1", "0", "main", "%1", "0", "/dev/ttys000",
+ *   "1234", "vim", "/home/user", "Editor", "1", "0", "80", "24", "bash"
+ * );
+ * if (result.ok) {
+ *   console.log("Pane detail:", result.data);
+ * }
+ * ```
+ */
 // PaneDetail value object
 export class PaneDetail {
   private constructor(
@@ -169,6 +245,20 @@ export class PaneDetail {
   }
 }
 
+/**
+ * Time validation smart constructor for scheduled monitoring operations.
+ *
+ * Validates and creates time objects from string input with comprehensive
+ * validation including format checking and scheduling logic for next occurrence.
+ *
+ * @example
+ * ```typescript
+ * const result = ValidatedTime.create("14:30");
+ * if (result.ok) {
+ *   console.log("Scheduled time:", result.data.getDate());
+ * }
+ * ```
+ */
 // Time validation smart constructor
 export class ValidatedTime {
   private constructor(readonly value: Date) {}
@@ -216,6 +306,22 @@ export class ValidatedTime {
   }
 }
 
+/**
+ * Monitoring options smart constructor for application configuration.
+ *
+ * Encapsulates all monitoring configuration options with validation and
+ * type-safe creation. Handles various monitoring modes and optional features.
+ *
+ * @example
+ * ```typescript
+ * const result = MonitoringOptions.create(
+ *   true, null, "./startup.txt", false, true, false
+ * );
+ * if (result.ok) {
+ *   console.log("Options:", result.data);
+ * }
+ * ```
+ */
 // MonitoringOptions smart constructor
 export class MonitoringOptions {
   private constructor(
@@ -299,6 +405,19 @@ export class MonitoringOptions {
   }
 }
 
+/**
+ * Worker status parser utility class for status string conversion and validation.
+ *
+ * Provides utilities for parsing status strings into typed WorkerStatus objects,
+ * converting back to strings, and comparing status values with type safety.
+ *
+ * @example
+ * ```typescript
+ * const status = WorkerStatusParser.parse("WORKING");
+ * const statusString = WorkerStatusParser.toString(status);
+ * const isEqual = WorkerStatusParser.isEqual(status1, status2);
+ * ```
+ */
 // WorkerStatus helper functions
 export class WorkerStatusParser {
   static parse(statusString: string): WorkerStatus {

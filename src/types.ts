@@ -2,9 +2,35 @@
 // Totality-based Type System Foundation
 // =============================================================================
 
+/**
+ * Generic Result type for explicit error handling without exceptions.
+ *
+ * Represents operations that can either succeed with data or fail with an error.
+ * This enables totality by making all possible outcomes explicit and type-safe.
+ *
+ * @template T - The type of successful result data
+ * @template E - The type of error information
+ * @example
+ * ```typescript
+ * function safeDivide(a: number, b: number): Result<number, string> {
+ *   if (b === 0) {
+ *     return { ok: false, error: "Division by zero" };
+ *   }
+ *   return { ok: true, data: a / b };
+ * }
+ * ```
+ */
 // Common Result type for error handling
 export type Result<T, E> = { ok: true; data: T } | { ok: false; error: E };
 
+/**
+ * Interface for keyboard interrupt handling and cancellation management.
+ *
+ * Provides methods for setting up keyboard interrupt detection,
+ * cleanup operations, and sleep operations with cancellation support.
+ *
+ * @interface KeyboardHandler
+ */
 // Service interfaces to avoid any type usage
 export interface KeyboardHandler {
   setup(): void;
@@ -12,6 +38,14 @@ export interface KeyboardHandler {
   sleepWithCancellation(milliseconds: number): Promise<boolean>;
 }
 
+/**
+ * Interface for runtime tracking and limit enforcement.
+ *
+ * Manages application runtime tracking, startup logging, and runtime limit
+ * enforcement to prevent runaway processes.
+ *
+ * @interface RuntimeTracker
+ */
 export interface RuntimeTracker {
   logStartupInfo(
     logger: Logger,
@@ -21,6 +55,14 @@ export interface RuntimeTracker {
   hasExceededLimit(): Result<boolean, ValidationError & { message: string }>;
 }
 
+/**
+ * Interface for time management operations including delays and scheduling.
+ *
+ * Provides time-related utilities for the monitoring system including
+ * current time access, formatting, delays, and scheduled waiting.
+ *
+ * @interface TimeManager
+ */
 export interface TimeManager {
   getCurrentTime(): Date;
   formatTime(date: Date): string;
@@ -32,12 +74,32 @@ export interface TimeManager {
   ): Promise<Result<void, ValidationError & { message: string }>>;
 }
 
+/**
+ * Interface for structured logging with different severity levels.
+ *
+ * Provides consistent logging capabilities across the application with
+ * support for informational, warning, and error messages.
+ *
+ * @interface Logger
+ */
 export interface Logger {
   info(message: string, ...args: unknown[]): void;
   warn(message: string, ...args: unknown[]): void;
   error(message: string, ...args: unknown[]): void;
 }
 
+/**
+ * Discriminated union type for comprehensive validation error representation.
+ *
+ * Covers all possible validation and operational errors that can occur
+ * throughout the application with specific error contexts and details.
+ *
+ * @example
+ * ```typescript
+ * const error: ValidationError = { kind: "InvalidFormat", input: "abc", expected: "number" };
+ * const errorWithMessage = createError(error);
+ * ```
+ */
 // Common validation error types
 export type ValidationError =
   | { kind: "ParseError"; input: string }
@@ -53,6 +115,21 @@ export type ValidationError =
   | { kind: "PaneNotFound"; paneId: string }
   | { kind: "RuntimeLimitExceeded"; maxRuntime: number };
 
+/**
+ * Error creation helper function for consistent error message generation.
+ *
+ * Creates ValidationError objects with consistent message formatting,
+ * supporting both custom messages and default message generation.
+ *
+ * @param error - The base validation error
+ * @param customMessage - Optional custom error message
+ * @returns ValidationError with message property
+ * @example
+ * ```typescript
+ * const error = createError({ kind: "EmptyInput" });
+ * const customError = createError({ kind: "ParseError", input: "abc" }, "Custom message");
+ * ```
+ */
 // Error creation helper
 export const createError = (
   error: ValidationError,
@@ -62,6 +139,20 @@ export const createError = (
   message: customMessage || getDefaultMessage(error),
 });
 
+/**
+ * Default message generator for ValidationError types.
+ *
+ * Provides consistent, human-readable error messages for all validation
+ * error types with appropriate context and details.
+ *
+ * @param error - The validation error to generate a message for
+ * @returns Human-readable error message string
+ * @example
+ * ```typescript
+ * const message = getDefaultMessage({ kind: "EmptyInput" });
+ * // Returns: "Input cannot be empty"
+ * ```
+ */
 export const getDefaultMessage = (error: ValidationError): string => {
   switch (error.kind) {
     case "ParseError":

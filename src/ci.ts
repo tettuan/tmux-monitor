@@ -2,7 +2,19 @@ import type { Result, ValidationError } from "./types.ts";
 import type { CommandExecutor, Logger } from "./services.ts";
 
 /**
- * CI Manager Class - Single Responsibility: CI Environment Management
+ * CI environment manager for detecting and handling continuous integration environments.
+ *
+ * Provides utilities for detecting CI environments and generating appropriate
+ * CI-specific instructions and commands for automated monitoring scenarios.
+ *
+ * @example
+ * ```typescript
+ * const ciManager = CIManager.create(commandExecutor, logger);
+ * const isCI = await ciManager.detectCIEnvironment();
+ * if (isCI.ok && isCI.data) {
+ *   const instructions = ciManager.generateCIInstructions();
+ * }
+ * ```
  */
 export class CIManager {
   private constructor(

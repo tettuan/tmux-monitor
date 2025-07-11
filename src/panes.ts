@@ -12,6 +12,21 @@ import { WORKER_STATUS_TYPES } from "./config.ts";
 // Pane Processing and Management
 // =============================================================================
 
+/**
+ * Processes and parses pane data from tmux command output.
+ *
+ * Handles the parsing of tmux pane information strings into structured data objects
+ * with comprehensive validation and error handling using Result types.
+ *
+ * @example
+ * ```typescript
+ * const processor = new PaneDataProcessor(commandExecutor);
+ * const result = processor.parsePaneInfo("session:window.pane command");
+ * if (result.ok) {
+ *   console.log("Parsed pane:", result.data);
+ * }
+ * ```
+ */
 export class PaneDataProcessor {
   constructor(private commandExecutor: CommandExecutor) {}
 
@@ -180,6 +195,19 @@ Start Command: #{pane_start_command}'`,
   }
 }
 
+/**
+ * Analyzes pane status and extracts meaningful information from pane data.
+ *
+ * Provides analysis capabilities for determining pane types, command classifications,
+ * and status extraction from tmux pane titles and commands.
+ *
+ * @example
+ * ```typescript
+ * const analyzer = new StatusAnalyzer(logger);
+ * const isNode = analyzer.isNodeCommand("node server.js");
+ * const status = analyzer.extractStatusFromTitle("WORKING - Processing");
+ * ```
+ */
 export class StatusAnalyzer {
   constructor(private logger: Logger) {}
 
@@ -346,6 +374,22 @@ export class StatusAnalyzer {
   }
 }
 
+/**
+ * Manages tmux pane discovery, classification, and state management.
+ *
+ * Handles the discovery of tmux panes, classification into main and target panes,
+ * and maintains pane state throughout the monitoring process.
+ *
+ * @example
+ * ```typescript
+ * const manager = new PaneManager(logger);
+ * const result = await manager.discoverPanes("session1");
+ * if (result.ok) {
+ *   const mainPanes = manager.getMainPanes();
+ *   const targetPanes = manager.getTargetPanes();
+ * }
+ * ```
+ */
 export class PaneManager {
   private mainPane: Pane | null = null;
   private panes: Pane[] = [];
@@ -388,6 +432,19 @@ export class PaneManager {
   }
 }
 
+/**
+ * Manages and tracks pane status changes over time.
+ *
+ * Maintains a history of pane status changes and provides utilities for
+ * detecting status transitions and retrieving changed panes.
+ *
+ * @example
+ * ```typescript
+ * const statusManager = new PaneStatusManager();
+ * const hasChanged = statusManager.updateStatus("pane1", { kind: "WORKING" });
+ * const changedPanes = statusManager.getChangedPanes();
+ * ```
+ */
 export class PaneStatusManager {
   private statusMap: Map<
     string,

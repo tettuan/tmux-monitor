@@ -2,7 +2,17 @@ import type { PaneDetail } from "./models.ts";
 import type { Logger } from "./services.ts";
 
 /**
- * Pane Display Class - Single Responsibility: Display Management
+ * Pane display manager for formatting and outputting pane information.
+ *
+ * Handles the display and formatting of tmux pane information including
+ * pane lists, main/target pane classifications, and status information.
+ *
+ * @example
+ * ```typescript
+ * const displayer = PaneDisplayer.create(logger);
+ * displayer.displayPaneList(allPanes);
+ * displayer.displayMainAndTargetPanes(mainPanes, targetPanes);
+ * ```
  */
 export class PaneDisplayer {
   private constructor(
