@@ -93,22 +93,45 @@ export class PaneCommunicator {
   ): Promise<Result<void, ValidationError & { message: string }>> {
     const command =
       "echo '=== STATUS UPDATE REQUEST ===' && echo 'Current Status: ' && echo 'WORKING' && echo";
-    const result = await this.commandExecutor.execute([
+
+    // コマンドを送信
+    const commandResult = await this.commandExecutor.execute([
       "tmux",
       "send-keys",
       "-t",
       paneId,
       command,
-      "Enter",
     ]);
 
-    if (!result.ok) {
+    if (!commandResult.ok) {
       return {
         ok: false,
         error: createError({
           kind: "CommandFailed",
-          command: `tmux send-keys to ${paneId}`,
-          stderr: result.error,
+          command: `tmux send-keys command to ${paneId}`,
+          stderr: commandResult.error,
+        }),
+      };
+    }
+
+    // 短い待機時間を置いてからEnterを送信
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const enterResult = await this.commandExecutor.execute([
+      "tmux",
+      "send-keys",
+      "-t",
+      paneId,
+      "Enter",
+    ]);
+
+    if (!enterResult.ok) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "CommandFailed",
+          command: `tmux send-keys Enter to ${paneId}`,
+          stderr: enterResult.error,
         }),
       };
     }
@@ -120,22 +143,44 @@ export class PaneCommunicator {
     paneId: string,
     message: string,
   ): Promise<Result<void, ValidationError & { message: string }>> {
-    const result = await this.commandExecutor.execute([
+    // メッセージを送信
+    const messageResult = await this.commandExecutor.execute([
       "tmux",
       "send-keys",
       "-t",
       paneId,
       message,
-      "Enter",
     ]);
 
-    if (!result.ok) {
+    if (!messageResult.ok) {
       return {
         ok: false,
         error: createError({
           kind: "CommandFailed",
-          command: `tmux send-keys to ${paneId}`,
-          stderr: result.error,
+          command: `tmux send-keys message to ${paneId}`,
+          stderr: messageResult.error,
+        }),
+      };
+    }
+
+    // 短い待機時間を置いてからEnterを送信
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const enterResult = await this.commandExecutor.execute([
+      "tmux",
+      "send-keys",
+      "-t",
+      paneId,
+      "Enter",
+    ]);
+
+    if (!enterResult.ok) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "CommandFailed",
+          command: `tmux send-keys Enter to ${paneId}`,
+          stderr: enterResult.error,
         }),
       };
     }
@@ -160,22 +205,45 @@ export class PaneCommunicator {
     }
 
     const command = `cat "${filePath}"`;
-    const result = await this.commandExecutor.execute([
+
+    // コマンドを送信
+    const commandResult = await this.commandExecutor.execute([
       "tmux",
       "send-keys",
       "-t",
       paneId,
       command,
-      "Enter",
     ]);
 
-    if (!result.ok) {
+    if (!commandResult.ok) {
       return {
         ok: false,
         error: createError({
           kind: "CommandFailed",
-          command: `tmux send instruction file to ${paneId}`,
-          stderr: result.error,
+          command: `tmux send-keys command to ${paneId}`,
+          stderr: commandResult.error,
+        }),
+      };
+    }
+
+    // 短い待機時間を置いてからEnterを送信
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const enterResult = await this.commandExecutor.execute([
+      "tmux",
+      "send-keys",
+      "-t",
+      paneId,
+      "Enter",
+    ]);
+
+    if (!enterResult.ok) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "CommandFailed",
+          command: `tmux send instruction file Enter to ${paneId}`,
+          stderr: enterResult.error,
         }),
       };
     }
@@ -209,22 +277,44 @@ export class PaneCommunicator {
   ): Promise<Result<void, ValidationError & { message: string }>> {
     this.logger.info(`Sending main report to pane ${mainPaneId}`);
 
-    const result = await this.commandExecutor.execute([
+    // メッセージを送信
+    const messageResult = await this.commandExecutor.execute([
       "tmux",
       "send-keys",
       "-t",
       mainPaneId,
       message,
-      "Enter",
     ]);
 
-    if (!result.ok) {
+    if (!messageResult.ok) {
       return {
         ok: false,
         error: createError({
           kind: "CommandFailed",
-          command: `tmux send main report to ${mainPaneId}`,
-          stderr: result.error,
+          command: `tmux send main report message to ${mainPaneId}`,
+          stderr: messageResult.error,
+        }),
+      };
+    }
+
+    // 短い待機時間を置いてからEnterを送信
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const enterResult = await this.commandExecutor.execute([
+      "tmux",
+      "send-keys",
+      "-t",
+      mainPaneId,
+      "Enter",
+    ]);
+
+    if (!enterResult.ok) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "CommandFailed",
+          command: `tmux send main report Enter to ${mainPaneId}`,
+          stderr: enterResult.error,
         }),
       };
     }
@@ -263,18 +353,36 @@ export class PaneCommunicator {
       if (pane.currentCommand.toLowerCase().includes("zsh")) {
         this.logger.info(`Sending cld command to pane ${pane.paneId}`);
 
-        const result = await this.commandExecutor.execute([
+        // cldコマンドを送信
+        const commandResult = await this.commandExecutor.execute([
           "tmux",
           "send-keys",
           "-t",
           pane.paneId,
           "cld",
+        ]);
+
+        if (!commandResult.ok) {
+          this.logger.warn(
+            `Failed to send cld command to pane ${pane.paneId}: ${commandResult.error}`,
+          );
+          continue;
+        }
+
+        // 短い待機時間を置いてからEnterを送信
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const enterResult = await this.commandExecutor.execute([
+          "tmux",
+          "send-keys",
+          "-t",
+          pane.paneId,
           "Enter",
         ]);
 
-        if (!result.ok) {
+        if (!enterResult.ok) {
           this.logger.warn(
-            `Failed to send cld command to pane ${pane.paneId}: ${result.error}`,
+            `Failed to send Enter to pane ${pane.paneId}: ${enterResult.error}`,
           );
         } else {
           this.logger.info(
