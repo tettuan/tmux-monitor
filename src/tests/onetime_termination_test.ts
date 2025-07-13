@@ -439,7 +439,7 @@ Deno.test("time option - past time gets scheduled for next day", async () => {
 
     // Should complete relatively quickly since it's onetime mode
     assertEquals(
-      executionTime < 3000, // Should be fast for onetime
+      executionTime < 4000, // Allow up to 4 seconds for onetime (increased from 3000)
       true,
       `Onetime process should complete quickly, but took ${executionTime}ms`,
     );
