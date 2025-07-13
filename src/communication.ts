@@ -2,6 +2,11 @@ import { createError, type Result, type ValidationError } from "./types.ts";
 import type { PaneDetail } from "./models.ts";
 
 /**
+ * Default instruction file path
+ */
+const DEFAULT_INSTRUCTION_FILE = "instructions/team-head.ja.md";
+
+/**
  * Message generator for creating formatted monitoring and status messages.
  *
  * Generates structured messages for status reports, pane listings, and other
@@ -16,6 +21,14 @@ import type { PaneDetail } from "./models.ts";
  * ```
  */
 export class MessageGenerator {
+  /**
+   * Generates a built-in instruction message referencing the default instruction file
+   * @returns The formatted English instruction message with file path reference
+   */
+  static generateBuiltInInstructionMessage(): string {
+    return `Follow the instruction and proceed with pane task assignment: ${DEFAULT_INSTRUCTION_FILE}`;
+  }
+
   static generateStatusMessage(
     activePanes: PaneDetail[],
     inactivePanes: PaneDetail[],
@@ -342,5 +355,22 @@ export class PaneCommunicator {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
+  }
+
+  /**
+   * Send built-in instruction message to main pane
+   * This is distinct from CLI-provided instruction files
+   */
+  async sendBuiltInInstructionToMainPane(
+    mainPaneId: string,
+  ): Promise<Result<void, ValidationError & { message: string }>> {
+    const instructionMessage = MessageGenerator
+      .generateBuiltInInstructionMessage();
+
+    this.logger.info(
+      `Sending built-in instruction message to main pane ${mainPaneId}`,
+    );
+
+    return await this.sendToPane(mainPaneId, instructionMessage);
   }
 }

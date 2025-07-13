@@ -1,4 +1,4 @@
-import { PANE_CONFIG, TIMING } from "./config.ts";
+import { DEFAULT_INSTRUCTION_FILE, PANE_CONFIG, TIMING } from "./config.ts";
 import { Pane, type WorkerStatus } from "./models.ts";
 import type { TmuxSession } from "./session.ts";
 import type {
@@ -254,7 +254,7 @@ export class MonitoringEngine {
         const clearReport =
           `Cleared ${panesToClear.length} newly IDLE/DONE panes: ${
             panesToClear.join(", ")
-          } (excluded ${smallestPanes.length} smallest IDs globally)`;
+          } (excluded ${smallestPanes.length} smallest IDs globally)\n\nFollow the instruction and proceed with pane task assignment: ${DEFAULT_INSTRUCTION_FILE}`;
         const result = await this.communicator.sendToPane(
           mainPane.id,
           clearReport,

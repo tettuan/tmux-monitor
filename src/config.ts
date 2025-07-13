@@ -58,6 +58,20 @@ export const PANE_CONFIG = {
 } as const;
 
 /**
+ * Default instruction file path for task assignment.
+ *
+ * This constant defines the default instruction file that is referenced
+ * in clear-report messages sent to the main pane after clearing operations.
+ *
+ * @example
+ * ```typescript
+ * import { DEFAULT_INSTRUCTION_FILE } from "./config.ts";
+ * const message = `Follow the instruction: ${DEFAULT_INSTRUCTION_FILE}`;
+ * ```
+ */
+export const DEFAULT_INSTRUCTION_FILE = "instructions/team-head.ja.md";
+
+/**
  * Available worker status types for pane monitoring.
  *
  * Defines all possible status values that can be assigned to worker panes
