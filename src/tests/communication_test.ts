@@ -119,29 +119,6 @@ Deno.test("PaneCommunicator - create", () => {
   assertExists(communicator);
 });
 
-Deno.test("PaneCommunicator - sendStatusUpdateToPane normal case", async () => {
-  const communicator = PaneCommunicator.create(
-    new MockCommandExecutor(),
-    new MockLogger(),
-  );
-
-  const result = await communicator.sendStatusUpdateToPane("%1");
-
-  assertEquals(result.ok, true);
-});
-
-Deno.test("PaneCommunicator - sendStatusUpdateToPane command failure", async () => {
-  const mockExecutor = {
-    execute: () => Promise.resolve({ ok: false, error: "Command failed" }),
-  };
-
-  const communicator = PaneCommunicator.create(mockExecutor, new MockLogger());
-
-  const result = await communicator.sendStatusUpdateToPane("%1");
-
-  assertEquals(result.ok, false);
-});
-
 Deno.test("PaneCommunicator - sendToPane normal case", async () => {
   const communicator = PaneCommunicator.create(
     new MockCommandExecutor(),

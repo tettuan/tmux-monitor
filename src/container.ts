@@ -112,18 +112,16 @@ export class DIContainer {
       ));
 
     // Pane monitoring
-    this.register("paneTitleManager", () => 
+    this.register("paneTitleManager", () =>
       PaneTitleManager.create(
         this.get("commandExecutor"),
-        this.get("logger")
-      )
-    );
-    this.register("paneContentMonitor", () => 
+        this.get("logger"),
+      ));
+    this.register("paneContentMonitor", () =>
       PaneContentMonitor.create(
-        this.get("commandExecutor"), 
-        this.get("logger")
-      )
-    );
+        this.get("commandExecutor"),
+        this.get("logger"),
+      ));
   }
 
   createMonitoringEngine(options: MonitoringOptions): MonitoringEngine {

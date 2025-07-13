@@ -28,7 +28,7 @@
   "tasks": {
     "start": "deno run --allow-run --allow-env --allow-read main.ts",
     "dev": "deno run --allow-run --allow-env --allow-read --watch main.ts",
-    "test": "deno test --allow-run --allow-env --allow-read",
+    "test": "deno test --allow-run --allow-env --allow-read --allow-write",
     "fmt": "deno fmt",
     "lint": "deno lint",
     "check": "deno check mod.ts main.ts",

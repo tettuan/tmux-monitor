@@ -71,7 +71,6 @@ export class MessageGenerator {
  * @example
  * ```typescript
  * const communicator = PaneCommunicator.create(commandExecutor, logger);
- * const result = await communicator.sendStatusUpdateToPane("pane1");
  * const instructionResult = await communicator.sendInstructionFile("pane1", "./startup.txt");
  * ```
  */
@@ -86,14 +85,6 @@ export class PaneCommunicator {
   // deno-lint-ignore no-explicit-any
   static create(commandExecutor: any, logger: any): PaneCommunicator {
     return new PaneCommunicator(commandExecutor, logger);
-  }
-
-  sendStatusUpdateToPane(
-    paneId: string,
-  ): Promise<Result<void, ValidationError & { message: string }>> {
-    // Status update instructions disabled - only monitoring without sending commands
-    this.logger.info(`Skipping status update instruction to pane ${paneId} (disabled)`);
-    return Promise.resolve({ ok: true, data: undefined });
   }
 
   async sendToPane(

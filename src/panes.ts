@@ -223,11 +223,11 @@ Start Command: #{pane_start_command}'`,
       logger.error(errorMessage);
       return {
         ok: false,
-        error: { 
-          kind: "CommandFailed" as const, 
+        error: {
+          kind: "CommandFailed" as const,
           message: errorMessage,
           command: `tmux capture-pane -t "${paneId}" -p -S -10`,
-          stderr: String(error)
+          stderr: String(error),
         },
       };
     }

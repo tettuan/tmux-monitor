@@ -9,8 +9,8 @@ import type {
 } from "./panes.ts";
 import type {
   PaneContentMonitor,
-  PaneTitleManager,
   PaneMonitorResult as _PaneMonitorResult,
+  PaneTitleManager,
 } from "./pane_monitor.ts";
 import { MessageGenerator, type PaneCommunicator } from "./communication.ts";
 import type { PaneDisplayer } from "./display.ts";
@@ -166,37 +166,47 @@ export class MonitoringEngine {
     this.logger.info(`ENTER sent to ${allPanes.length} panes`);
   }
 
-  async checkAndClearDoneAndIdlePanes(newlyIdleOrDonePanes: string[] = []): Promise<void> {
+  async checkAndClearDoneAndIdlePanes(
+    newlyIdleOrDonePanes: string[] = [],
+  ): Promise<void> {
     if (newlyIdleOrDonePanes.length === 0) {
       this.logger.info("No newly IDLE/DONE panes to clear");
       return;
     }
 
     this.logger.info(
-      `Checking for clearing newly IDLE/DONE panes: ${newlyIdleOrDonePanes.join(", ")}`,
+      `Checking for clearing newly IDLE/DONE panes: ${
+        newlyIdleOrDonePanes.join(", ")
+      }`,
     );
 
     // Sort panes by ID and exclude the 4 smallest IDs
     const sortedPanes = newlyIdleOrDonePanes.sort((a: string, b: string) =>
       a.localeCompare(b)
     );
-    
+
     // Get all current DONE/IDLE panes to determine which are the 4 smallest globally
     const allDoneIdlePanes = this.statusManager.getDoneAndIdlePanes();
     const sortedAllPanes = allDoneIdlePanes.sort((a: string, b: string) =>
       a.localeCompare(b)
     );
     const smallestFourPanes = sortedAllPanes.slice(0, 4);
-    
+
     // Filter out panes that are among the 4 smallest IDs globally
-    const panesToClear = sortedPanes.filter(paneId => !smallestFourPanes.includes(paneId));
+    const panesToClear = sortedPanes.filter((paneId) =>
+      !smallestFourPanes.includes(paneId)
+    );
 
     if (panesToClear.length > 0) {
       this.logger.info(
-        `Excluding globally smallest 4 pane IDs: ${smallestFourPanes.join(", ")}`,
+        `Excluding globally smallest 4 pane IDs: ${
+          smallestFourPanes.join(", ")
+        }`,
       );
       this.logger.info(
-        `Clearing ${panesToClear.length} newly IDLE/DONE panes: ${panesToClear.join(", ")}`,
+        `Clearing ${panesToClear.length} newly IDLE/DONE panes: ${
+          panesToClear.join(", ")
+        }`,
       );
 
       // Send clear command to each selected pane
@@ -204,20 +214,24 @@ export class MonitoringEngine {
         const result = await this.communicator.sendToPane(paneId, "clear");
         if (result.ok) {
           this.logger.info(`/clear command sent to pane ${paneId}`);
-          
+
           // Wait a moment for the clear command to process
           await this.timeManager.sleep(1000);
-          
+
           // Verify clear state and perform recovery if needed
-          const isProperlyCleared = await this.verifyClearStateAndRecover(paneId);
-          
+          const isProperlyCleared = await this.verifyClearStateAndRecover(
+            paneId,
+          );
+
           if (isProperlyCleared) {
             // Mark this pane as cleared to prevent future redundant clears
             this.clearedPanes.add(paneId);
           } else {
             // Wait a moment after recovery and verify again
             await this.timeManager.sleep(2000);
-            const isRecoverySuccessful = await this.verifyClearStateAndRecover(paneId);
+            const isRecoverySuccessful = await this.verifyClearStateAndRecover(
+              paneId,
+            );
             if (isRecoverySuccessful) {
               this.clearedPanes.add(paneId);
             }
@@ -255,12 +269,6 @@ export class MonitoringEngine {
     }
   }
 
-  processAllPanes(): Promise<void> {
-    // Pane status instructions disabled - monitoring only without sending commands
-    this.logger.info("Skipping status report instructions to panes (disabled)");
-    return Promise.resolve();
-  }
-
   async updateStatusTracking(): Promise<string[]> {
     const targetPanes = this.paneManager.getTargetPanes();
     const newlyIdleOrDonePanes: string[] = [];
@@ -284,10 +292,11 @@ export class MonitoringEngine {
             if (this.clearedPanes.has(pane.id)) {
               this.clearedPanes.delete(pane.id);
             }
-          }
-          // If pane newly becomes IDLE or DONE and hasn't been cleared yet
-          else if ((currentStatus.kind === "IDLE" || currentStatus.kind === "DONE") && 
-                   !this.clearedPanes.has(pane.id)) {
+          } // If pane newly becomes IDLE or DONE and hasn't been cleared yet
+          else if (
+            (currentStatus.kind === "IDLE" || currentStatus.kind === "DONE") &&
+            !this.clearedPanes.has(pane.id)
+          ) {
             newlyIdleOrDonePanes.push(pane.id);
           }
         }
@@ -384,11 +393,16 @@ export class MonitoringEngine {
     );
 
     // If there are status changes, prepend change notification
-    const finalMessage = changedPanes.length > 0 
-      ? `Status changes detected in panes: ${changedPanes.join(", ")}\n\n${message}`
+    const finalMessage = changedPanes.length > 0
+      ? `Status changes detected in panes: ${
+        changedPanes.join(", ")
+      }\n\n${message}`
       : message;
 
-    const result = await this.communicator.sendToPane(mainPane.id, finalMessage);
+    const result = await this.communicator.sendToPane(
+      mainPane.id,
+      finalMessage,
+    );
     if (!result.ok) {
       this.logger.warn(`Failed to send main report: ${result.error.message}`);
     }
@@ -473,10 +487,7 @@ export class MonitoringEngine {
         await this.communicator.startClaudeIfNotRunning(panesResult.data);
       }
 
-      // 3. Process all panes
-      await this.processAllPanes();
-
-      // 4. Update status tracking and report changes
+      // 3. Update status tracking and report changes
       const _newlyIdleOrDonePanes = await this.updateStatusTracking();
 
       // 5. Display list
@@ -665,10 +676,7 @@ export class MonitoringEngine {
         await this.communicator.startClaudeIfNotRunning(panesResult.data);
       }
 
-      // 3. Process all panes (send status update instructions)
-      await this.processAllPanes();
-
-      // 4. Update status tracking and report changes
+      // 3. Update status tracking and report changes
       const _newlyIdleOrDonePanes = await this.updateStatusTracking();
 
       // 5. Display pane list
@@ -838,7 +846,9 @@ export class MonitoringEngine {
         );
         if (paneDetailResult.ok) {
           // Clean the title to get the base title without status prefixes
-          const cleanTitle = this.paneTitleManager.cleanTitle(paneDetailResult.data.title || "tmux");
+          const cleanTitle = this.paneTitleManager.cleanTitle(
+            paneDetailResult.data.title || "tmux",
+          );
           this.originalTitles.set(pane.id, cleanTitle || "tmux");
         }
       }
@@ -853,8 +863,11 @@ export class MonitoringEngine {
     // Update status manager with new statuses and track transitions
     for (const result of monitorResults) {
       const currentStatus = { kind: result.status } as WorkerStatus;
-      const updated = this.statusManager.updateStatus(result.paneId, currentStatus);
-      
+      const updated = this.statusManager.updateStatus(
+        result.paneId,
+        currentStatus,
+      );
+
       // Track status transitions for clearing logic
       if (updated) {
         // If pane becomes WORKING, remove from clearedPanes so it can be cleared again later
@@ -862,10 +875,11 @@ export class MonitoringEngine {
           if (this.clearedPanes.has(result.paneId)) {
             this.clearedPanes.delete(result.paneId);
           }
-        }
-        // If pane newly becomes IDLE or DONE and hasn't been cleared yet
-        else if ((currentStatus.kind === "IDLE" || currentStatus.kind === "DONE") && 
-                 !this.clearedPanes.has(result.paneId)) {
+        } // If pane newly becomes IDLE or DONE and hasn't been cleared yet
+        else if (
+          (currentStatus.kind === "IDLE" || currentStatus.kind === "DONE") &&
+          !this.clearedPanes.has(result.paneId)
+        ) {
           newlyIdleOrDonePanes.push(result.paneId);
         }
       }
@@ -892,25 +906,31 @@ export class MonitoringEngine {
    */
   async verifyClearStateAndRecover(paneId: string): Promise<boolean> {
     // Get pane content to verify clear state
-    const contentResult = await this.paneDataProcessor.getPaneContent(paneId, this.logger);
+    const contentResult = await this.paneDataProcessor.getPaneContent(
+      paneId,
+      this.logger,
+    );
     if (!contentResult.ok) {
       return false;
     }
 
     // Normalize content and check for proper clear pattern
-    const normalizedContent = this.normalizeContentForComparison(contentResult.data);
+    const normalizedContent = this.normalizeContentForComparison(
+      contentResult.data,
+    );
     const expectedPattern = ">/clear⎿(nocontent)";
-    
+
     if (normalizedContent.includes(expectedPattern)) {
       return true;
     }
 
     // Check for various failure patterns
     const hasClearCommand = normalizedContent.includes(">/clear");
-    const clearOccurrences = (normalizedContent.split(">/clear").length - 1);
+    const clearOccurrences = normalizedContent.split(">/clear").length - 1;
     const hasMultipleClear = clearOccurrences > 1;
-    const hasMissingNoContent = hasClearCommand && !normalizedContent.includes("⎿(nocontent)");
-    
+    const hasMissingNoContent = hasClearCommand &&
+      !normalizedContent.includes("⎿(nocontent)");
+
     if (hasMultipleClear || hasMissingNoContent) {
       // Perform recovery sequence
       await this.performClearRecovery(paneId);
@@ -940,17 +960,27 @@ export class MonitoringEngine {
       // 1. Send Escape, wait 1 second
       this.logger.info(`[RECOVERY] Sending Escape to pane ${paneId}`);
       const escapeResult1 = await this.commandExecutor.execute([
-        "tmux", "send-keys", "-t", paneId, "Escape"
+        "tmux",
+        "send-keys",
+        "-t",
+        paneId,
+        "Escape",
       ]);
       if (!escapeResult1.ok) {
-        this.logger.warn(`Failed to send first Escape: ${escapeResult1.error.message}`);
+        this.logger.warn(
+          `Failed to send first Escape: ${escapeResult1.error.message}`,
+        );
       }
       await this.timeManager.sleep(1000);
 
       // 2. Send Enter, wait 1 second
       this.logger.info(`[RECOVERY] Sending Enter to pane ${paneId}`);
       const enterResult = await this.commandExecutor.execute([
-        "tmux", "send-keys", "-t", paneId, "Enter"
+        "tmux",
+        "send-keys",
+        "-t",
+        paneId,
+        "Enter",
       ]);
       if (!enterResult.ok) {
         this.logger.warn(`Failed to send Enter: ${enterResult.error.message}`);
@@ -960,10 +990,16 @@ export class MonitoringEngine {
       // 3. Send Escape, wait 2 seconds
       this.logger.info(`[RECOVERY] Sending second Escape to pane ${paneId}`);
       const escapeResult2 = await this.commandExecutor.execute([
-        "tmux", "send-keys", "-t", paneId, "Escape"
+        "tmux",
+        "send-keys",
+        "-t",
+        paneId,
+        "Escape",
       ]);
       if (!escapeResult2.ok) {
-        this.logger.warn(`Failed to send second Escape: ${escapeResult2.error.message}`);
+        this.logger.warn(
+          `Failed to send second Escape: ${escapeResult2.error.message}`,
+        );
       }
       await this.timeManager.sleep(2000);
 
@@ -971,13 +1007,19 @@ export class MonitoringEngine {
       this.logger.info(`[RECOVERY] Sending /clear command to pane ${paneId}`);
       const clearResult = await this.communicator.sendToPane(paneId, "/clear");
       if (!clearResult.ok) {
-        this.logger.warn(`Failed to send recovery /clear: ${clearResult.error.message}`);
+        this.logger.warn(
+          `Failed to send recovery /clear: ${clearResult.error.message}`,
+        );
       } else {
-        this.logger.info(`[RECOVERY] Recovery /clear sent successfully to pane ${paneId}`);
+        this.logger.info(
+          `[RECOVERY] Recovery /clear sent successfully to pane ${paneId}`,
+        );
       }
-
     } catch (error) {
-      this.logger.error(`[RECOVERY] Error during clear recovery for pane ${paneId}:`, error);
+      this.logger.error(
+        `[RECOVERY] Error during clear recovery for pane ${paneId}:`,
+        error,
+      );
     }
   }
 }
