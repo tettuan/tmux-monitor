@@ -92,7 +92,7 @@ export class PaneCommunicator {
     paneId: string,
   ): Promise<Result<void, ValidationError & { message: string }>> {
     const command =
-      "echo '=== STATUS UPDATE REQUEST ===' && echo 'Current Status: ' && echo 'WORKING' && echo";
+      "Set Current Working STATUS: tmux select-pane -T '[STATUS]'";
 
     // コマンドを送信
     const commandResult = await this.commandExecutor.execute([
