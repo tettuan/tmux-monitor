@@ -40,7 +40,7 @@ export class ArgumentParser {
     // Look for time parameter (--time=HH:MM, --time HH:MM, or -t HH:MM)
     for (let i = 0; i < args.length; i++) {
       const arg = args[i];
-      
+
       if (arg.startsWith("--time=")) {
         const timeStr = arg.substring(7);
         const parseResult = ValidatedTime.create(timeStr);
@@ -82,7 +82,7 @@ export class ArgumentParser {
 
     // Default to continuous monitoring mode unless --onetime or --clear is specified
     const continuous = !oneTime;
-    
+
     const options = MonitoringOptions.create(
       continuous,
       scheduledTime,

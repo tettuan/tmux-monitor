@@ -254,7 +254,9 @@ Deno.test("time and instruction options - compatibility test", async () => {
     let timeoutReached = false;
     const timeoutId = setTimeout(() => {
       timeoutReached = true;
-      console.log(`[TEST] ⚠️ Timeout reached - killing process (this is expected)`);
+      console.log(
+        `[TEST] ⚠️ Timeout reached - killing process (this is expected)`,
+      );
       try {
         child.kill("SIGTERM");
       } catch {
@@ -385,7 +387,9 @@ Deno.test("time option - past time gets scheduled for next day", async () => {
   let timeoutReached = false;
   const timeoutId = setTimeout(() => {
     timeoutReached = true;
-    console.log(`[TEST] ⚠️ Timeout reached - killing process (this is expected)`);
+    console.log(
+      `[TEST] ⚠️ Timeout reached - killing process (this is expected)`,
+    );
     try {
       child.kill("SIGTERM");
     } catch {
