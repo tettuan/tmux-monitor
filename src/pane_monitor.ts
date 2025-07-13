@@ -243,6 +243,24 @@ export class PaneContentMonitor {
   clearAllHistory(): void {
     this.captures.clear();
   }
+
+  /**
+   * Check if a pane exists
+   */
+  private async paneExists(paneId: string): Promise<boolean> {
+    try {
+      const result = await this.commandExecutor.execute([
+        "tmux",
+        "display-panes",
+        "-t",
+        paneId,
+        "-p",
+      ]);
+      return result.ok;
+    } catch (_error) {
+      return false;
+    }
+  }
 }
 
 /**
@@ -265,6 +283,24 @@ export class PaneTitleManager {
   }
 
   /**
+   * Check if a pane exists
+   */
+  private async paneExists(paneId: string): Promise<boolean> {
+    try {
+      const result = await this.commandExecutor.execute([
+        "tmux",
+        "display-panes",
+        "-t",
+        paneId,
+        "-p",
+      ]);
+      return result.ok;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  /**
    * Update pane title with status information
    */
   async updatePaneTitle(
@@ -273,6 +309,18 @@ export class PaneTitleManager {
     originalTitle?: string,
   ): Promise<Result<void, ValidationError & { message: string }>> {
     try {
+      // Check if pane exists before attempting to update title
+      if (!(await this.paneExists(paneId))) {
+        return {
+          ok: false,
+          error: createError({
+            kind: "CommandFailed",
+            command: `tmux select-pane -t ${paneId}`,
+            stderr: `Pane ${paneId} does not exist`,
+          }),
+        };
+      }
+
       // Get current title and clean it from existing status prefixes
       let baseTitle: string;
       if (originalTitle) {
@@ -357,6 +405,18 @@ export class PaneTitleManager {
     originalTitle: string,
   ): Promise<Result<void, ValidationError & { message: string }>> {
     try {
+      // Check if pane exists before attempting to restore title
+      if (!(await this.paneExists(paneId))) {
+        return {
+          ok: false,
+          error: createError({
+            kind: "CommandFailed",
+            command: `tmux select-pane -t ${paneId}`,
+            stderr: `Pane ${paneId} does not exist`,
+          }),
+        };
+      }
+
       const result = await this.commandExecutor.execute([
         "tmux",
         "select-pane",
@@ -420,6 +480,11 @@ export class PaneTitleManager {
    * Get current pane title for cleaning
    */
   private async getCurrentPaneTitle(paneId: string): Promise<string> {
+    // Check if pane exists first
+    if (!(await this.paneExists(paneId))) {
+      return "tmux"; // fallback for non-existent panes
+    }
+
     const result = await this.commandExecutor.execute([
       "tmux",
       "display",
