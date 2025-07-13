@@ -513,6 +513,9 @@ export class MonitoringEngine {
 
       let interrupted = false;
       while (!interrupted) {
+        // Re-discover panes to detect new/removed panes (every 30 seconds)
+        await this.refreshPaneList();
+
         // Send ENTER to all panes (every 30 seconds)
         await this.sendEnterToAllPanesCycle();
 
@@ -1000,6 +1003,104 @@ export class MonitoringEngine {
     } catch (error) {
       this.logger.error(
         `[RECOVERY] Error during clear recovery for pane ${paneId}:`,
+        error,
+      );
+    }
+  }
+
+  /**
+   * Refresh pane list to detect new/removed panes
+   * This method re-discovers all panes and updates the pane manager
+   */
+  async refreshPaneList(): Promise<void> {
+    try {
+      // Get current session
+      const sessionResult = await this.session.findMostActiveSession();
+      if (!sessionResult.ok) {
+        this.logger.warn(
+          `Failed to refresh session: ${sessionResult.error.message}`,
+        );
+        return;
+      }
+
+      // Get all current panes
+      const panesResult = await this.session.getAllPanes(sessionResult.data);
+      if (!panesResult.ok) {
+        this.logger.warn(
+          `Failed to refresh panes: ${panesResult.error.message}`,
+        );
+        return;
+      }
+
+      // Get previous pane counts for comparison
+      const previousTargetCount = this.paneManager.getTargetPanes().length;
+      const previousMainPane = this.paneManager.getMainPane();
+      const previousMainCount = previousMainPane ? 1 : 0;
+
+      // Re-separate panes with current data
+      this.paneManager.separate(
+        panesResult.data.map((pd) => {
+          const paneResult = Pane.create(
+            pd.paneId,
+            pd.active === "1",
+            pd.currentCommand,
+            pd.title,
+          );
+          return paneResult.ok ? paneResult.data : null;
+        }).filter((p): p is Pane => p !== null),
+      );
+
+      // Get new pane counts
+      const currentTargetCount = this.paneManager.getTargetPanes().length;
+      const currentMainPane = this.paneManager.getMainPane();
+      const currentMainCount = currentMainPane ? 1 : 0;
+
+      // Log changes if any
+      const targetDiff = currentTargetCount - previousTargetCount;
+      const mainDiff = currentMainCount - previousMainCount;
+
+      if (targetDiff !== 0 || mainDiff !== 0) {
+        this.logger.info(
+          `[PANE-REFRESH] Pane list updated: target panes ${
+            targetDiff > 0 ? "+" : ""
+          }${targetDiff} (${previousTargetCount} → ${currentTargetCount}), main panes ${
+            mainDiff > 0 ? "+" : ""
+          }${mainDiff} (${previousMainCount} → ${currentMainCount})`,
+        );
+
+        // Clean up original titles for removed panes
+        const currentPaneIds = new Set([
+          ...this.paneManager.getTargetPanes().map((p) => p.id),
+          ...(currentMainPane ? [currentMainPane.id] : []),
+        ]);
+
+        // Remove original titles for panes that no longer exist
+        for (const [paneId] of this.originalTitles.entries()) {
+          if (!currentPaneIds.has(paneId)) {
+            this.originalTitles.delete(paneId);
+            this.logger.info(
+              `[PANE-REFRESH] Removed original title tracking for deleted pane ${paneId}`,
+            );
+          }
+        }
+
+        // Clean up cleared panes tracking for removed panes
+        for (const paneId of this.clearedPanes) {
+          if (!currentPaneIds.has(paneId)) {
+            this.clearedPanes.delete(paneId);
+            this.logger.info(
+              `[PANE-REFRESH] Removed clear tracking for deleted pane ${paneId}`,
+            );
+          }
+        }
+      } else {
+        this.logger.info(
+          `[PANE-REFRESH] No pane changes detected (${currentTargetCount} target, ${currentMainCount} main)`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        "[PANE-REFRESH] Error during pane list refresh:",
         error,
       );
     }
