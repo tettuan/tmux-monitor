@@ -76,22 +76,11 @@ export class MonitoringEngine {
   }
 
   async sendInstructionFileToMainPane(): Promise<void> {
-    // this.logger.info(
-    //   `[DEBUG] sendInstructionFileToMainPane: instructionFile = ${this.instructionFile}`,
-    // );
     if (!this.instructionFile) {
-      // this.logger.info(
-      //   `[DEBUG] sendInstructionFileToMainPane: No instruction file specified`,
-      // );
       return;
     }
 
     const mainPane = this.paneManager.getMainPane();
-    // this.logger.info(
-    //   `[DEBUG] sendInstructionFileToMainPane: mainPane = ${
-    //     mainPane ? mainPane.id : "null"
-    //   }`,
-    // );
     if (!mainPane) {
       this.logger.error("Main pane not found for instruction file");
       return;
@@ -155,7 +144,6 @@ export class MonitoringEngine {
   }
 
   async sendEnterToAllPanesCycle(): Promise<void> {
-    // console.log(`[DEBUG] sendEnterToAllPanesCycle: Starting`);
     this.logger.info("Starting 30-second ENTER sending cycle to all panes...");
 
     const targetPanes = this.paneManager.getTargetPanes();
@@ -167,11 +155,6 @@ export class MonitoringEngine {
     for (let i = 0; i < allPanes.length; i++) {
       const pane = allPanes[i];
 
-      // console.log(
-      //   `[DEBUG] sendEnterToAllPanesCycle: Sending ENTER to pane ${
-      //     i + 1
-      //   }/${allPanes.length} (${pane.id})`,
-      // );
       const result = await this.communicator.sendToPane(pane.id, "");
       if (!result.ok) {
         this.logger.warn(
@@ -180,7 +163,6 @@ export class MonitoringEngine {
       }
     }
 
-    // console.log(`[DEBUG] sendEnterToAllPanesCycle: Completed successfully`);
     this.logger.info(`ENTER sent to ${allPanes.length} panes`);
   }
 
@@ -221,7 +203,7 @@ export class MonitoringEngine {
       for (const paneId of panesToClear) {
         const result = await this.communicator.sendToPane(paneId, "clear");
         if (result.ok) {
-          this.logger.info(`[CLEAR] /clear command sent to pane ${paneId}`);
+          this.logger.info(`/clear command sent to pane ${paneId}`);
           
           // Wait a moment for the clear command to process
           await this.timeManager.sleep(1000);
@@ -232,16 +214,12 @@ export class MonitoringEngine {
           if (isProperlyCleared) {
             // Mark this pane as cleared to prevent future redundant clears
             this.clearedPanes.add(paneId);
-            this.logger.info(`[DEBUG] Pane ${paneId} marked as cleared`);
           } else {
             // Wait a moment after recovery and verify again
             await this.timeManager.sleep(2000);
             const isRecoverySuccessful = await this.verifyClearStateAndRecover(paneId);
             if (isRecoverySuccessful) {
               this.clearedPanes.add(paneId);
-              this.logger.info(`[DEBUG] Pane ${paneId} marked as cleared after recovery`);
-            } else {
-              this.logger.warn(`[DEBUG] Pane ${paneId} clear verification failed even after recovery`);
             }
           }
         } else {
@@ -287,7 +265,6 @@ export class MonitoringEngine {
     const targetPanes = this.paneManager.getTargetPanes();
     const newlyIdleOrDonePanes: string[] = [];
 
-    this.logger.info("[DEBUG] Updating status tracking for all panes...");
     for (const pane of targetPanes) {
       const paneDetailResult = await this.paneDataProcessor.getPaneDetail(
         pane.id,
@@ -299,10 +276,6 @@ export class MonitoringEngine {
         );
         const _previousStatus = this.statusManager.getStatus(pane.id);
         const updated = this.statusManager.updateStatus(pane.id, currentStatus);
-        
-        this.logger.info(
-          `[DEBUG]   Pane ${pane.id}: ${currentStatus.kind} (updated: ${updated})`,
-        );
 
         // Track status transitions
         if (updated) {
@@ -310,23 +283,16 @@ export class MonitoringEngine {
           if (currentStatus.kind === "WORKING") {
             if (this.clearedPanes.has(pane.id)) {
               this.clearedPanes.delete(pane.id);
-              this.logger.info(`[DEBUG] Pane ${pane.id} returned to WORKING - can be cleared again`);
             }
           }
           // If pane newly becomes IDLE or DONE and hasn't been cleared yet
           else if ((currentStatus.kind === "IDLE" || currentStatus.kind === "DONE") && 
                    !this.clearedPanes.has(pane.id)) {
             newlyIdleOrDonePanes.push(pane.id);
-            this.logger.info(`[DEBUG] Pane ${pane.id} newly transitioned to ${currentStatus.kind}`);
           }
         }
-      } else {
-        this.logger.warn(
-          `[DEBUG]   Failed to get details for pane ${pane.id}: ${paneDetailResult.error.message}`,
-        );
       }
     }
-    this.logger.info("[DEBUG] Status tracking update completed");
     return newlyIdleOrDonePanes;
   }
 
@@ -432,35 +398,19 @@ export class MonitoringEngine {
   }
 
   async monitor(): Promise<void> {
-    // this.logger.info(
-    //   `[DEBUG] monitor() started: cancellation state = ${globalCancellationToken.isCancelled()}`,
-    // );
-
     // If scheduled time is set, wait for it first
     if (this.scheduledTime) {
-      // this.logger.info(
-      //   `[DEBUG] Before waitUntilScheduledTime: cancellation state = ${globalCancellationToken.isCancelled()}`,
-      // );
       try {
         const waitResult = await this.timeManager.waitUntilScheduledTime(
           this.scheduledTime,
           this.logger,
           this.keyboardHandler,
         );
-        // this.logger.info(
-        //   `[DEBUG] After waitUntilScheduledTime: waitResult.ok = ${waitResult.ok}, cancellation state = ${globalCancellationToken.isCancelled()}`,
-        // );
         if (!waitResult.ok) {
-          // this.logger.info(
-          //   `[DEBUG] waitResult failed with error: ${waitResult.error.message}`,
-          // );
           this.logger.info("Monitoring cancelled by user input. Exiting...");
           return;
         }
       } catch (_error) {
-        // this.logger.error(
-        //   `[DEBUG] waitUntilScheduledTime threw exception: ${_error}`,
-        // );
         return;
       }
       this.scheduledTime = null; // Clear after first use
@@ -507,31 +457,15 @@ export class MonitoringEngine {
       );
 
       // Check for cancellation
-      this.logger.info(
-        `[DEBUG] Before cancellation check: cancellation state = ${globalCancellationToken.isCancelled()}, reason = ${globalCancellationToken.getReason()}`,
-      );
       if (globalCancellationToken.isCancelled()) {
         this.logger.info("Monitoring cancelled by user input. Exiting...");
         return;
       }
 
       // 2. Send instruction file to main pane (only once)
-      // this.logger.info(
-      //   `[DEBUG] Checking instruction file: instructionFile = ${this.instructionFile}`,
-      // );
       if (this.instructionFile) {
-        // this.logger.info(`[DEBUG] About to send instruction file to main pane`);
-        // const mainPaneBeforeSend = this.paneManager.getMainPane();
-        // this.logger.info(
-        //   `[DEBUG] Main pane before send: ${
-        //     mainPaneBeforeSend ? mainPaneBeforeSend.id : "null"
-        //   }`,
-        // );
         await this.sendInstructionFileToMainPane();
         this.instructionFile = null;
-        // this.logger.info(`[DEBUG] Instruction file sent and cleared`);
-      } else {
-        // this.logger.info(`[DEBUG] No instruction file to send`);
       }
 
       // 2.5. Check and start Claude if needed (only if --start-claude flag is used)
@@ -636,7 +570,6 @@ export class MonitoringEngine {
   }
 
   async startContinuousMonitoring(): Promise<void> {
-    // console.log(`[DEBUG] startContinuousMonitoring: Starting continuous mode`);
     this.logger.info(
       "Starting continuous monitoring mode (Press any key to stop, auto-stop after 4 hours)",
     );
@@ -644,29 +577,17 @@ export class MonitoringEngine {
     let cycleCount = 0;
     while (true) {
       cycleCount++;
-      // console.log(
-      //   `[DEBUG] startContinuousMonitoring: Starting cycle ${cycleCount}`,
-      // );
 
       // Check for 4-hour runtime limit
       const limitCheck = this.runtimeTracker.hasExceededLimit();
       if (!limitCheck.ok) {
-        // console.log(
-        //   `[DEBUG] startContinuousMonitoring: Runtime limit exceeded after ${cycleCount} cycles`,
-        // );
         this.logger.info(
           "Automatic termination due to 4-hour runtime limit. Exiting...",
         );
         break;
       }
 
-      // console.log(
-      //   `[DEBUG] startContinuousMonitoring: Starting monitor() for cycle ${cycleCount}`,
-      // );
       await this.monitor();
-      // console.log(
-      //   `[DEBUG] startContinuousMonitoring: Completed monitor() for cycle ${cycleCount}`,
-      // );
 
       // After the first execution, wait for 30 seconds before next cycle
       this.logger.info("Waiting for next cycle...\n");
@@ -689,8 +610,6 @@ export class MonitoringEngine {
    * Performs only: pane discovery, status update, one ENTER send, then exits
    */
   async oneTimeMonitor(): Promise<void> {
-    // this.logger.info("[DEBUG] oneTimeMonitor() started: One-time execution mode");
-
     try {
       // 1. Get session and panes
       const sessionResult = await this.session.findMostActiveSession();
@@ -737,10 +656,8 @@ export class MonitoringEngine {
 
       // 2. Send instruction file to main pane (only once)
       if (this.instructionFile) {
-        // this.logger.info(`[DEBUG] About to send instruction file to main pane`);
         await this.sendInstructionFileToMainPane();
         this.instructionFile = null;
-        // this.logger.info(`[DEBUG] Instruction file sent and cleared`);
       }
 
       // 2.5. Check and start Claude if needed (only if --start-claude flag is used)
@@ -908,8 +825,6 @@ export class MonitoringEngine {
    * This method implements the 30-second interval monitoring feature
    */
   async monitorPaneChanges(): Promise<string[]> {
-    this.logger.info("[MONITOR] Starting 30-second pane content monitoring...");
-
     const targetPanes = this.paneManager.getTargetPanes();
     const paneIds = targetPanes.map((p) => p.id);
     const newlyIdleOrDonePanes: string[] = [];
@@ -925,7 +840,6 @@ export class MonitoringEngine {
           // Clean the title to get the base title without status prefixes
           const cleanTitle = this.paneTitleManager.cleanTitle(paneDetailResult.data.title || "tmux");
           this.originalTitles.set(pane.id, cleanTitle || "tmux");
-          this.logger.info(`[MONITOR] Stored original title for pane ${pane.id}: "${cleanTitle}"`);
         }
       }
     }
@@ -947,21 +861,15 @@ export class MonitoringEngine {
         if (currentStatus.kind === "WORKING") {
           if (this.clearedPanes.has(result.paneId)) {
             this.clearedPanes.delete(result.paneId);
-            this.logger.info(`[MONITOR] Pane ${result.paneId} returned to WORKING - can be cleared again`);
           }
         }
         // If pane newly becomes IDLE or DONE and hasn't been cleared yet
         else if ((currentStatus.kind === "IDLE" || currentStatus.kind === "DONE") && 
                  !this.clearedPanes.has(result.paneId)) {
           newlyIdleOrDonePanes.push(result.paneId);
-          this.logger.info(`[MONITOR] Pane ${result.paneId} newly transitioned to ${currentStatus.kind}`);
         }
       }
     }
-
-    this.logger.info(
-      `[MONITOR] Monitored ${monitorResults.length} panes, updated titles and statuses`,
-    );
 
     return newlyIdleOrDonePanes;
   }
@@ -970,8 +878,6 @@ export class MonitoringEngine {
    * Restore original pane titles
    */
   async restoreOriginalTitles(): Promise<void> {
-    this.logger.info("[MONITOR] Restoring original pane titles...");
-
     for (const [paneId, originalTitle] of this.originalTitles.entries()) {
       await this.paneTitleManager.restorePaneTitle(paneId, originalTitle);
     }
@@ -988,7 +894,6 @@ export class MonitoringEngine {
     // Get pane content to verify clear state
     const contentResult = await this.paneDataProcessor.getPaneContent(paneId, this.logger);
     if (!contentResult.ok) {
-      this.logger.warn(`Failed to get pane content for verification: ${contentResult.error.message}`);
       return false;
     }
 
@@ -997,7 +902,6 @@ export class MonitoringEngine {
     const expectedPattern = ">/clear⎿(nocontent)";
     
     if (normalizedContent.includes(expectedPattern)) {
-      this.logger.info(`[VERIFY] Pane ${paneId} is properly cleared`);
       return true;
     }
 
@@ -1008,14 +912,11 @@ export class MonitoringEngine {
     const hasMissingNoContent = hasClearCommand && !normalizedContent.includes("⎿(nocontent)");
     
     if (hasMultipleClear || hasMissingNoContent) {
-      this.logger.warn(`[VERIFY] Pane ${paneId} clear failed. Multiple clear: ${hasMultipleClear}, Missing (no content): ${hasMissingNoContent}`);
-      
       // Perform recovery sequence
       await this.performClearRecovery(paneId);
       return false;
     }
 
-    this.logger.info(`[VERIFY] Pane ${paneId} clear state is acceptable`);
     return true;
   }
 
