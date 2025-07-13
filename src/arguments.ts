@@ -37,9 +37,10 @@ export class ArgumentParser {
     let clearPanes = false;
     let startClaude = false;
 
-    // Look for time parameter (--time=HH:MM or -t HH:MM)
+    // Look for time parameter (--time=HH:MM, --time HH:MM, or -t HH:MM)
     for (let i = 0; i < args.length; i++) {
       const arg = args[i];
+      
       if (arg.startsWith("--time=")) {
         const timeStr = arg.substring(7);
         const parseResult = ValidatedTime.create(timeStr);
@@ -48,6 +49,13 @@ export class ArgumentParser {
         }
         scheduledTime = parseResult.data.getDate();
       } else if (arg === "-t" && i + 1 < args.length) {
+        const timeStr = args[i + 1];
+        const parseResult = ValidatedTime.create(timeStr);
+        if (!parseResult.ok) {
+          return { ok: false, error: parseResult.error };
+        }
+        scheduledTime = parseResult.data.getDate();
+      } else if (arg === "--time" && i + 1 < args.length) {
         const timeStr = args[i + 1];
         const parseResult = ValidatedTime.create(timeStr);
         if (!parseResult.ok) {
@@ -74,6 +82,7 @@ export class ArgumentParser {
 
     // Default to continuous monitoring mode unless --onetime or --clear is specified
     const continuous = !oneTime;
+    
     const options = MonitoringOptions.create(
       continuous,
       scheduledTime,

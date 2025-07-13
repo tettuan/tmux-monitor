@@ -412,24 +412,6 @@ export class MonitoringEngine {
   }
 
   async monitor(): Promise<void> {
-    // If scheduled time is set, wait for it first
-    if (this.scheduledTime) {
-      try {
-        const waitResult = await this.timeManager.waitUntilScheduledTime(
-          this.scheduledTime,
-          this.logger,
-          this.keyboardHandler,
-        );
-        if (!waitResult.ok) {
-          this.logger.info("Monitoring cancelled by user input. Exiting...");
-          return;
-        }
-      } catch (_error) {
-        return;
-      }
-      this.scheduledTime = null; // Clear after first use
-    }
-
     try {
       this.logger.info("Starting tmux monitoring...");
 

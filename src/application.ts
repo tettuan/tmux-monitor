@@ -132,14 +132,22 @@ export class Application {
     keyboardHandler.setup();
 
     try {
-      const monitor = this.container.createMonitoringEngine(options);
+      // If scheduled time is set, wait for it first (before any mode-specific processing)
+      if (scheduledTime) {
+        logger.info(`Waiting for scheduled time: ${scheduledTime.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}...`);
+        const waitResult = await timeManager.waitUntilScheduledTime(
+          scheduledTime,
+          logger,
+          keyboardHandler,
+        );
+        if (!waitResult.ok) {
+          logger.info("Monitoring cancelled by user input during wait. Exiting...");
+          return;
+        }
+        logger.info("Scheduled time reached - starting monitoring");
+      }
 
-      // logger.info(
-      //   `[DEBUG] Application.run(): About to start monitoring, continuous = ${options.isContinuous()}`,
-      // );
-      // logger.info(
-      //   `[DEBUG] Application.run(): cancellation state before monitoring = ${globalCancellationToken.isCancelled()}`,
-      // );
+      const monitor = this.container.createMonitoringEngine(options);
 
       if (options.isContinuous()) {
         // logger.info(
