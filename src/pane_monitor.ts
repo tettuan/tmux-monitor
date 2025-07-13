@@ -143,41 +143,6 @@ export class PaneContentMonitor {
       `[MONITOR] Pane ${paneId}: ${status} (changes: ${hasChanges})`,
     );
 
-    // Debug output for IDLE status to show content comparison
-    if (status === "IDLE") {
-      this.logger.info(`[DEBUG-IDLE] Pane ${paneId} content comparison:`);
-      this.logger.info(
-        `[DEBUG-IDLE]   Previous content (${previousCapture.content.length} chars):`,
-      );
-      const prevLines = previousCapture.content.split("\n");
-      this.logger.info(
-        `[DEBUG-IDLE]     Lines: ${prevLines.length}, First: "${
-          prevLines[0]?.substring(0, 50)
-        }..."`,
-      );
-
-      this.logger.info(
-        `[DEBUG-IDLE]   Current content (${currentCapture.content.length} chars):`,
-      );
-      const currLines = currentCapture.content.split("\n");
-      this.logger.info(
-        `[DEBUG-IDLE]     Lines: ${currLines.length}, First: "${
-          currLines[0]?.substring(0, 50)
-        }..."`,
-      );
-
-      const prevNormalized = this.normalizeContent(previousCapture.content);
-      const currNormalized = this.normalizeContent(currentCapture.content);
-      this.logger.info(
-        `[DEBUG-IDLE]   Normalized lengths: prev=${prevNormalized.length}, curr=${currNormalized.length}`,
-      );
-      this.logger.info(
-        `[DEBUG-IDLE]   Content identical: ${
-          prevNormalized === currNormalized
-        }`,
-      );
-    }
-
     return {
       ok: true,
       data: {
@@ -312,28 +277,16 @@ export class PaneTitleManager {
       let baseTitle: string;
       if (originalTitle) {
         baseTitle = this.cleanTitle(originalTitle);
-        this.logger.info(
-          `[TITLE-DEBUG] Using originalTitle for ${paneId}: "${originalTitle}" → "${baseTitle}"`,
-        );
       } else {
         const currentTitle = await this.getCurrentPaneTitle(paneId);
         const cleanedTitle = this.cleanTitle(currentTitle);
-
-        this.logger.info(
-          `[TITLE-DEBUG] Current title for ${paneId}: "${currentTitle}"`,
-        );
-        this.logger.info(`[TITLE-DEBUG] After cleaning: "${cleanedTitle}"`);
 
         // If cleaning didn't change the title (no status prefix was present), use the current title as-is
         // Only fallback to "tmux" if the title is completely empty
         if (cleanedTitle === "") {
           baseTitle = currentTitle || "tmux";
-          this.logger.info(
-            `[TITLE-DEBUG] Empty after cleaning, using: "${baseTitle}"`,
-          );
         } else {
           baseTitle = cleanedTitle;
-          this.logger.info(`[TITLE-DEBUG] Using cleaned title: "${baseTitle}"`);
         }
       }
 
