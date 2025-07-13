@@ -1,4 +1,4 @@
-import { TIMING } from "./config.ts";
+import { PANE_CONFIG, TIMING } from "./config.ts";
 import { Pane, type WorkerStatus } from "./models.ts";
 import type { TmuxSession } from "./session.ts";
 import type {
@@ -185,22 +185,25 @@ export class MonitoringEngine {
       a.localeCompare(b)
     );
 
-    // Get all current DONE/IDLE panes to determine which are the 4 smallest globally
+    // Get all current DONE/IDLE panes to determine which are the smallest globally
     const allDoneIdlePanes = this.statusManager.getDoneAndIdlePanes();
     const sortedAllPanes = allDoneIdlePanes.sort((a: string, b: string) =>
       a.localeCompare(b)
     );
-    const smallestFourPanes = sortedAllPanes.slice(0, 4);
+    const smallestPanes = sortedAllPanes.slice(
+      0,
+      PANE_CONFIG.EXCLUDE_SMALLEST_PANES_COUNT,
+    );
 
-    // Filter out panes that are among the 4 smallest IDs globally
+    // Filter out panes that are among the smallest IDs globally
     const panesToClear = sortedPanes.filter((paneId) =>
-      !smallestFourPanes.includes(paneId)
+      !smallestPanes.includes(paneId)
     );
 
     if (panesToClear.length > 0) {
       this.logger.info(
-        `Excluding globally smallest 4 pane IDs: ${
-          smallestFourPanes.join(", ")
+        `Excluding globally smallest ${PANE_CONFIG.EXCLUDE_SMALLEST_PANES_COUNT} pane IDs: ${
+          smallestPanes.join(", ")
         }`,
       );
       this.logger.info(
@@ -211,7 +214,7 @@ export class MonitoringEngine {
 
       // Send clear command to each selected pane
       for (const paneId of panesToClear) {
-        const result = await this.communicator.sendToPane(paneId, "clear");
+        const result = await this.communicator.sendToPane(paneId, "/clear");
         if (result.ok) {
           this.logger.info(`/clear command sent to pane ${paneId}`);
 
@@ -251,7 +254,7 @@ export class MonitoringEngine {
         const clearReport =
           `Cleared ${panesToClear.length} newly IDLE/DONE panes: ${
             panesToClear.join(", ")
-          } (excluded ${smallestFourPanes.length} smallest IDs globally)`;
+          } (excluded ${smallestPanes.length} smallest IDs globally)`;
         const result = await this.communicator.sendToPane(
           mainPane.id,
           clearReport,
@@ -773,7 +776,7 @@ export class MonitoringEngine {
       for (const paneId of nodePanes) {
         this.logger.info(`Sending /clear to pane ${paneId}...`);
 
-        // Send /clear command
+        // Send /clear command (sendToPane already includes Enter)
         const clearResult = await this.communicator.sendToPane(
           paneId,
           "/clear",
@@ -785,23 +788,9 @@ export class MonitoringEngine {
           continue;
         }
 
-        // Send Enter key separately using CommandExecutor
-        const enterResult = await this.commandExecutor.execute([
-          "tmux",
-          "send-keys",
-          "-t",
-          paneId,
-          "Enter",
-        ]);
-        if (!enterResult.ok) {
-          this.logger.warn(
-            `Failed to send Enter to pane ${paneId}: ${enterResult.error.message}`,
-          );
-        } else {
-          this.logger.info(
-            `Successfully sent /clear + Enter to pane ${paneId}`,
-          );
-        }
+        this.logger.info(
+          `Successfully sent /clear command to pane ${paneId}`,
+        );
       }
 
       this.logger.info(

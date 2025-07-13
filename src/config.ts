@@ -41,6 +41,23 @@ export const TIMING: TimingConfig = {
 } as const;
 
 /**
+ * Pane management configuration constants.
+ *
+ * Configuration for pane operations including clear command exclusions
+ * and other pane management behaviors.
+ *
+ * @example
+ * ```typescript
+ * import { PANE_CONFIG } from "./config.ts";
+ * const excludeCount = PANE_CONFIG.EXCLUDE_SMALLEST_PANES_COUNT;
+ * ```
+ */
+export const PANE_CONFIG = {
+  /** Number of smallest pane IDs to exclude from /clear command operations */
+  EXCLUDE_SMALLEST_PANES_COUNT: 4,
+} as const;
+
+/**
  * Available worker status types for pane monitoring.
  *
  * Defines all possible status values that can be assigned to worker panes

@@ -243,24 +243,6 @@ export class PaneContentMonitor {
   clearAllHistory(): void {
     this.captures.clear();
   }
-
-  /**
-   * Check if a pane exists
-   */
-  private async paneExists(paneId: string): Promise<boolean> {
-    try {
-      const result = await this.commandExecutor.execute([
-        "tmux",
-        "display-panes",
-        "-t",
-        paneId,
-        "-p",
-      ]);
-      return result.ok;
-    } catch (_error) {
-      return false;
-    }
-  }
 }
 
 /**
@@ -289,12 +271,20 @@ export class PaneTitleManager {
     try {
       const result = await this.commandExecutor.execute([
         "tmux",
-        "display-panes",
-        "-t",
-        paneId,
-        "-p",
+        "list-panes",
+        "-a",
+        "-F",
+        "#{pane_id}",
       ]);
-      return result.ok;
+
+      if (!result.ok) {
+        return false;
+      }
+
+      const existingPanes = result.data.split("\n").filter((id) =>
+        id.trim() !== ""
+      );
+      return existingPanes.includes(paneId);
     } catch (_error) {
       return false;
     }

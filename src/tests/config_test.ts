@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.208.0/assert/mod.ts";
-import { TIMING, WORKER_STATUS_TYPES } from "../config.ts";
+import { PANE_CONFIG, TIMING, WORKER_STATUS_TYPES } from "../config.ts";
 
 Deno.test("TIMING configuration - instruction delay", () => {
   assertEquals(TIMING.INSTRUCTION_DELAY, 200);
@@ -65,4 +65,16 @@ Deno.test("Timing calculations - max runtime in hours", () => {
 Deno.test("Timing calculations - enter send cycle in seconds", () => {
   const seconds = TIMING.ENTER_SEND_CYCLE_DELAY / 1000;
   assertEquals(seconds, 30); // 30000 ms = 30 seconds
+});
+
+Deno.test("PANE_CONFIG - exclude smallest panes count", () => {
+  assertEquals(PANE_CONFIG.EXCLUDE_SMALLEST_PANES_COUNT, 4);
+});
+
+Deno.test("PANE_CONFIG - configuration structure", () => {
+  const configKeys = Object.keys(PANE_CONFIG);
+  assertEquals(configKeys.length, 1);
+  assertEquals(configKeys.includes("EXCLUDE_SMALLEST_PANES_COUNT"), true);
+  assertEquals(typeof PANE_CONFIG.EXCLUDE_SMALLEST_PANES_COUNT, "number");
+  assertEquals(PANE_CONFIG.EXCLUDE_SMALLEST_PANES_COUNT > 0, true);
 });
