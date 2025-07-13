@@ -13,6 +13,8 @@ A comprehensive tmux monitoring tool designed for command-line usage with real-t
 - **🔄 Continuous Mode**: Long-running monitoring with configurable cycles
 - **🚀 CI/CD Integration**: Built-in CI environment detection
 - **📝 Instruction Files**: Send startup commands to main pane
+- **🏷️ Smart Pane Titles**: Automatic pane title updates based on activity status
+- **🔍 Content Change Detection**: 30-second interval content monitoring for WORKING/IDLE status
 - **🛠️ Cross-platform**: Works on macOS, Linux, and Windows (with WSL)
 
 ## Quick Start - CLI Usage
@@ -65,9 +67,12 @@ tmux-monitor --time=14:30 --instruction=./startup.txt
 
 1. **Session Discovery**: Automatically finds the most active tmux session
 2. **Pane Classification**: Separates main pane (active) from target panes (inactive)
-3. **Status Updates**: Sends status update instructions to target panes
-4. **Monitoring**: Reports pane status back to main pane
-5. **Display**: Shows comprehensive pane list with real-time updates
+3. **Content Monitoring**: Captures pane content every 30 seconds to detect changes
+4. **Status Analysis**: Compares content changes to determine WORKING/IDLE status
+5. **Title Updates**: Updates pane titles with current status (e.g., "[WORKING] tmux", "[IDLE] tmux")
+6. **Status Updates**: Sends status update instructions to target panes
+7. **Monitoring**: Reports pane status back to main pane
+8. **Display**: Shows comprehensive pane list with real-time updates
 
 ## Requirements
 

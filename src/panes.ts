@@ -193,6 +193,45 @@ Start Command: #{pane_start_command}'`,
     }
     return mostActiveSession;
   }
+
+  /**
+   * Get the actual visible content of a pane for clear state verification
+   * @param paneId - The pane ID to capture content from
+   * @param logger - Logger instance
+   * @returns Promise<Result<string, ValidationError & { message: string }>> - The pane content
+   */
+  async getPaneContent(
+    paneId: string,
+    logger: Logger,
+  ): Promise<Result<string, ValidationError & { message: string }>> {
+    try {
+      // Capture last few lines of pane content
+      const commandResult = await this.commandExecutor.executeTmuxCommand(
+        `tmux capture-pane -t "${paneId}" -p -S -10`,
+      );
+
+      if (!commandResult.ok) {
+        logger.warn(
+          `Failed to capture pane content for ${paneId}: ${commandResult.error.message}`,
+        );
+        return { ok: false, error: commandResult.error };
+      }
+
+      return { ok: true, data: commandResult.data };
+    } catch (error) {
+      const errorMessage = `Error capturing pane content: ${error}`;
+      logger.error(errorMessage);
+      return {
+        ok: false,
+        error: { 
+          kind: "CommandFailed" as const, 
+          message: errorMessage,
+          command: `tmux capture-pane -t "${paneId}" -p -S -10`,
+          stderr: String(error)
+        },
+      };
+    }
+  }
 }
 
 /**

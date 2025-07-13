@@ -88,55 +88,12 @@ export class PaneCommunicator {
     return new PaneCommunicator(commandExecutor, logger);
   }
 
-  async sendStatusUpdateToPane(
+  sendStatusUpdateToPane(
     paneId: string,
   ): Promise<Result<void, ValidationError & { message: string }>> {
-    const command =
-      "Set Current Working STATUS: tmux select-pane -T '[STATUS]'";
-
-    // コマンドを送信
-    const commandResult = await this.commandExecutor.execute([
-      "tmux",
-      "send-keys",
-      "-t",
-      paneId,
-      command,
-    ]);
-
-    if (!commandResult.ok) {
-      return {
-        ok: false,
-        error: createError({
-          kind: "CommandFailed",
-          command: `tmux send-keys command to ${paneId}`,
-          stderr: commandResult.error,
-        }),
-      };
-    }
-
-    // 短い待機時間を置いてからEnterを送信
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    const enterResult = await this.commandExecutor.execute([
-      "tmux",
-      "send-keys",
-      "-t",
-      paneId,
-      "Enter",
-    ]);
-
-    if (!enterResult.ok) {
-      return {
-        ok: false,
-        error: createError({
-          kind: "CommandFailed",
-          command: `tmux send-keys Enter to ${paneId}`,
-          stderr: enterResult.error,
-        }),
-      };
-    }
-
-    return { ok: true, data: undefined };
+    // Status update instructions disabled - only monitoring without sending commands
+    this.logger.info(`Skipping status update instruction to pane ${paneId} (disabled)`);
+    return Promise.resolve({ ok: true, data: undefined });
   }
 
   async sendToPane(

@@ -13,6 +13,7 @@ import {
   PaneStatusManager,
   StatusAnalyzer,
 } from "./panes.ts";
+import { PaneContentMonitor, PaneTitleManager } from "./pane_monitor.ts";
 import { MessageGenerator, PaneCommunicator } from "./communication.ts";
 import { PaneDisplayer } from "./display.ts";
 import { CIManager } from "./ci.ts";
@@ -109,6 +110,20 @@ export class DIContainer {
         this.get("commandExecutor"),
         this.get("logger"),
       ));
+
+    // Pane monitoring
+    this.register("paneTitleManager", () => 
+      PaneTitleManager.create(
+        this.get("commandExecutor"),
+        this.get("logger")
+      )
+    );
+    this.register("paneContentMonitor", () => 
+      PaneContentMonitor.create(
+        this.get("commandExecutor"), 
+        this.get("logger")
+      )
+    );
   }
 
   createMonitoringEngine(options: MonitoringOptions): MonitoringEngine {
@@ -146,6 +161,8 @@ export class DIContainer {
       this.get("messageGenerator"),
       this.get("commandExecutor"),
       this.get("logger"),
+      this.get("paneContentMonitor"),
+      this.get("paneTitleManager"),
       scheduledTime,
       instructionFile,
       options.shouldStartClaude(),

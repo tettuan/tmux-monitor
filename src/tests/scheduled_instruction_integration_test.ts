@@ -216,13 +216,6 @@ Deno.test("Requirements - 4時間実行制限の設定確認", () => {
   console.log("✅ 4時間実行制限の値を確認");
 });
 
-Deno.test("Requirements - 5分サイクル監視設定の確認", () => {
-  // TIMING.MONITORING_CYCLE_DELAY が 5分（300000ms）に設定されていることを確認
-  assertEquals(TIMING.MONITORING_CYCLE_DELAY, 300000); // 5 minutes
-
-  console.log("✅ 5分サイクル監視設定を確認");
-});
-
 Deno.test("Requirements - 30秒ENTERサイクル設定の確認", () => {
   // TIMING.ENTER_SEND_CYCLE_DELAY が 30秒（30000ms）に設定されていることを確認
   assertEquals(TIMING.ENTER_SEND_CYCLE_DELAY, 30000); // 30 seconds

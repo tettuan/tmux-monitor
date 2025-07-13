@@ -13,10 +13,6 @@ Deno.test("TIMING configuration - pane processing delay", () => {
   assertEquals(TIMING.PANE_PROCESSING_DELAY, 1000);
 });
 
-Deno.test("TIMING configuration - monitoring cycle delay", () => {
-  assertEquals(TIMING.MONITORING_CYCLE_DELAY, 300000);
-});
-
 Deno.test("TIMING configuration - CLD command delay", () => {
   assertEquals(TIMING.CLD_COMMAND_DELAY, 200);
 });
@@ -33,11 +29,10 @@ Deno.test("TIMING configuration - immutable", () => {
   // TypeScript should enforce readonly properties
   // This test ensures the configuration is properly defined
   const timingKeys = Object.keys(TIMING);
-  assertEquals(timingKeys.length, 7);
+  assertEquals(timingKeys.length, 6);
   assertEquals(timingKeys.includes("INSTRUCTION_DELAY"), true);
   assertEquals(timingKeys.includes("ENTER_KEY_DELAY"), true);
   assertEquals(timingKeys.includes("PANE_PROCESSING_DELAY"), true);
-  assertEquals(timingKeys.includes("MONITORING_CYCLE_DELAY"), true);
   assertEquals(timingKeys.includes("CLD_COMMAND_DELAY"), true);
   assertEquals(timingKeys.includes("ENTER_SEND_CYCLE_DELAY"), true);
   assertEquals(timingKeys.includes("MAX_RUNTIME"), true);
@@ -62,20 +57,9 @@ Deno.test("WORKER_STATUS_TYPES - all status types defined", () => {
   assertEquals(WORKER_STATUS_TYPES.includes("UNKNOWN"), true);
 });
 
-Deno.test("Timing calculations - monitoring cycles", () => {
-  const cycleCount = TIMING.MONITORING_CYCLE_DELAY /
-    TIMING.ENTER_SEND_CYCLE_DELAY;
-  assertEquals(cycleCount, 10); // 300000 / 30000 = 10 cycles
-});
-
 Deno.test("Timing calculations - max runtime in hours", () => {
   const hours = TIMING.MAX_RUNTIME / (1000 * 60 * 60);
   assertEquals(hours, 4); // 14400000 ms = 4 hours
-});
-
-Deno.test("Timing calculations - monitoring cycle in minutes", () => {
-  const minutes = TIMING.MONITORING_CYCLE_DELAY / (1000 * 60);
-  assertEquals(minutes, 5); // 300000 ms = 5 minutes
 });
 
 Deno.test("Timing calculations - enter send cycle in seconds", () => {
