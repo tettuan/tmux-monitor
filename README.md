@@ -10,11 +10,11 @@ A comprehensive tmux monitoring tool designed for command-line usage with real-t
 - **🖥️ Real-time Monitoring**: Live tmux session and pane status updates
 - **⚡ Immediate Cancellation**: Any key press or Ctrl+C stops monitoring instantly
 - **📅 Scheduled Execution**: Run monitoring at specific times
-- **🔄 Continuous Mode**: Long-running monitoring with configurable cycles
+- **🔄 Continuous Mode**: Long-running monitoring with 30-second content detection intervals
 - **🚀 CI/CD Integration**: Built-in CI environment detection
 - **📝 Instruction Files**: Send startup commands to main pane
 - **🏷️ Smart Pane Titles**: Automatic pane title updates based on activity status
-- **🔍 Content Change Detection**: 30-second interval content monitoring for WORKING/IDLE status
+- **🔍 Content Change Detection**: 30-second interval content monitoring for WORKING/IDLE status determination
 - **🛠️ Cross-platform**: Works on macOS, Linux, and Windows (with WSL)
 
 ## Quick Start - CLI Usage
@@ -74,6 +74,8 @@ tmux-monitor --time=14:30 --instruction=./startup.txt
 7. **Monitoring**: Reports pane status back to main pane
 8. **Display**: Shows comprehensive pane list with real-time updates
 
+The monitoring operates on a continuous cycle with 30-second intervals for content change detection, providing real-time status updates without the need for longer monitoring cycles.
+
 ## Requirements
 
 - **Deno**: 1.40+ (runtime)
@@ -119,8 +121,8 @@ deno run --allow-run jsr:@aidevtool/tmux-monitor
 ### Continuous Monitoring
 
 ```bash
-# Keep monitoring until interrupted
-deno run --allow-run jsr:@aidevtool/tmux-monitor --continuous
+# Keep monitoring until interrupted (default behavior with 30-second status checks)
+deno run --allow-run jsr:@aidevtool/tmux-monitor
 ```
 
 ### Scheduled Execution
@@ -157,7 +159,7 @@ deno run --allow-run jsr:@aidevtool/tmux-monitor --kill-all-panes
 
 ```bash
 # Check if Claude is running and start it with 'cld' command if not found
-# (Continuous monitoring is the default behavior)
+# (Continuous monitoring is the default behavior with 30-second status detection)
 deno run --allow-run jsr:@aidevtool/tmux-monitor --start-claude
 
 # For one-time execution only (exit after single check)
