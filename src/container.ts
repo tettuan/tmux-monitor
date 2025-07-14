@@ -129,46 +129,13 @@ export class DIContainer {
       ));
   }
 
-  createMonitoringEngine(options: MonitoringOptions): MonitoringEngine {
-    let scheduledTime: Date | null = null;
-    let instructionFile: string | null = null;
-
-    // Extract values from discriminated union
-    switch (options.mode.kind) {
-      case "Scheduled":
-        scheduledTime = options.mode.scheduledTime;
-        break;
-      case "ScheduledContinuous":
-        scheduledTime = options.mode.scheduledTime;
-        break;
-    }
-
-    switch (options.instruction.kind) {
-      case "WithFile":
-        instructionFile = options.instruction.filePath;
-        break;
-    }
-
-    return new MonitoringEngine(
-      this.get("session"),
-      this.get("paneManager"),
-      this.get("communicator"),
-      this.get("displayer"),
-      this.get("statusManager"),
-      this.get("ciManager"),
-      this.get("timeManager"),
-      this.get("runtimeTracker"),
-      this.get("keyboardHandler"),
-      this.get("paneDataProcessor"),
-      this.get("statusAnalyzer"),
-      this.get("messageGenerator"),
+  createMonitoringEngine(_options: MonitoringOptions): MonitoringEngine {
+    // Use DDD-based monitoring engine (now unified as MonitoringEngine)
+    const engine = new MonitoringEngine(
       this.get("commandExecutor"),
       this.get("logger"),
-      this.get("paneContentMonitor"),
-      this.get("paneTitleManager"),
-      scheduledTime,
-      instructionFile,
-      options.shouldStartClaude(),
     );
+
+    return engine;
   }
 }
