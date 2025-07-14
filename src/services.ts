@@ -249,6 +249,15 @@ export class CommandExecutor {
  */
 export class Logger {
   /**
+   * Logs a debug message.
+   *
+   * @param message - The debug message to log
+   */
+  debug(message: string): void {
+    console.log(`[DEBUG] ${message}`);
+  }
+
+  /**
    * Logs an informational message.
    *
    * @param message - The message to log

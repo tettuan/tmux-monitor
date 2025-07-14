@@ -113,7 +113,15 @@ export type ValidationError =
   | { kind: "CancellationRequested"; operation: string }
   | { kind: "SessionNotFound" }
   | { kind: "PaneNotFound"; paneId: string }
-  | { kind: "RuntimeLimitExceeded"; maxRuntime: number };
+  | { kind: "RuntimeLimitExceeded"; maxRuntime: number }
+  // DDD拡張エラー型
+  | { kind: "ValidationFailed"; input?: string; constraint?: string }
+  | { kind: "BusinessRuleViolation"; rule?: string; context?: string }
+  | { kind: "UnexpectedError"; operation?: string; details?: string }
+  | { kind: "IllegalState"; currentState?: string; expectedState?: string }
+  | { kind: "RepositoryError"; operation?: string; details?: string }
+  | { kind: "CommunicationFailed"; target?: string; details?: string }
+  | { kind: "MigrationFailed"; from?: string; to?: string; details?: string };
 
 /**
  * Error creation helper function for consistent error message generation.
@@ -179,5 +187,48 @@ export const getDefaultMessage = (error: ValidationError): string => {
       return `Pane not found: ${error.paneId}`;
     case "RuntimeLimitExceeded":
       return `Runtime limit exceeded: ${error.maxRuntime}ms`;
+    // DDD拡張エラー型のメッセージ
+    case "ValidationFailed":
+      return error.input
+        ? `Validation failed for "${error.input}": ${
+          error.constraint || "constraint violation"
+        }`
+        : `Validation failed: ${error.constraint || "constraint violation"}`;
+    case "BusinessRuleViolation":
+      return error.rule
+        ? `Business rule violation: ${error.rule}${
+          error.context ? ` (${error.context})` : ""
+        }`
+        : `Business rule violation${error.context ? `: ${error.context}` : ""}`;
+    case "UnexpectedError":
+      return error.operation
+        ? `Unexpected error in ${error.operation}: ${
+          error.details || "unknown error"
+        }`
+        : `Unexpected error: ${error.details || "unknown error"}`;
+    case "IllegalState":
+      return error.currentState
+        ? `Illegal state: ${error.currentState}, expected: ${
+          error.expectedState || "valid state"
+        }`
+        : "Illegal state detected";
+    case "RepositoryError":
+      return error.operation
+        ? `Repository error in ${error.operation}: ${
+          error.details || "operation failed"
+        }`
+        : `Repository error: ${error.details || "operation failed"}`;
+    case "CommunicationFailed":
+      return error.target
+        ? `Communication failed with ${error.target}: ${
+          error.details || "connection error"
+        }`
+        : `Communication failed: ${error.details || "connection error"}`;
+    case "MigrationFailed":
+      return error.from
+        ? `Migration failed from ${error.from} to ${error.to || "target"}: ${
+          error.details || "migration error"
+        }`
+        : `Migration failed: ${error.details || "migration error"}`;
   }
 };
