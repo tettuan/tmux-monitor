@@ -10,11 +10,11 @@ A comprehensive tmux monitoring tool designed for command-line usage with real-t
 - **🖥️ Real-time Monitoring**: Live tmux session and pane status updates
 - **⚡ Immediate Cancellation**: Any key press or Ctrl+C stops monitoring instantly
 - **📅 Scheduled Execution**: Run monitoring at specific times
-- **🔄 Continuous Mode**: Long-running monitoring with 30-second content detection intervals
+- **🔄 Continuous Mode**: Long-running monitoring with 5-minute cycles for 4 hours maximum
 - **🚀 CI/CD Integration**: Built-in CI environment detection
 - **📝 Instruction Files**: Send startup commands to main pane
 - **🏷️ Smart Pane Titles**: Automatic pane title updates based on activity status
-- **🔍 Content Change Detection**: 30-second interval content monitoring for WORKING/IDLE status determination
+- **🔍 Content Change Detection**: 30-second interval content monitoring within 5-minute cycles for WORKING/IDLE status determination
 - **🛠️ Cross-platform**: Works on macOS, Linux, and Windows (with WSL)
 
 ## Quick Start - CLI Usage
@@ -56,7 +56,7 @@ tmux-monitor --time=14:30 --instruction=./startup.txt
 
 ### Available CLI Options
 
-- `--onetime` or `-o`: Run single monitoring cycle then exit (overrides default continuous mode)
+- `--onetime` or `-o`: Run single monitoring cycle then exit (overrides default 4-hour continuous mode)
 - `--time=HH:MM` or `-t HH:MM`: Schedule monitoring start time
 - `--instruction=PATH` or `-i PATH`: Load instruction file with startup commands
 - `--kill-all-panes`: Safely terminate all tmux panes (SIGTERM first, then SIGKILL)
@@ -67,18 +67,18 @@ tmux-monitor --time=14:30 --instruction=./startup.txt
 
 1. **Session Discovery**: Automatically finds the most active tmux session
 2. **Pane Classification**: Separates main pane (active) from target panes (inactive)
-3. **Content Monitoring**: Captures pane content every 30 seconds to detect changes
+3. **Content Monitoring**: Captures pane content during 30-second ENTER cycles within each 5-minute period to detect changes
 4. **Status Analysis**: Compares content changes to determine WORKING/IDLE status
 5. **Title Updates**: Updates pane titles with current status (e.g., "[WORKING] tmux", "[IDLE] tmux")
 6. **Status Updates**: Sends status update instructions to target panes
-7. **Monitoring**: Reports pane status back to main pane
+7. **Monitoring**: Reports pane status back to main pane every 5 minutes
 8. **Display**: Shows comprehensive pane list with real-time updates
 
-The monitoring operates on a continuous cycle with 30-second intervals for content change detection, providing real-time status updates without the need for longer monitoring cycles.
+The monitoring operates on a continuous cycle with 5-minute intervals, using 30-second ENTER key cycles within each period for content change detection, providing real-time status updates and maximizing tmux session efficiency over a 4-hour period.
 
 ## Requirements
 
-- **Deno**: 1.40+ (runtime)
+- **Deno**: 2.4+ (runtime)
 - **tmux**: Installed and available in PATH
 - **Terminal**: Raw mode support for keyboard interrupts
 
@@ -99,7 +99,7 @@ The CLI requires these specific Deno permissions:
 
 For maximum security, use specific permissions:
 ```bash
-# Basic monitoring (most common use case)
+# Basic monitoring (5-minute cycles for 4 hours maximum)
 deno run --allow-run jsr:@aidevtool/tmux-monitor
 
 # With instruction file
@@ -114,14 +114,14 @@ deno install --allow-run --allow-read -n tmux-monitor jsr:@aidevtool/tmux-monito
 ### Basic Monitoring
 
 ```bash
-# Monitor current tmux session (minimum permissions)
+# Monitor current tmux session with default 5-minute cycles (4 hours maximum)
 deno run --allow-run jsr:@aidevtool/tmux-monitor
 ```
 
 ### Continuous Monitoring
 
 ```bash
-# Keep monitoring until interrupted (default behavior with 30-second status checks)
+# Keep monitoring until interrupted (5-minute cycles with 30-second ENTER pulses)
 deno run --allow-run jsr:@aidevtool/tmux-monitor
 ```
 
@@ -159,7 +159,7 @@ deno run --allow-run jsr:@aidevtool/tmux-monitor --kill-all-panes
 
 ```bash
 # Check if Claude is running and start it with 'cld' command if not found
-# (Continuous monitoring is the default behavior with 30-second status detection)
+# (Default: 5-minute monitoring cycles with 30-second ENTER pulses for 4 hours)
 deno run --allow-run jsr:@aidevtool/tmux-monitor --start-claude
 
 # For one-time execution only (exit after single check)
@@ -193,7 +193,7 @@ await app.run();
 ### Debug Mode
 
 ```bash
-# Enable debug logging
+# Enable debug logging for detailed monitoring cycle information
 DENO_LOG=debug deno run --allow-run jsr:@aidevtool/tmux-monitor
 ```
 
