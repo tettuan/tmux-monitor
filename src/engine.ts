@@ -736,13 +736,14 @@ export class MonitoringEngine {
         }).filter((p): p is Pane => p !== null),
       );
 
-      const allPanes = this.paneManager.getTargetPanes();
+      // Get all panes and sort them properly by pane ID
+      const targetPanes = this.paneManager.getTargetPanes();
       const mainPane = this.paneManager.getMainPane();
-
-      // Add main pane to the list if it exists
-      if (mainPane) {
-        allPanes.push(mainPane);
-      }
+      
+      let allPanes = mainPane ? [mainPane, ...targetPanes] : targetPanes;
+      
+      // Sort all panes by pane ID to ensure consistent ordering (%0, %1, %2, etc.)
+      allPanes = allPanes.sort((a, b) => comparePaneIds(a.id, b.id));
 
       // 2. Filter for Node.js panes
       const nodePanes: string[] = [];

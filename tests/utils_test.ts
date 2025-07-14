@@ -84,6 +84,14 @@ Deno.test("sortPaneIds - edge case with high numbers", () => {
   assertEquals(sorted, expected);
 });
 
+Deno.test("sortPaneIds - %0 should come first", () => {
+  const unsorted = ["%1", "%0", "%2", "%10"];
+  const expected = ["%0", "%1", "%2", "%10"];
+  const sorted = sortPaneIds(unsorted);
+
+  assertEquals(sorted, expected);
+});
+
 Deno.test("getPaneName - gets correct name by index", () => {
   assertEquals(getPaneName(0), "main");
   assertEquals(getPaneName(1), "manager1");
