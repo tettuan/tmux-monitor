@@ -7,7 +7,7 @@ import {
 } from "./models.ts";
 import type { CommandExecutor, Logger } from "./services.ts";
 import { WORKER_STATUS_TYPES } from "./config.ts";
-import { comparePaneIds } from "./utils.ts";
+import { comparePaneIds, getPaneNameById, sortPaneIds } from "./utils.ts";
 
 // =============================================================================
 // Pane Processing and Management
@@ -433,6 +433,7 @@ export class StatusAnalyzer {
 export class PaneManager {
   private mainPane: Pane | null = null;
   private panes: Pane[] = [];
+  private paneNames: Map<string, string> = new Map(); // paneId -> paneName
 
   constructor(private logger: Logger) {}
 
@@ -452,14 +453,60 @@ export class PaneManager {
 
     this.mainPane = allPanes.find((pane) => pane.isActive()) || null;
     const targetPanes = allPanes.filter((pane) => !pane.isActive());
-    
+
     // Sort target panes by pane ID numerically
     this.panes = targetPanes.sort((a, b) => comparePaneIds(a.id, b.id));
+
+    // Assign names to panes based on sorted order
+    this.assignPaneNames();
 
     this.logger.info(`Main pane: ${this.mainPane?.id || "none"}`);
     this.logger.info(`Target panes: ${this.panes.map((p) => p.id).join(", ")}`);
 
     return { ok: true, data: undefined };
+  }
+
+  /**
+   * Assigns names to panes based on their sorted order
+   */
+  private assignPaneNames(): void {
+    this.paneNames.clear();
+
+    // Create a sorted list of all pane IDs
+    const allPaneIds: string[] = [];
+    if (this.mainPane) {
+      allPaneIds.push(this.mainPane.id);
+    }
+    allPaneIds.push(...this.panes.map((p) => p.id));
+
+    // Sort all pane IDs numerically
+    const sortedPaneIds = sortPaneIds(allPaneIds);
+
+    // Assign names based on position in sorted list
+    sortedPaneIds.forEach((paneId, _index) => {
+      const paneName = getPaneNameById(paneId, sortedPaneIds);
+      this.paneNames.set(paneId, paneName);
+    });
+
+    // Log pane name assignments
+    this.logger.info("Pane name assignments:");
+    for (const [paneId, paneName] of this.paneNames.entries()) {
+      this.logger.info(`  ${paneId} -> ${paneName}`);
+    }
+  }
+
+  /**
+   * Get the assigned name for a pane
+   */
+  getPaneName(paneId: string): string | undefined {
+    return this.paneNames.get(paneId);
+  }
+
+  /**
+   * Get all pane name assignments
+   */
+  getAllPaneNames(): Map<string, string> {
+    return new Map(this.paneNames);
   }
 
   getMainPane(): Pane | null {

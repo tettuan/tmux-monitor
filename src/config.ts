@@ -58,6 +58,45 @@ export const PANE_CONFIG = {
 } as const;
 
 /**
+ * Pane naming configuration.
+ *
+ * Defines ordered list of names to assign to panes from top to bottom.
+ * The first name is typically for the main pane, followed by target panes.
+ *
+ * @example
+ * ```typescript
+ * import { PANE_NAMES } from "./config.ts";
+ * const firstPaneName = PANE_NAMES[0]; // "main"
+ * ```
+ */
+export const PANE_NAMES = [
+  "main",
+  "manager1",
+  "manager2",
+  "secretary",
+  "worker1",
+  "worker2",
+  "worker3",
+  "worker4",
+  "worker5",
+  "worker6",
+  "worker7",
+  "worker8",
+  "worker9",
+  "worker10",
+  "worker11",
+  "worker12",
+  "worker13",
+  "worker14",
+  "worker15",
+  "worker16",
+  "worker17",
+  "worker18",
+  "worker19",
+  "worker20",
+] as const;
+
+/**
  * Default instruction file path for task assignment.
  *
  * This constant defines the default instruction file that is referenced

@@ -291,12 +291,13 @@ export class PaneTitleManager {
   }
 
   /**
-   * Update pane title with status information
+   * Update pane title with status information and pane name
    */
   async updatePaneTitle(
     paneId: string,
     status: PaneMonitorStatus,
     originalTitle?: string,
+    paneName?: string,
   ): Promise<Result<void, ValidationError & { message: string }>> {
     try {
       // Check if pane exists before attempting to update title
@@ -328,7 +329,13 @@ export class PaneTitleManager {
         }
       }
 
-      const newTitle = `[${status}] ${baseTitle}`;
+      // Create title with status, pane name (if provided), and base title
+      let newTitle: string;
+      if (paneName) {
+        newTitle = `[${status}] ${paneName}: ${baseTitle}`;
+      } else {
+        newTitle = `[${status}] ${baseTitle}`;
+      }
 
       const result = await this.commandExecutor.execute([
         "tmux",
@@ -370,13 +377,16 @@ export class PaneTitleManager {
   async updatePaneTitles(
     monitorResults: PaneMonitorResult[],
     originalTitles?: Map<string, string>,
+    paneNames?: Map<string, string>,
   ): Promise<void> {
     for (const result of monitorResults) {
       const originalTitle = originalTitles?.get(result.paneId);
+      const paneName = paneNames?.get(result.paneId);
       const titleResult = await this.updatePaneTitle(
         result.paneId,
         result.status,
         originalTitle,
+        paneName,
       );
 
       if (!titleResult.ok) {

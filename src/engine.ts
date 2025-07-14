@@ -828,8 +828,15 @@ export class MonitoringEngine {
     // Monitor panes for content changes
     const monitorResults = await this.paneContentMonitor.monitorPanes(paneIds);
 
+    // Get pane names for title updates
+    const paneNames = this.paneManager.getAllPaneNames();
+
     // Update titles based on monitoring results (without originalTitles to use current cleaned titles)
-    await this.paneTitleManager.updatePaneTitles(monitorResults);
+    await this.paneTitleManager.updatePaneTitles(
+      monitorResults,
+      undefined,
+      paneNames,
+    );
 
     // Update status manager with new statuses and track transitions
     for (const result of monitorResults) {
