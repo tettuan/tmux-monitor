@@ -81,7 +81,12 @@ export class DIContainer {
     // Command line processing
     this.register(
       "argumentParser",
-      () => new ArgumentParser(this.get("timeManager"), this.get("logger")),
+      () =>
+        new ArgumentParser(
+          this.get("timeManager"),
+          this.get("logger"),
+          undefined,
+        ),
     );
 
     // Business logic

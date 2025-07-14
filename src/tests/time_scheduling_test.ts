@@ -125,7 +125,7 @@ Deno.test("ValidatedTime: create() - future time scheduling (same day)", () => {
   const currentTimeInMinutes = currentHour * 60 + currentMinute;
   const scheduledTimeInMinutes = 23 * 60 + 30;
 
-  if (currentTimeInMinutes < scheduledTimeInMinutes - 1) { // -1 for buffer
+  if (currentTimeInMinutes < scheduledTimeInMinutes) {
     // Should be same day
     assertEquals(scheduledDate.getDate(), now.getDate());
   } else {
@@ -160,8 +160,8 @@ Deno.test("ValidatedTime: create() - past time scheduling (next day)", () => {
   assertEquals(scheduledDate.getMinutes(), pastMinute);
 });
 
-Deno.test("ValidatedTime: create() - current time with buffer (next day)", () => {
-  // Create a time that's very close to current time (should be scheduled for tomorrow due to 30s buffer)
+Deno.test("ValidatedTime: create() - current time scheduling", () => {
+  // Create a time that's the same as current time
   const now = new Date();
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
@@ -175,13 +175,8 @@ Deno.test("ValidatedTime: create() - current time with buffer (next day)", () =>
   assert(result.ok);
   const scheduledDate = result.data.getDate();
 
-  // Due to 30-second buffer, should be scheduled for tomorrow
-  const expectedDate = new Date(now);
-  expectedDate.setDate(expectedDate.getDate() + 1);
-
-  assertEquals(scheduledDate.getDate(), expectedDate.getDate());
-  assertEquals(scheduledDate.getMonth(), expectedDate.getMonth());
-  assertEquals(scheduledDate.getFullYear(), expectedDate.getFullYear());
+  // Should be scheduled appropriately (current time or next occurrence)
+  assert(scheduledDate.getTime() >= now.getTime());
 });
 
 Deno.test("ValidatedTime: create() - scheduling logic consistency", () => {

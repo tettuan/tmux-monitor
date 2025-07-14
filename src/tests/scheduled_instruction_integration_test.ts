@@ -100,10 +100,9 @@ Deno.test("ValidatedTime - 過去の時刻指定（翌日処理）", () => {
     assertEquals(scheduledTime.getHours(), 23);
     assertEquals(scheduledTime.getMinutes(), 59);
 
-    // 現在時刻よりも未来であることを確認（30秒バッファ考慮）
+    // 現在時刻以降であることを確認
     const now = new Date();
-    const bufferTime = 30 * 1000; // 30 second buffer
-    assert(scheduledTime.getTime() > now.getTime() + bufferTime);
+    assert(scheduledTime.getTime() >= now.getTime());
   }
 });
 

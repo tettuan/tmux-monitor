@@ -1,6 +1,7 @@
 import type { Result, ValidationError } from "./types.ts";
 import { MonitoringOptions, ValidatedTime } from "./models.ts";
 import type { Logger, TimeManager } from "./services.ts";
+import type { TimeCalculator } from "./time_calculator.ts";
 
 // =============================================================================
 // Command Line Argument Processing
@@ -27,6 +28,7 @@ export class ArgumentParser {
   constructor(
     private timeManager: TimeManager,
     private logger: Logger,
+    private timeCalculator?: TimeCalculator,
   ) {}
 
   parse(): Result<MonitoringOptions, ValidationError & { message: string }> {
@@ -43,21 +45,21 @@ export class ArgumentParser {
 
       if (arg.startsWith("--time=")) {
         const timeStr = arg.substring(7);
-        const parseResult = ValidatedTime.create(timeStr);
+        const parseResult = ValidatedTime.create(timeStr, this.timeCalculator);
         if (!parseResult.ok) {
           return { ok: false, error: parseResult.error };
         }
         scheduledTime = parseResult.data.getDate();
       } else if (arg === "-t" && i + 1 < args.length) {
         const timeStr = args[i + 1];
-        const parseResult = ValidatedTime.create(timeStr);
+        const parseResult = ValidatedTime.create(timeStr, this.timeCalculator);
         if (!parseResult.ok) {
           return { ok: false, error: parseResult.error };
         }
         scheduledTime = parseResult.data.getDate();
       } else if (arg === "--time" && i + 1 < args.length) {
         const timeStr = args[i + 1];
-        const parseResult = ValidatedTime.create(timeStr);
+        const parseResult = ValidatedTime.create(timeStr, this.timeCalculator);
         if (!parseResult.ok) {
           return { ok: false, error: parseResult.error };
         }

@@ -1,4 +1,5 @@
 import { createError, type Result, type ValidationError } from "./types.ts";
+import { TimeCalculator } from "./time_calculator.ts";
 
 // =============================================================================
 // Domain Models with Totality Principles
@@ -265,39 +266,16 @@ export class ValidatedTime {
 
   static create(
     timeStr: string,
+    timeCalculator?: TimeCalculator,
   ): Result<ValidatedTime, ValidationError & { message: string }> {
-    if (!timeStr || timeStr.trim() === "") {
-      return { ok: false, error: createError({ kind: "EmptyInput" }) };
+    const calculator = timeCalculator || new TimeCalculator();
+
+    const parseResult = calculator.parseTimeString(timeStr);
+    if (!parseResult.ok) {
+      return { ok: false, error: parseResult.error };
     }
 
-    const timeMatch = timeStr.match(/^(\d{1,2}):(\d{2})$/);
-    if (!timeMatch) {
-      return {
-        ok: false,
-        error: createError({ kind: "InvalidTimeFormat", input: timeStr }),
-      };
-    }
-
-    const hours = parseInt(timeMatch[1], 10);
-    const minutes = parseInt(timeMatch[2], 10);
-
-    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-      return {
-        ok: false,
-        error: createError({ kind: "InvalidTimeFormat", input: timeStr }),
-      };
-    }
-
-    const now = new Date();
-    const scheduledTime = new Date();
-    scheduledTime.setHours(hours, minutes, 0, 0);
-
-    // If the scheduled time is in the past (considering current time), schedule for tomorrow
-    if (scheduledTime.getTime() <= now.getTime()) {
-      scheduledTime.setDate(scheduledTime.getDate() + 1);
-    }
-
-    return { ok: true, data: new ValidatedTime(scheduledTime) };
+    return { ok: true, data: new ValidatedTime(parseResult.data) };
   }
 
   getDate(): Date {
