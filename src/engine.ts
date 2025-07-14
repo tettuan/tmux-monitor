@@ -18,6 +18,7 @@ import type { CIManager } from "./ci.ts";
 import type { KeyboardHandler, RuntimeTracker, TimeManager } from "./types.ts";
 import type { CommandExecutor, Logger } from "./services.ts";
 import { globalCancellationToken } from "./cancellation.ts";
+import { comparePaneIds } from "./utils.ts";
 
 /**
  * Core monitoring engine that orchestrates tmux session monitoring operations.
@@ -180,16 +181,12 @@ export class MonitoringEngine {
       }`,
     );
 
-    // Sort panes by ID and exclude the 4 smallest IDs
-    const sortedPanes = newlyIdleOrDonePanes.sort((a: string, b: string) =>
-      a.localeCompare(b)
-    );
+    // Sort panes by ID numerically and exclude the 4 smallest IDs
+    const sortedPanes = newlyIdleOrDonePanes.sort(comparePaneIds);
 
     // Get all current DONE/IDLE panes to determine which are the smallest globally
     const allDoneIdlePanes = this.statusManager.getDoneAndIdlePanes();
-    const sortedAllPanes = allDoneIdlePanes.sort((a: string, b: string) =>
-      a.localeCompare(b)
-    );
+    const sortedAllPanes = allDoneIdlePanes.sort(comparePaneIds);
     const smallestPanes = sortedAllPanes.slice(
       0,
       PANE_CONFIG.EXCLUDE_SMALLEST_PANES_COUNT,

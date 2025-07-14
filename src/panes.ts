@@ -7,6 +7,7 @@ import {
 } from "./models.ts";
 import type { CommandExecutor, Logger } from "./services.ts";
 import { WORKER_STATUS_TYPES } from "./config.ts";
+import { comparePaneIds } from "./utils.ts";
 
 // =============================================================================
 // Pane Processing and Management
@@ -450,7 +451,10 @@ export class PaneManager {
     }
 
     this.mainPane = allPanes.find((pane) => pane.isActive()) || null;
-    this.panes = allPanes.filter((pane) => !pane.isActive());
+    const targetPanes = allPanes.filter((pane) => !pane.isActive());
+    
+    // Sort target panes by pane ID numerically
+    this.panes = targetPanes.sort((a, b) => comparePaneIds(a.id, b.id));
 
     this.logger.info(`Main pane: ${this.mainPane?.id || "none"}`);
     this.logger.info(`Target panes: ${this.panes.map((p) => p.id).join(", ")}`);
