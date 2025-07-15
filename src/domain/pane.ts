@@ -8,8 +8,36 @@
 
 import type { Result, ValidationError } from "../types.ts";
 import { createError } from "../types.ts";
+import { WorkerStatusParser } from "../models.ts";
+import { WORKER_STATUS_TYPES } from "../config.ts";
 import { PaneId, type PaneName } from "./value_objects.ts";
 import type { WorkerStatus } from "../models.ts";
+
+// =============================================================================
+// インターフェース定義
+// =============================================================================
+
+/**
+ * tmuxリポジトリインターフェース（イベント駆動アーキテクチャ用）
+ */
+export interface ITmuxRepository {
+  captureContent(paneId: string): Promise<Result<string, Error>>;
+  getTitle(paneId: string): Promise<Result<string, Error>>;
+}
+
+/**
+ * ペイン更新結果（完了報告）
+ */
+export interface PaneUpdateResult {
+  readonly paneId: string;
+  readonly statusChanged: boolean;
+  readonly oldStatus: string;
+  readonly newStatus: string;
+  readonly titleChanged: boolean;
+  readonly oldTitle: string;
+  readonly newTitle: string;
+  readonly updatedAt: Date;
+}
 
 // =============================================================================
 // Pane集約ルート - 業務の最小単位
@@ -170,12 +198,16 @@ export class Pane {
       };
     }
 
-    // Pane作成
+    // タイトルから初期状態を解析
+    const statusFromTitle = Pane.extractStatusFromTitleStatic(title || "");
+    
+    // Pane作成（初期状態付き）
     return Pane.create(
       paneIdResult.data,
       isActive,
       command || "unknown",
       title || "untitled",
+      statusFromTitle,
     );
   }
 
@@ -464,4 +496,191 @@ export class Pane {
   getTitle(): string | null {
     return this._title;
   }
+
+  /**
+   * 自己状態更新 - ペイン自身がタイトルから状態を判定
+   * 
+   * tmuxコマンドでタイトルを取得し、自分で状態を判定します。
+   * 外部からはタイミングのキックのみを受けます。
+   */
+  async refreshStatusFromTmux(
+    commandExecutor: { executeTmuxCommand(cmd: string[]): Promise<Result<string, Error>> }
+  ): Promise<Result<boolean, ValidationError & { message: string }>> {
+    try {
+      // tmuxからこのペインのタイトルを取得
+      const titleResult = await commandExecutor.executeTmuxCommand([
+        "display-message", 
+        "-p", 
+        "-t", 
+        this._id.value, 
+        "#{pane_title}"
+      ]);
+
+      if (!titleResult.ok) {
+        return {
+          ok: false,
+          error: createError({
+            kind: "CommandFailed",
+            command: `tmux display-message -p -t ${this._id.value}`,
+            stderr: titleResult.error.message
+          }, `Failed to get pane title: ${titleResult.error.message}`)
+        };
+      }
+
+      const newTitle = titleResult.data.trim();
+      const oldStatus = this._status.kind;
+      
+      // タイトルから状態を抽出
+      const newStatus = this.extractStatusFromTitle(newTitle);
+      
+      // タイトルと状態を更新
+      this._title = newTitle;
+      this._status = newStatus;
+      
+      // 状態変更があったかどうかを返す
+      const hasChanged = oldStatus !== newStatus.kind;
+      
+      if (hasChanged) {
+        console.log(`🔄 Pane ${this._id.value}: ${oldStatus} → ${newStatus.kind} (title: "${newTitle}")`);
+      }
+      
+      return { ok: true, data: hasChanged };
+      
+    } catch (error) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "UnexpectedError",
+          operation: "refreshStatusFromTmux",
+          details: `${error}`
+        }, `Unexpected error during status refresh: ${error}`)
+      };
+    }
+  }
+
+  /**
+   * イベント駆動アーキテクチャ - ペインの自己状態更新
+   * 
+   * ドメイン境界内の情報を、ペイン自身の責務で更新する。
+   * 全域性原則に基づき、すべての状態変更は型安全に実行される。
+   * 
+   * @param tmuxRepository - tmuxからの最新情報取得インターフェース
+   * @returns 更新結果とともに完了報告
+   */
+  async handleRefreshEvent(
+    tmuxRepository: ITmuxRepository
+  ): Promise<Result<PaneUpdateResult, ValidationError & { message: string }>> {
+    try {
+      // 1. 自己の境界内で最新情報を取得
+      const captureResult = await tmuxRepository.captureContent(this._id.value);
+      if (!captureResult.ok) {
+        return {
+          ok: false,
+          error: createError({
+            kind: "CommunicationFailed",
+            target: `pane ${this._id.value}`,
+            details: `Failed to capture content: ${captureResult.error.message}`
+          }, `Failed to refresh pane ${this._id.value}`)
+        };
+      }
+
+      // 2. タイトル情報の取得
+      const titleResult = await tmuxRepository.getTitle(this._id.value);
+      if (!titleResult.ok) {
+        return {
+          ok: false,
+          error: createError({
+            kind: "CommunicationFailed", 
+            target: `pane ${this._id.value}`,
+            details: `Failed to get title: ${titleResult.error.message}`
+          }, `Failed to get title for pane ${this._id.value}`)
+        };
+      }
+
+      // 3. 自己責任による状態判定と更新
+      const oldStatus = this._status;
+      const oldTitle = this._title;
+      
+      // タイトルから新しい状態を抽出
+      const newStatus = this.extractStatusFromTitle(titleResult.data);
+      const statusChanged = !WorkerStatusParser.isEqual(oldStatus, newStatus);
+      
+      // 4. ドメイン境界内での状態更新
+      if (statusChanged || titleResult.data !== oldTitle) {
+        this._status = newStatus;
+        this._title = titleResult.data;
+        
+        // 履歴の追加（不変条件: 最大2件まで）
+        this.addToHistory(newStatus, titleResult.data, this._currentCommand);
+      }
+
+      // 5. 完了報告として更新結果を返す
+      return {
+        ok: true,
+        data: {
+          paneId: this._id.value,
+          statusChanged,
+          oldStatus: WorkerStatusParser.toString(oldStatus),
+          newStatus: WorkerStatusParser.toString(newStatus),
+          titleChanged: titleResult.data !== oldTitle,
+          oldTitle,
+          newTitle: titleResult.data,
+          updatedAt: new Date()
+        }
+      };
+
+    } catch (error) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "UnexpectedError",
+          operation: "handleRefreshEvent",
+          details: `Unexpected error: ${error}`
+        }, `Unexpected error during pane refresh: ${error}`)
+      };
+    }
+  }
+
+  /**
+   * 自己責任によるタイトルからの状態抽出
+   * ペインの境界内で状態判定ロジックを実行
+   */
+  private extractStatusFromTitle(title: string): WorkerStatus {
+    console.log(`🔍 DEBUG: Extracting status from title: "${title}"`);
+    
+    // 全域性原則: すべてのケースを型安全に処理
+    for (const statusType of WORKER_STATUS_TYPES) {
+      if (title.toLowerCase().includes(statusType.toLowerCase())) {
+        const status = WorkerStatusParser.parse(statusType);
+        console.log(`✅ Status extracted: ${statusType}`);
+        return status;
+      }
+    }
+
+    // デフォルト状態（型安全性保証）
+    console.log(`⚠️ No status found in title, defaulting to UNKNOWN`);
+    return { kind: "UNKNOWN" };
+  }
+
+  /**
+   * 静的ヘルパー: タイトルから状態を抽出
+   * fromTmuxData静的メソッドから使用するため
+   */
+  private static extractStatusFromTitleStatic(title: string): WorkerStatus {
+    console.log(`🔍 DEBUG (static): Extracting status from title: "${title}"`);
+    
+    // 全域性原則: すべてのケースを型安全に処理
+    for (const statusType of WORKER_STATUS_TYPES) {
+      if (title.toLowerCase().includes(statusType.toLowerCase())) {
+        const status = WorkerStatusParser.parse(statusType);
+        console.log(`✅ Status extracted (static): ${statusType}`);
+        return status;
+      }
+    }
+
+    // デフォルト状態（型安全性保証）
+    console.log(`⚠️ No status found in title (static), defaulting to UNKNOWN`);
+    return { kind: "UNKNOWN" };
+  }
+
 }

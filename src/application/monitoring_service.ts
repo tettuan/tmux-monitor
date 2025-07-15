@@ -423,6 +423,12 @@ export class MonitoringApplicationService {
   /**
    * 監視フェーズの実行
    */
+  /**
+   * 監視フェーズの実行（イベント駆動アーキテクチャ）
+   * 
+   * Paneのイベント受信による自己状態更新を活用し、
+   * 監視サービスは完了報告を受け取って統計を更新する
+   */
   private async executeMonitoringPhase(): Promise<
     Result<MonitoringPhaseResult, ValidationError & { message: string }>
   > {
@@ -433,63 +439,55 @@ export class MonitoringApplicationService {
     const newlyIdlePanes: string[] = [];
     const newlyWorkingPanes: string[] = [];
 
+    // イベント駆動アーキテクチャ: 各Paneにリフレッシュイベントを送信
     for (const pane of targetPanes) {
       try {
-        // コンテンツ変化の検出
-        const contentResult = await this._contentMonitor.captureContent(
-          pane.id.value,
-        );
-        if (!contentResult.ok) {
-          continue; // エラーは続行
-        }
+        // Paneの境界内で自己状態更新を実行
+        const updateResult = await pane.handleRefreshEvent({
+          captureContent: (paneId: string) => this._contentMonitor.captureContent(paneId),
+          getTitle: (paneId: string) => this._tmuxRepository.executeTmuxCommand([
+            'display-message', '-p', '-t', paneId, '#{pane_title}'
+          ]).then(result => result.ok ? { ok: true, data: result.data } : result)
+        });
 
-        // ステータスの推論
-        const hasChanges = this._contentMonitor.hasContentChanged(
-          pane.id.value,
-          contentResult.data,
-        );
+        if (updateResult.ok) {
+          const update = updateResult.data;
+          
+          // 完了報告を受け取って統計を更新
+          if (update.statusChanged) {
+            statusChanges.push({
+              paneId: update.paneId,
+              oldStatus: update.oldStatus,
+              newStatus: update.newStatus
+            });
 
-        const context = {
-          hasContentChanges: hasChanges,
-          isActive: pane.isActive,
-          commandType: this.classifyCommand(pane.currentCommand),
-        };
-
-        const suggestedStatus = StatusTransitionService.suggestNextStatus(
-          pane,
-          context,
-        );
-
-        // ステータス更新
-        const oldStatus = pane.status.kind;
-        const updateResult = pane.updateStatus(suggestedStatus);
-
-        if (updateResult.ok && oldStatus !== suggestedStatus.kind) {
-          statusChanges.push({
-            paneId: pane.id.value,
-            oldStatus,
-            newStatus: suggestedStatus.kind,
-          });
-
-          if (suggestedStatus.kind === "IDLE") {
-            newlyIdlePanes.push(pane.id.value);
-          } else if (suggestedStatus.kind === "WORKING") {
-            newlyWorkingPanes.push(pane.id.value);
+            // 新しい状態に基づく分類
+            if (update.newStatus === "IDLE") {
+              newlyIdlePanes.push(update.paneId);
+            } else if (update.newStatus === "WORKING") {
+              newlyWorkingPanes.push(update.paneId);
+            }
           }
+
+          console.log(`✅ Pane ${update.paneId} self-updated: ${update.oldStatus} → ${update.newStatus}`);
+        } else {
+          console.warn(`⚠️ Pane ${pane.id.value} failed to self-update: ${updateResult.error.message}`);
+          // エラーは続行（堅牢性のため）
         }
-      } catch (_error) {
-        // 個別ペインのエラーは続行
-        continue;
+      } catch (error) {
+        console.error(`❌ Error sending refresh event to pane ${pane.id.value}:`, error);
+        // エラーは続行
       }
     }
 
-    const result: MonitoringPhaseResult = {
-      statusChanges,
-      newlyIdlePanes,
-      newlyWorkingPanes,
+    return {
+      ok: true,
+      data: {
+        statusChanges,
+        newlyIdlePanes,
+        newlyWorkingPanes,
+      }
     };
-
-    return { ok: true, data: result };
   }
 
   /**
