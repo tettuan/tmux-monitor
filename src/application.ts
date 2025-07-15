@@ -155,6 +155,20 @@ export class Application {
 
       const monitor = this.container.createMonitoringEngine(options);
 
+      // 指示ファイルが指定されている場合は、メインペインに送信
+      const instructionFile = options.getInstructionFile();
+      if (instructionFile) {
+        logger.info(`Sending instruction file path to main pane: ${instructionFile}`);
+        const sendResult = await monitor.sendInstructionFileToMainPane(instructionFile);
+        
+        if (sendResult.ok) {
+          logger.info("✅ Instruction file path sent successfully to main pane");
+        } else {
+          logger.error(`Failed to send instruction file path: ${sendResult.error.message}`);
+          // 指示ファイル送信失敗は継続（要求事項により監視は継続する）
+        }
+      }
+
       if (options.isContinuous()) {
         // logger.info(
         //   `[DEBUG] Application.run(): Starting continuous monitoring`,

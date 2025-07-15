@@ -9,6 +9,8 @@ import type { PaneCollection } from "./domain/services.ts";
 import { MonitoringApplicationService } from "./application/monitoring_service.ts";
 import { InfrastructureAdapterFactory } from "./infrastructure/adapters.ts";
 import type { CommandExecutor, Logger } from "./services.ts";
+import type { Result, ValidationError } from "./types.ts";
+import { createError } from "./types.ts";
 
 /**
  * 監視エンジン
@@ -193,6 +195,81 @@ export class MonitoringEngine {
    */
   async startContinuousMonitoring(): Promise<void> {
     await this.monitor();
+  }
+
+  /**
+   * 指示ファイルパスをメインペインに送信
+   *
+   * 全域性原則に基づき、指示ファイルパスをメッセージとして送信。
+   * ファイル内容は読み取らず、パスのみを送信するため--allow-read権限は不要。
+   */
+  async sendInstructionFileToMainPane(instructionFilePath: string): Promise<Result<void, ValidationError & { message: string }>> {
+    this._logger.info(`📝 Sending instruction file path to main pane: ${instructionFilePath}`);
+
+    try {
+      // セッション開始（ペイン情報を取得するため）
+      const startResult = await this._appService.startMonitoring();
+      if (!startResult.ok) {
+        return {
+          ok: false,
+          error: createError({
+            kind: "BusinessRuleViolation",
+            rule: "MonitoringRequired",
+            context: "Cannot send instruction without active monitoring session"
+          }, `Failed to start monitoring for instruction sending: ${startResult.error.message}`)
+        };
+      }
+
+      // アクティブペインの取得
+      const collection = this._appService.getPaneCollection();
+      const activePane = collection.getActivePane();
+
+      if (!activePane) {
+        return {
+          ok: false,
+          error: createError({
+            kind: "BusinessRuleViolation", 
+            rule: "ActivePaneRequired",
+            context: "Main pane must be active to receive instructions"
+          }, "No active pane found to send instruction file")
+        };
+      }
+
+      // 指示ファイルパスをメッセージとして送信（ファイル読み取り権限不要）
+      const { PaneCommunicator } = await import("./communication.ts");
+      const { CommandExecutor } = await import("./services.ts");
+      
+      const communicator = PaneCommunicator.create(new CommandExecutor(), this._logger);
+      const instructionMessage = `Follow the instruction file: ${instructionFilePath}`;
+      const sendResult = await communicator.sendToPane(
+        activePane.id.value,
+        instructionMessage
+      );
+
+      if (!sendResult.ok) {
+        return {
+          ok: false,
+          error: createError({
+            kind: "CommunicationFailed",
+            target: "main pane",
+            details: `Failed to send instruction message: ${sendResult.error.message}`
+          }, `Failed to send instruction file path to main pane: ${sendResult.error.message}`)
+        };
+      }
+
+      this._logger.info(`✅ Instruction file path sent successfully to main pane ${activePane.id.value}`);
+      return { ok: true, data: undefined };
+
+    } catch (error) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "UnexpectedError",
+          operation: "sendInstructionFileToMainPane",
+          details: `Unexpected error: ${error}`
+        }, `Unexpected error while sending instruction file: ${error}`)
+      };
+    }
   }
 
   /**
