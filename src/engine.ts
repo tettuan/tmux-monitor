@@ -69,6 +69,12 @@ export class MonitoringEngine {
     let cycleCount = 0;
     const maxCycles = 1000;
 
+    // 初回統計情報の表示
+    const initialStats = this._appService.getMonitoringStats();
+    this._logger.info(
+      `🎯 Initial state: ${initialStats.totalPanes} total panes, ${initialStats.workingPanes} working, ${initialStats.idlePanes} idle`,
+    );
+
     while (cycleCount < maxCycles) {
       try {
         const cycleResult = await this._appService.executeSingleCycle();
@@ -82,9 +88,14 @@ export class MonitoringEngine {
 
         const result = cycleResult.data;
 
+        // より詳細なサイクル情報をログ出力
+        this._logger.info(
+          `📊 Cycle ${result.cycleCount} (${result.phase}): ${result.statusChanges.length} status changes`,
+        );
+
         if (result.statusChanges.length > 0) {
           this._logger.info(
-            `📊 Cycle ${result.cycleCount}: ${result.statusChanges.length} status changes detected`,
+            `📊 Status changes: ${result.newlyWorkingPanes.length} newly working, ${result.newlyIdlePanes.length} newly idle`,
           );
         }
 
@@ -95,8 +106,19 @@ export class MonitoringEngine {
           );
         }
 
+        // デバッグ用：より詳細なログを追加
+        if (cycleCount <= 3) {
+          const stats = this._appService.getMonitoringStats();
+          this._logger.info(
+            `🔍 Debug Cycle ${cycleCount}: ${stats.totalPanes} total, ${stats.workingPanes} working, ${stats.idlePanes} idle`,
+          );
+        }
+
         cycleCount++;
-        await new Promise((resolve) => setTimeout(resolve, 30000));
+        // デバッグ用：最初の数サイクルは短い間隔で実行
+        const interval = cycleCount <= 5 ? 5000 : 30000;
+        this._logger.info(`⏱️ Next cycle in ${interval / 1000}s...`);
+        await new Promise((resolve) => setTimeout(resolve, interval));
       } catch (error) {
         this._logger.error(
           `Unexpected error in monitoring cycle: ${error}`,
