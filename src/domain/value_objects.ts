@@ -138,7 +138,9 @@ export class PaneName {
 
     // 制約2: 役割パターンの判定
     let role: PaneRole;
-    if (trimmed.includes("manager") || trimmed.includes("mgr")) {
+    if (trimmed === "main") {
+      role = "manager"; // "main" is treated as a manager role for validation purposes
+    } else if (trimmed.includes("manager") || trimmed.includes("mgr")) {
       role = "manager";
     } else if (trimmed.includes("worker") || trimmed.includes("work")) {
       role = "worker";
@@ -151,7 +153,7 @@ export class PaneName {
           kind: "ValidationFailed",
           input: trimmed,
           constraint:
-            `PaneName must contain role indicator (manager/worker/secretary), got: ${trimmed}`,
+            `PaneName must contain role indicator (main/manager/worker/secretary), got: ${trimmed}`,
         }),
       };
     }

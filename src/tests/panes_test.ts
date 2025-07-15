@@ -1,9 +1,6 @@
-import {
-  assertEquals,
-  assertExists,
-} from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { PaneManager, PaneStatusManager, StatusAnalyzer } from "../panes.ts";
-import { Pane, WorkerStatusParser } from "../models.ts";
+import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { PaneStatusManager, StatusAnalyzer } from "../panes.ts";
+import { WorkerStatusParser } from "../models.ts";
 
 // Mock Logger
 class MockLogger {
@@ -13,49 +10,7 @@ class MockLogger {
   warn = (msg: string) => console.warn(`WARN: ${msg}`);
 }
 
-Deno.test("PaneManager - instance creation", () => {
-  const manager = new PaneManager(new MockLogger());
-  assertExists(manager);
-});
-
-Deno.test("PaneManager - separate normal case", () => {
-  const manager = new PaneManager(new MockLogger());
-
-  const activePane = Pane.create("%1", true, "bash", "main");
-  const inactivePane = Pane.create("%2", false, "vim", "editor");
-
-  if (activePane.ok && inactivePane.ok) {
-    const result = manager.separate([activePane.data, inactivePane.data]);
-
-    assertEquals(result.ok, true);
-    assertEquals(manager.getMainPane()?.id, "%1");
-    assertEquals(manager.getTargetPanes().length, 1);
-    assertEquals(manager.getTargetPanes()[0].id, "%2");
-  }
-});
-
-Deno.test("PaneManager - separate empty pane array", () => {
-  const manager = new PaneManager(new MockLogger());
-
-  const result = manager.separate([]);
-
-  assertEquals(result.ok, false);
-});
-
-Deno.test("PaneManager - separate no active panes", () => {
-  const manager = new PaneManager(new MockLogger());
-
-  const pane1 = Pane.create("%1", false, "bash", "main");
-  const pane2 = Pane.create("%2", false, "vim", "editor");
-
-  if (pane1.ok && pane2.ok) {
-    const result = manager.separate([pane1.data, pane2.data]);
-
-    assertEquals(result.ok, true);
-    assertEquals(manager.getMainPane(), null);
-    assertEquals(manager.getTargetPanes().length, 2);
-  }
-});
+// PaneManager tests are removed as the class has been integrated into MonitoringApplicationService
 
 Deno.test("StatusAnalyzer - isNodeCommand normal case", () => {
   const analyzer = new StatusAnalyzer(new MockLogger());

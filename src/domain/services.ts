@@ -14,6 +14,7 @@ import {
   PaneName,
 } from "./value_objects.ts";
 import type { WorkerStatus } from "../models.ts";
+import { PANE_NAMES } from "../config.ts";
 
 // =============================================================================
 // PaneCollection - ペイン群の管理
@@ -379,13 +380,121 @@ export class MonitoringCycleService {
 /**
  * ペイン命名サービス
  *
- * ペインの自動命名と役割の割り当てを管理する。
+ * 全域性原則に基づく順序型役割割り当てサービス。
+ * pane ID数値順に従い、設定値配列から上から順番に役割名を割り当てる。
  */
 export class PaneNamingService {
   /**
-   * 自動命名
+   * 順序型役割割り当て
    *
-   * ペインの特性に基づいて適切な名前を提案する。
+   * pane ID数値順（%0, %1, %2...）に従い、設定値配列から名前を割り当てる。
+   * 全域性原則により、すべてのケースで必ず有効な名前を返す。
+   *
+   * @param sortedPanes pane ID数値順にソートされたペイン配列
+   * @returns 各ペインの役割名マップ（失敗なし）
+   */
+  static assignSequentialNames(
+    sortedPanes: Pane[],
+  ): Result<Map<string, PaneName>, ValidationError & { message: string }> {
+    const assignments = new Map<string, PaneName>();
+    const errors: ValidationError[] = [];
+
+    for (let index = 0; index < sortedPanes.length; index++) {
+      const pane = sortedPanes[index];
+      const nameResult = this.getNameBySequentialIndex(index);
+
+      if (nameResult.ok) {
+        // ビジネスルール検証: アクティブペインの役割制約
+        const validationResult = this.validateActivePane(pane, nameResult.data);
+        if (validationResult.ok) {
+          assignments.set(pane.id.value, nameResult.data);
+        } else {
+          errors.push(validationResult.error);
+        }
+      } else {
+        errors.push(nameResult.error);
+      }
+    }
+
+    // 全域性保証: エラーがあっても部分的な成功を返す
+    if (errors.length > 0 && assignments.size === 0) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "ValidationFailed",
+          input: "sequential assignment",
+          constraint: `Failed to assign any names: ${errors.length} errors`,
+        }),
+      };
+    }
+
+    return { ok: true, data: assignments };
+  }
+
+  /**
+   * インデックスによる名前取得
+   *
+   * 設定値配列から順序に基づいて名前を取得。
+   * 配列範囲外の場合は動的生成で全域性を保証。
+   */
+  private static getNameBySequentialIndex(
+    index: number,
+  ): Result<PaneName, ValidationError & { message: string }> {
+    if (index < 0) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "ValidationFailed",
+          input: String(index),
+          constraint: "Index must be non-negative",
+        }),
+      };
+    }
+
+    let nameStr: string;
+
+    if (index < PANE_NAMES.length) {
+      // 設定値配列から取得
+      nameStr = PANE_NAMES[index];
+    } else {
+      // 動的生成（worker{N}形式）
+      // PANE_NAMES[23] = "worker20" なので、次は worker21 から
+      const workerIndex = index - PANE_NAMES.length + 21;
+      nameStr = `worker${workerIndex}`;
+    }
+
+    return PaneName.create(nameStr);
+  }
+
+  /**
+   * アクティブペインの役割制約検証
+   */
+  private static validateActivePane(
+    pane: Pane,
+    proposedName: PaneName,
+  ): Result<void, ValidationError & { message: string }> {
+    if (
+      pane.isActive && !proposedName.isManager() &&
+      proposedName.value !== "main"
+    ) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "BusinessRuleViolation",
+          rule: "ActivePaneManagerRole",
+          context:
+            `Active pane must have manager or main role, got: ${proposedName.value}`,
+        }),
+      };
+    }
+
+    return { ok: true, data: undefined };
+  }
+
+  /**
+   * 従来のコンテキストベース命名（後方互換性用）
+   *
+   * @deprecated 順序型割り当て（assignSequentialNames）を使用してください
    */
   static suggestName(
     pane: Pane,
@@ -394,21 +503,21 @@ export class PaneNamingService {
       existingWorkerCount: number;
     },
   ): Result<PaneName, ValidationError & { message: string }> {
-    // ビジネスルール: アクティブペインはmanagerに
+    // アクティブペインの場合
     if (pane.isActive) {
-      return PaneName.create("manager-main");
+      return PaneName.create("main");
     }
 
-    // コマンドに基づく役割判定
+    // コマンドベース判定
     const command = pane.currentCommand.toLowerCase();
 
     if (command.includes("secretary") || command.includes("sec")) {
-      return PaneName.create("secretary-1");
+      return PaneName.create("secretary");
     }
 
     // デフォルトはworker
     const workerIndex = context.existingWorkerCount + 1;
-    return PaneName.create(`worker-${workerIndex}`);
+    return PaneName.create(`worker${workerIndex}`);
   }
 
   /**

@@ -9,7 +9,6 @@ import {
 import { ArgumentParser } from "./arguments.ts";
 import {
   PaneDataProcessor,
-  PaneManager,
   PaneStatusManager,
   StatusAnalyzer,
 } from "./panes.ts";
@@ -96,7 +95,7 @@ export class DIContainer {
         this.get("logger"),
       ));
 
-    this.register("paneManager", () => new PaneManager(this.get("logger")));
+    // PaneManager は削除され、MonitoringApplicationService に統合されました
     this.register("statusManager", () => new PaneStatusManager());
 
     this.register("communicator", () =>

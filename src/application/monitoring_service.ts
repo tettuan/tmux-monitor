@@ -381,41 +381,60 @@ export class MonitoringApplicationService {
   }
 
   /**
-   * ペイン分類と命名
+   * ペイン分類と命名（順序型役割割り当て）
+   *
+   * 全域性原則に基づき、pane ID数値順に従って設定値配列から役割名を割り当てる。
    */
   private classifyAndNamePanes(): Result<
     void,
     ValidationError & { message: string }
   > {
     const allPanes = this._paneCollection.getAllPanes();
-    let workerCount = 0;
 
-    for (const pane of allPanes) {
-      const context = {
-        sessionPaneCount: allPanes.length,
-        existingWorkerCount: workerCount,
+    if (allPanes.length === 0) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "InvalidState",
+          current: "no_panes",
+          expected: "at_least_one_pane",
+        }),
       };
+    }
 
-      const nameResult = PaneNamingService.suggestName(pane, context);
-      if (!nameResult.ok) {
-        continue; // 命名失敗は続行
-      }
+    // pane ID数値順にソート
+    const sortedPanes = allPanes.sort((a, b) => {
+      const aNum = parseInt(a.id.value.replace("%", ""), 10);
+      const bNum = parseInt(b.id.value.replace("%", ""), 10);
+      return aNum - bNum;
+    });
 
-      // 重複チェック
-      if (
-        !PaneNamingService.checkNameUniqueness(
-          nameResult.data,
-          this._paneCollection,
-        )
-      ) {
-        continue; // 重複は続行
-      }
+    // 順序型役割割り当て
+    const assignmentResult = PaneNamingService.assignSequentialNames(
+      sortedPanes,
+    );
+    if (!assignmentResult.ok) {
+      return assignmentResult;
+    }
 
-      const assignResult = pane.assignName(nameResult.data);
-      if (assignResult.ok && nameResult.data.isWorker()) {
-        workerCount++;
+    // 各ペインに名前を割り当て
+    let successCount = 0;
+    const assignments = assignmentResult.data;
+
+    for (const pane of sortedPanes) {
+      const assignedName = assignments.get(pane.id.value);
+      if (assignedName) {
+        const assignResult = pane.assignName(assignedName);
+        if (assignResult.ok) {
+          successCount++;
+        }
       }
     }
+
+    // 部分的成功も許容（全域性原則）
+    console.log(
+      `✅ Assigned names to ${successCount}/${sortedPanes.length} panes`,
+    );
 
     return { ok: true, data: undefined };
   }
