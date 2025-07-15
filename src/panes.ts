@@ -318,9 +318,11 @@ export class StatusAnalyzer {
     }
 
     const normalizedTitle = title.trim().toUpperCase();
-    
+
     // デバッグ用：タイトルと検出ロジックを出力
-    console.log(`🎯 DEBUG Status extraction: title="${title}" normalized="${normalizedTitle}"`);
+    console.log(
+      `🎯 DEBUG Status extraction: title="${title}" normalized="${normalizedTitle}"`,
+    );
 
     for (const status of WORKER_STATUS_TYPES) {
       if (normalizedTitle.includes(status)) {

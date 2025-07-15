@@ -135,7 +135,11 @@ export class TmuxSessionAdapter implements ITmuxSessionRepository {
     }
 
     // デバッグ用：取得したペイン情報を出力
-    console.log(`🔧 DEBUG Raw pane data: id=${parts[3]}, cmd="${parts[7]}", title="${parts[9]}", active=${parts[10]}`);
+    console.log(
+      `🔧 DEBUG Raw pane data: id=${parts[3]}, cmd="${parts[7]}", title="${
+        parts[9]
+      }", active=${parts[10]}`,
+    );
 
     return {
       sessionName: parts[0],

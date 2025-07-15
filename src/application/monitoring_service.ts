@@ -425,7 +425,7 @@ export class MonitoringApplicationService {
    */
   /**
    * 監視フェーズの実行（イベント駆動アーキテクチャ）
-   * 
+   *
    * Paneのイベント受信による自己状態更新を活用し、
    * 監視サービスは完了報告を受け取って統計を更新する
    */
@@ -444,21 +444,30 @@ export class MonitoringApplicationService {
       try {
         // Paneの境界内で自己状態更新を実行
         const updateResult = await pane.handleRefreshEvent({
-          captureContent: (paneId: string) => this._contentMonitor.captureContent(paneId),
-          getTitle: (paneId: string) => this._tmuxRepository.executeTmuxCommand([
-            'tmux', 'display-message', '-p', '-t', paneId, '#{pane_title}'
-          ]).then(result => result.ok ? { ok: true, data: result.data.trim() } : result)
+          captureContent: (paneId: string) =>
+            this._contentMonitor.captureContent(paneId),
+          getTitle: (paneId: string) =>
+            this._tmuxRepository.executeTmuxCommand([
+              "tmux",
+              "display-message",
+              "-p",
+              "-t",
+              paneId,
+              "#{pane_title}",
+            ]).then((result) =>
+              result.ok ? { ok: true, data: result.data.trim() } : result
+            ),
         });
 
         if (updateResult.ok) {
           const update = updateResult.data;
-          
+
           // 完了報告を受け取って統計を更新
           if (update.statusChanged) {
             statusChanges.push({
               paneId: update.paneId,
               oldStatus: update.oldStatus,
-              newStatus: update.newStatus
+              newStatus: update.newStatus,
             });
 
             // 新しい状態に基づく分類
@@ -469,13 +478,20 @@ export class MonitoringApplicationService {
             }
           }
 
-          console.log(`✅ Pane ${update.paneId} self-updated: ${update.oldStatus} → ${update.newStatus}`);
+          console.log(
+            `✅ Pane ${update.paneId} self-updated: ${update.oldStatus} → ${update.newStatus}`,
+          );
         } else {
-          console.warn(`⚠️ Pane ${pane.id.value} failed to self-update: ${updateResult.error.message}`);
+          console.warn(
+            `⚠️ Pane ${pane.id.value} failed to self-update: ${updateResult.error.message}`,
+          );
           // エラーは続行（堅牢性のため）
         }
       } catch (error) {
-        console.error(`❌ Error sending refresh event to pane ${pane.id.value}:`, error);
+        console.error(
+          `❌ Error sending refresh event to pane ${pane.id.value}:`,
+          error,
+        );
         // エラーは続行
       }
     }
@@ -486,7 +502,7 @@ export class MonitoringApplicationService {
         statusChanges,
         newlyIdlePanes,
         newlyWorkingPanes,
-      }
+      },
     };
   }
 
@@ -547,9 +563,13 @@ export class MonitoringApplicationService {
     // デバッグ用：ペインの詳細情報をログ出力
     if (allPanes.length > 0) {
       console.log(`🔍 DEBUG: Found ${allPanes.length} panes:`);
-      allPanes.slice(0, 5).forEach(pane => {
-        const statusStr = pane.status.kind || 'unknown';
-        console.log(`  - ${pane.id.value}: ${pane.name?.value || 'unnamed'} (active: ${pane.isActive}) status: ${statusStr}`);
+      allPanes.slice(0, 5).forEach((pane) => {
+        const statusStr = pane.status.kind || "unknown";
+        console.log(
+          `  - ${pane.id.value}: ${
+            pane.name?.value || "unnamed"
+          } (active: ${pane.isActive}) status: ${statusStr}`,
+        );
       });
       if (allPanes.length > 5) {
         console.log(`  ... and ${allPanes.length - 5} more panes`);
