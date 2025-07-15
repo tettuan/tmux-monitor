@@ -105,20 +105,14 @@ async function main(): Promise<void> {
   const logger = new Logger();
 
   try {
-    logger.info("Starting tmux monitor with totality principles...");
-    logger.info("Initializing application with dependency injection...");
-
     // Create application instance with proper initialization
     const app = new Application();
 
     // Run the application - all errors are handled internally
     await app.run();
 
-    logger.info("Application completed successfully");
-
     // Force exit for CLI to ensure clean termination
     // This is necessary because some async handlers might keep the process alive
-    // logger.info("[DEBUG] Forcing process exit for clean CLI termination");
     Deno.exit(0);
   } catch (error) {
     // This should never happen due to totality principles,

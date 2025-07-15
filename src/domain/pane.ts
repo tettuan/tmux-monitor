@@ -649,19 +649,15 @@ export class Pane {
    * ペインの境界内で状態判定ロジックを実行
    */
   private extractStatusFromTitle(title: string): WorkerStatus {
-    console.log(`🔍 DEBUG: Extracting status from title: "${title}"`);
-
     // 全域性原則: すべてのケースを型安全に処理
     for (const statusType of WORKER_STATUS_TYPES) {
       if (title.toLowerCase().includes(statusType.toLowerCase())) {
         const status = WorkerStatusParser.parse(statusType);
-        console.log(`✅ Status extracted: ${statusType}`);
         return status;
       }
     }
 
     // デフォルト状態（型安全性保証）
-    console.log(`⚠️ No status found in title, defaulting to UNKNOWN`);
     return { kind: "UNKNOWN" };
   }
 
@@ -670,19 +666,15 @@ export class Pane {
    * fromTmuxData静的メソッドから使用するため
    */
   private static extractStatusFromTitleStatic(title: string): WorkerStatus {
-    console.log(`🔍 DEBUG (static): Extracting status from title: "${title}"`);
-
     // 全域性原則: すべてのケースを型安全に処理
     for (const statusType of WORKER_STATUS_TYPES) {
       if (title.toLowerCase().includes(statusType.toLowerCase())) {
         const status = WorkerStatusParser.parse(statusType);
-        console.log(`✅ Status extracted (static): ${statusType}`);
         return status;
       }
     }
 
     // デフォルト状態（型安全性保証）
-    console.log(`⚠️ No status found in title (static), defaulting to UNKNOWN`);
     return { kind: "UNKNOWN" };
   }
 }

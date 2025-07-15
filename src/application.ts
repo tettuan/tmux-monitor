@@ -96,13 +96,11 @@ export class Application {
 
     // Handle clear-panes option early
     if (options.shouldClearPanes()) {
-      logger.info(
-        "Clear panes option detected - sending /clear commands to Node.js panes...",
-      );
+      logger.info("🧹 Clearing Node.js panes...");
       const engine = this.container.createMonitoringEngine(options);
       await engine.clearNodePanes();
 
-      logger.info("Clear panes operation completed");
+      logger.info("✅ Clear operation completed");
       // Exit early after clearing panes
       return;
     }

@@ -455,21 +455,36 @@ export class PaneTitleManager {
 
   /**
    * Remove existing status prefix from title to prevent duplication
+   * Also handles repeated role names like "role: role: role:"
    */
   cleanTitle(title: string): string {
     if (!title) return "";
 
-    // Remove patterns like [WORKING], [IDLE], [TERMINATED], etc.
-    // Also handle multiple prefixes that might have accumulated
     let cleaned = title;
     let previousLength = 0;
 
-    // Keep cleaning until no more changes occur (handles multiple prefixes)
+    // Keep cleaning until no more changes occur (handles multiple prefixes and role duplications)
     while (cleaned.length !== previousLength) {
       previousLength = cleaned.length;
+      
+      // Remove status prefixes like [WORKING], [IDLE], [TERMINATED], etc.
+      // Also remove status with timestamps like [DONE 07/14 22:08]
       cleaned = cleaned.replace(
-        /^\[(?:WORKING|IDLE|TERMINATED|DONE|UNKNOWN)\]\s*/,
+        /^\[(?:WORKING|IDLE|TERMINATED|DONE|UNKNOWN)(?:\s+\d{2}\/\d{2}\s+\d{2}:\d{2})?\]\s*/,
         "",
+      ).trim();
+      
+      // Remove repeated role names like "manager1: manager1: manager1:"
+      // Match any word followed by colon that repeats
+      cleaned = cleaned.replace(
+        /^(\w+):\s*(\1:\s*)+/g,
+        "$1: ",
+      ).trim();
+      
+      // Remove repeated role names like "worker3: worker3: worker3:"
+      cleaned = cleaned.replace(
+        /^(\w+\d*):\s*(\1:\s*)+/g,
+        "$1: ",
       ).trim();
     }
 

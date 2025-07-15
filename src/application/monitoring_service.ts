@@ -478,9 +478,12 @@ export class MonitoringApplicationService {
             }
           }
 
-          console.log(
-            `✅ Pane ${update.paneId} self-updated: ${update.oldStatus} → ${update.newStatus}`,
-          );
+          // 状態変更があった場合のみログ出力（冗長性を削減）
+          if (update.oldStatus !== update.newStatus) {
+            console.log(
+              `✅ Pane ${update.paneId} updated: ${update.oldStatus} → ${update.newStatus}`,
+            );
+          }
         } else {
           console.warn(
             `⚠️ Pane ${pane.id.value} failed to self-update: ${updateResult.error.message}`,

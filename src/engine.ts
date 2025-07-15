@@ -36,8 +36,6 @@ export class MonitoringEngine {
       adapters.contentMonitor,
       adapters.communicator,
     );
-
-    this._logger.info("✅ Monitoring engine initialized");
   }
 
   /**
@@ -315,8 +313,6 @@ export class MonitoringEngine {
    * Nodeペインクリア（application.ts互換性のため）
    */
   async clearNodePanes(): Promise<void> {
-    this._logger.info("🧹 Clearing Node.js panes...");
-
     try {
       const startResult = await this._appService.startMonitoring();
       if (!startResult.ok) {
