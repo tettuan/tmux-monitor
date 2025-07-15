@@ -446,8 +446,8 @@ export class MonitoringApplicationService {
         const updateResult = await pane.handleRefreshEvent({
           captureContent: (paneId: string) => this._contentMonitor.captureContent(paneId),
           getTitle: (paneId: string) => this._tmuxRepository.executeTmuxCommand([
-            'display-message', '-p', '-t', paneId, '#{pane_title}'
-          ]).then(result => result.ok ? { ok: true, data: result.data } : result)
+            'tmux', 'display-message', '-p', '-t', paneId, '#{pane_title}'
+          ]).then(result => result.ok ? { ok: true, data: result.data.trim() } : result)
         });
 
         if (updateResult.ok) {
