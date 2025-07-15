@@ -546,6 +546,18 @@ export class MonitoringApplicationService {
   getMonitoringStats(): MonitoringStats {
     const allPanes = this._paneCollection.getAllPanes();
 
+    // デバッグ用：ペインの詳細情報をログ出力
+    if (allPanes.length > 0) {
+      console.log(`🔍 DEBUG: Found ${allPanes.length} panes:`);
+      allPanes.slice(0, 5).forEach(pane => {
+        const statusStr = pane.status.kind || 'unknown';
+        console.log(`  - ${pane.id.value}: ${pane.name?.value || 'unnamed'} (active: ${pane.isActive}) status: ${statusStr}`);
+      });
+      if (allPanes.length > 5) {
+        console.log(`  ... and ${allPanes.length - 5} more panes`);
+      }
+    }
+
     return {
       totalPanes: allPanes.length,
       activePanes: allPanes.filter((p) => p.isActive).length,
