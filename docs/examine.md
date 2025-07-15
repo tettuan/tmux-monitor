@@ -161,6 +161,150 @@ timeout 30s deno task start --clear --onetime
 - [ ] メイン操作ペインが保護される
 - [ ] 安全に実行される
 
+#### 4.3 ペインタイトル管理テスト
+
+**準備:**
+```bash
+# 既存のペインタイトルを確認
+tmux list-panes -a -F "#{pane_id}: #{pane_title}"
+
+# テスト用の複雑なタイトルを設定
+tmux select-pane -t %0 -T "manager1: manager1: test title"
+tmux select-pane -t %1 -T "[WORKING] worker2: worker2: another title"
+tmux select-pane -t %2 -T "[DONE 07/14 22:08] complex: complex: task name"
+```
+
+**4.3.1 タイトルクリーニング機能テスト**
+
+**実行コマンド:**
+```bash
+timeout 45s deno task start --onetime
+```
+
+**成功の定義:**
+- [ ] 重複したロール名が正しく削除される（"manager1: manager1:" → "manager1:"）
+- [ ] 既存のステータスプレフィックスが削除される（"[WORKING]", "[DONE]"等）
+- [ ] タイムスタンプ付きステータスが削除される（"[DONE 07/14 22:08]"）
+- [ ] 複数のプレフィックスが一度に処理される
+- [ ] クリーニング後のタイトルが適切に保持される
+
+**検証ポイント:**
+```
+✅ 期待する処理例:
+Before: "[WORKING] manager1: manager1: test title"
+After:  "[IDLE] manager1: test title"
+
+Before: "worker2: worker2: worker2: another title"  
+After:  "[WORKING] worker2: another title"
+
+Before: "[DONE 07/14 22:08] complex: complex: task name"
+After:  "[IDLE] complex: task name"
+```
+
+**4.3.2 ステータス更新の正確性テスト**
+
+**実行コマンド:**
+```bash
+# 継続監視でステータス変化を確認
+timeout 90s deno task start
+```
+
+**成功の定義:**
+- [ ] IDLE → WORKING の変化が正しく反映される
+- [ ] WORKING → IDLE の変化が正しく反映される
+- [ ] ステータス変更時にタイトルの基本部分が保持される
+- [ ] 複数ペインの同時更新が正常に動作する
+- [ ] ペイン名がある場合の形式が正しい（"[STATUS] name: title"）
+
+**検証ポイント:**
+```
+✅ 期待するステータス変更:
+Initial: "[IDLE] manager1: test title"
+Working: "[WORKING] manager1: test title"
+Back:    "[IDLE] manager1: test title"
+
+✅ ペイン名付きの場合:
+"[WORKING] pane-name: original title"
+```
+
+**4.3.3 タイトル復元テスト**
+
+**実行コマンド:**
+```bash
+# 元のタイトルを記録してから実行
+ORIGINAL_TITLES=$(tmux list-panes -a -F "#{pane_id}:#{pane_title}")
+echo "Original titles: $ORIGINAL_TITLES"
+
+timeout 30s deno task start --onetime
+
+# 実行後のタイトルを確認
+echo "After monitoring:"
+tmux list-panes -a -F "#{pane_id}: #{pane_title}"
+```
+
+**成功の定義:**
+- [ ] 元のタイトル情報が適切に保存される
+- [ ] 監視終了後にタイトルが正しく復元される（オプション）
+- [ ] 複数のステータス変更を経ても基本タイトルが維持される
+- [ ] ペインが削除された場合のエラーハンドリングが適切
+
+**4.3.4 エッジケースのタイトル処理テスト**
+
+**準備:**
+```bash
+# エッジケース用のタイトルを設定
+tmux select-pane -t %0 -T ""  # 空タイトル
+tmux select-pane -t %1 -T "   "  # 空白のみ
+tmux select-pane -t %2 -T "[UNKNOWN] [WORKING] nested: nested: title"  # 多重プレフィックス
+tmux select-pane -t %3 -T "役割1: 役割1: 日本語タイトル"  # 日本語
+```
+
+**実行コマンド:**
+```bash
+timeout 45s deno task start --onetime
+```
+
+**成功の定義:**
+- [ ] 空タイトルが "tmux" フォールバックで処理される
+- [ ] 空白のみのタイトルが適切に処理される
+- [ ] 多重プレフィックスが完全に削除される
+- [ ] 日本語文字を含むタイトルが正しく処理される
+- [ ] 特殊文字を含むタイトルが破損しない
+
+**検証ポイント:**
+```
+✅ エッジケースの処理例:
+Empty: "" → "[IDLE] tmux"
+Whitespace: "   " → "[IDLE] tmux"
+Multi-prefix: "[UNKNOWN] [WORKING] nested: nested: title" → "[IDLE] nested: title"
+Japanese: "役割1: 役割1: 日本語タイトル" → "[IDLE] 役割1: 日本語タイトル"
+```
+
+**4.3.5 ペイン削除時のタイトル処理テスト**
+
+**実行コマンド:**
+```bash
+# 監視開始
+timeout 60s deno task start &
+MONITOR_PID=$!
+
+sleep 10
+# 監視中にペインを削除
+tmux kill-pane -t %2 2>/dev/null || true
+
+sleep 20
+# モニターを停止
+kill $MONITOR_PID 2>/dev/null || true
+wait
+```
+
+**成功の定義:**
+- [ ] 削除されたペインでエラーが発生しない
+- [ ] 他のペインの監視が継続される
+- [ ] 存在チェックが正常に動作する
+- [ ] ログに適切な警告メッセージが出力される
+- [ ] アプリケーションがクラッシュしない
+
 ### 5. エラーハンドリングテスト
 
 #### 5.1 不正なオプション
@@ -254,6 +398,7 @@ timeout 60s deno task ci:dirty
    - [ ] 全基本機能が正常動作する
    - [ ] オプションの組み合わせが正しく処理される
    - [ ] エラーハンドリングが適切に動作する
+   - [ ] ペインタイトル管理が正確に動作する
 
 2. **アーキテクチャ準拠**
    - [ ] DDDの集約ルート（Pane）が正常に機能する
@@ -275,6 +420,12 @@ timeout 60s deno task ci:dirty
    - [ ] 分かりやすいログ出力
    - [ ] 適切なエラーメッセージ
 
+6. **タイトル管理の信頼性**
+   - [ ] 複雑なタイトルパターンの正確な処理
+   - [ ] ステータス変更時のタイトル整合性
+   - [ ] エッジケース（空タイトル、多言語等）の適切な処理
+   - [ ] ペイン削除時の安全な処理
+
 ### 🔧 総合評価実行
 
 **最終評価コマンド:**
@@ -292,13 +443,27 @@ echo "📋 1. 基本機能テスト"
 timeout 30s deno task start --onetime
 echo "✅ 単発監視テスト完了"
 
+# タイトル管理テスト
+echo "📋 2. タイトル管理テスト"
+echo "現在のペインタイトル:"
+tmux list-panes -a -F "#{pane_id}: #{pane_title}"
+
+# 複雑なタイトルを設定してテスト
+tmux select-pane -t %0 -T "manager1: manager1: test title" 2>/dev/null || true
+tmux select-pane -t %1 -T "[WORKING] worker2: worker2: another title" 2>/dev/null || true
+
+timeout 45s deno task start --onetime
+echo "タイトル処理後:"
+tmux list-panes -a -F "#{pane_id}: #{pane_title}"
+echo "✅ タイトル管理テスト完了"
+
 # CI/CDテスト
-echo "📋 2. CI/CDテスト"
+echo "📋 3. CI/CDテスト"
 timeout 120s deno task ci:dirty
 echo "✅ CI/CDテスト完了"
 
 # 自動テスト
-echo "📋 3. 自動テスト実行"
+echo "📋 4. 自動テスト実行"
 timeout 120s deno task test
 echo "✅ 自動テスト完了"
 
@@ -331,6 +496,14 @@ timeout 300s ./test_all.sh
 2. 時間指定実行テスト: ✅/❌
 3. 指示書実行テスト: ✅/❌
 4. ペイン管理テスト: ✅/❌
+   4.1 ペイン一覧表示: ✅/❌
+   4.2 ペインクリア機能: ✅/❌
+   4.3 ペインタイトル管理: ✅/❌
+     4.3.1 タイトルクリーニング機能: ✅/❌
+     4.3.2 ステータス更新の正確性: ✅/❌
+     4.3.3 タイトル復元: ✅/❌
+     4.3.4 エッジケースの処理: ✅/❌
+     4.3.5 ペイン削除時の処理: ✅/❌
 5. エラーハンドリングテスト: ✅/❌
 6. パフォーマンステスト: ✅/❌
 7. CI/CDテスト: ✅/❌
