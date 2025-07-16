@@ -8,10 +8,9 @@
  */
 
 import type { Result } from "../types.ts";
-import type { createError as _createError } from "../types.ts";
+import { createError } from "../types.ts";
 import type {
   IPaneCommunicator,
-  IPaneContentMonitor,
   ITmuxSessionRepository,
   RawPaneData,
 } from "../application/monitoring_service.ts";
@@ -186,80 +185,6 @@ export class TmuxSessionAdapter implements ITmuxSessionRepository {
 // =============================================================================
 // PaneContentAdapter - ペインコンテンツ監視の実装（統合版）
 // =============================================================================
-
-/**
- * 【統合版】ペインコンテンツ監視の実装
- *
- * 統合CaptureDetectionServiceを使用してcapture機能を一元化。
- * 既存の分散したcaptureロジックから統合サービスベースの実装に移行。
- */
-export class PaneContentAdapter implements IPaneContentMonitor {
-  private readonly captureDetectionService: CaptureDetectionService;
-
-  constructor(
-    private readonly commandExecutor: CommandExecutor,
-    private readonly logger: Logger,
-  ) {
-    // 統合サービスの初期化
-    const commandAdapter = new CommandExecutorAdapter(commandExecutor);
-    const captureAdapter = new TmuxCaptureAdapter(commandAdapter);
-    const captureHistory = new InMemoryCaptureHistory();
-    this.captureDetectionService = new CaptureDetectionService(
-      captureAdapter,
-      captureHistory,
-    );
-  }
-
-  /**
-   * 【統合版】ペインコンテンツのキャプチャ
-   *
-   * 統合CaptureDetectionServiceを使用してcapture実行。
-   * 古いtmux capture-pane直接実行から統合Adapterに移行。
-   */
-  async captureContent(paneId: string): Promise<Result<string, Error>> {
-    try {
-      const detectionResult = await this.captureDetectionService.detectChanges(
-        paneId,
-      );
-
-      if (!detectionResult.ok) {
-        return {
-          ok: false,
-          error: new Error(
-            `Failed to capture pane ${paneId}: ${detectionResult.error.message}`,
-          ),
-        };
-      }
-
-      const content = detectionResult.data.captureResult.content;
-      return { ok: true, data: content };
-    } catch (error) {
-      return {
-        ok: false,
-        error: new Error(`Unexpected error capturing pane ${paneId}: ${error}`),
-      };
-    }
-  }
-
-  /**
-   * 【統合版】コンテンツ変化の検出
-   *
-   * 統合CaptureDetectionServiceのActivityStatusを使用して変化判定。
-   * 既存のローカル履歴管理から統合サービスの状態管理に移行。
-   */
-  hasContentChanged(paneId: string, _currentContent: string): boolean {
-    // 統合版では外部から現在コンテンツを受け取る形式は非推奨
-    // 代わりにCaptureDetectionServiceで一元的に変化検出すべき
-    this.logger.warn(
-      `hasContentChanged with external content is deprecated for pane ${paneId}. ` +
-        `Use CaptureDetectionService.detectChanges() directly.`,
-    );
-
-    // 暫定的な互換性実装
-    // 実際の変化検出はCaptureDetectionServiceが担当
-    return false;
-  }
-}
 
 // =============================================================================
 // PaneCommunicationAdapter - ペイン通信の実装
@@ -448,6 +373,55 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
 
     return { ok: true, data: successCount };
   }
+
+  /**
+   * /clearコマンドの専用送信（Enterキーを分離）
+   * 
+   * /clearコマンドを送信し、0.2秒待機してから別途Enterキーを送信します。
+   * これによりClaudeの適切なクリア動作を確保します。
+   */
+  async sendClearCommand(paneId: string): Promise<Result<void, Error>> {
+    try {
+      // 1. /clearコマンドを送信（Enterキーなし）
+      const clearCommand = ["tmux", "send-keys", "-t", paneId, "/clear"];
+      const clearResult = await this.commandExecutor.execute(clearCommand);
+
+      if (!clearResult.ok) {
+        return {
+          ok: false,
+          error: new Error(
+            `Failed to send /clear command to pane ${paneId}: ${clearResult.error.message}`,
+          ),
+        };
+      }
+
+      this.logger.debug(`/clear command sent to pane ${paneId}`);
+
+      // 2. 0.2秒待機
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // 3. Enterキーを送信
+      const enterResult = await this.sendEnter(paneId);
+      if (!enterResult.ok) {
+        return {
+          ok: false,
+          error: new Error(
+            `Failed to send Enter after /clear to pane ${paneId}: ${enterResult.error.message}`,
+          ),
+        };
+      }
+
+      this.logger.info(`Clear command sequence completed for pane ${paneId}`);
+      return { ok: true, data: undefined };
+    } catch (error) {
+      return {
+        ok: false,
+        error: new Error(
+          `Unexpected error sending clear command to pane ${paneId}: ${error}`,
+        ),
+      };
+    }
+  }
 }
 
 // =============================================================================
@@ -472,16 +446,6 @@ export class InfrastructureAdapterFactory {
   }
 
   /**
-   * ペインコンテンツアダプターの作成
-   */
-  static createPaneContentAdapter(
-    commandExecutor: CommandExecutor,
-    logger: Logger,
-  ): IPaneContentMonitor {
-    return new PaneContentAdapter(commandExecutor, logger);
-  }
-
-  /**
    * ペイン通信アダプターの作成
    */
   static createPaneCommunicationAdapter(
@@ -492,6 +456,30 @@ export class InfrastructureAdapterFactory {
   }
 
   /**
+   * 統合キャプチャ検出サービスの作成
+   */
+  static createCaptureDetectionService(
+    commandExecutor: CommandExecutor,
+  ): CaptureDetectionService {
+    // CommandExecutorアダプターを作成
+    const commandAdapter = {
+      async execute(command: string[]): Promise<Result<string, Error>> {
+        const result = await commandExecutor.execute(command);
+        if (result.ok) {
+          return { ok: true, data: result.data };
+        } else {
+          return { ok: false, error: new Error(result.error.message) };
+        }
+      }
+    };
+
+    // 統合サービスの初期化
+    const captureAdapter = new TmuxCaptureAdapter(commandAdapter);
+    const captureHistory = new InMemoryCaptureHistory();
+    return new CaptureDetectionService(captureAdapter, captureHistory);
+  }
+
+  /**
    * 全アダプターのセット作成
    */
   static createAllAdapters(
@@ -499,16 +487,18 @@ export class InfrastructureAdapterFactory {
     logger: Logger,
   ): {
     tmuxRepository: ITmuxSessionRepository;
-    contentMonitor: IPaneContentMonitor;
     communicator: IPaneCommunicator;
+    captureDetectionService: CaptureDetectionService;
   } {
+    const captureDetectionService = this.createCaptureDetectionService(commandExecutor);
+    
     return {
       tmuxRepository: this.createTmuxSessionAdapter(commandExecutor, logger),
-      contentMonitor: this.createPaneContentAdapter(commandExecutor, logger),
       communicator: this.createPaneCommunicationAdapter(
         commandExecutor,
         logger,
       ),
+      captureDetectionService,
     };
   }
 }

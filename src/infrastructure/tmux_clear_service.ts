@@ -89,8 +89,8 @@ export class TmuxClearService implements PaneClearService {
         // 1. クリアコマンドの送信（Claude特有の方法を試す）
         let sendResult;
         if (retryCount === 0) {
-          // 最初は /clear を試す（通常のペイン用）
-          sendResult = await this.communicator.sendCommand(paneId, "/clear");
+          // 最初は /clear を試す（通常のペイン用）- 0.2秒間隔でEnterを分離送信
+          sendResult = await this.communicator.sendClearCommand(paneId);
         } else if (retryCount === 1) {
           // 2回目は単一 Escape キー（Claude UI用）
           sendResult = await this.communicator.sendCommand(paneId, "\u001b");

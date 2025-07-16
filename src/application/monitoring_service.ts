@@ -34,19 +34,12 @@ export interface ITmuxSessionRepository {
 }
 
 /**
- * ペインコンテンツ監視のインターフェース
- */
-export interface IPaneContentMonitor {
-  captureContent(paneId: string): Promise<Result<string, Error>>;
-  hasContentChanged(paneId: string, previousContent: string): boolean;
-}
-
-/**
  * 外部通信のインターフェース
  */
 export interface IPaneCommunicator {
   sendMessage(paneId: string, message: string): Promise<Result<void, Error>>;
   sendCommand(paneId: string, command: string): Promise<Result<void, Error>>;
+  sendClearCommand(paneId: string): Promise<Result<void, Error>>;
 }
 
 /**
@@ -82,20 +75,20 @@ export interface RawPaneData {
  */
 export class MonitoringApplicationService {
   private readonly _tmuxRepository: ITmuxSessionRepository;
-  private readonly _contentMonitor: IPaneContentMonitor;
   private readonly _communicator: IPaneCommunicator;
   private readonly _paneCollection: PaneCollection;
   private _cycleService: MonitoringCycleService | null = null;
+  private readonly _captureDetectionService?: import("../domain/capture_detection_service.ts").CaptureDetectionService;
 
   constructor(
     tmuxRepository: ITmuxSessionRepository,
-    contentMonitor: IPaneContentMonitor,
     communicator: IPaneCommunicator,
+    captureDetectionService?: import("../domain/capture_detection_service.ts").CaptureDetectionService,
   ) {
     this._tmuxRepository = tmuxRepository;
-    this._contentMonitor = contentMonitor;
     this._communicator = communicator;
     this._paneCollection = new PaneCollection();
+    this._captureDetectionService = captureDetectionService;
   }
 
   // =============================================================================
@@ -461,10 +454,8 @@ export class MonitoringApplicationService {
     // イベント駆動アーキテクチャ: 各Paneにリフレッシュイベントを送信
     for (const pane of targetPanes) {
       try {
-        // Paneの境界内で自己状態更新を実行
+        // Paneの境界内で自己状態更新を実行（キャプチャサービス統合版）
         const updateResult = await pane.handleRefreshEvent({
-          captureContent: (paneId: string) =>
-            this._contentMonitor.captureContent(paneId),
           getTitle: (paneId: string) =>
             this._tmuxRepository.executeTmuxCommand([
               "tmux",
@@ -476,7 +467,7 @@ export class MonitoringApplicationService {
             ]).then((result) =>
               result.ok ? { ok: true, data: result.data.trim() } : result
             ),
-        });
+        }, this._captureDetectionService); // キャプチャサービスを統合
 
         if (updateResult.ok) {
           const update = updateResult.data;

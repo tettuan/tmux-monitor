@@ -12,7 +12,6 @@ import {
   PaneStatusManager,
   StatusAnalyzer,
 } from "./panes.ts";
-import { PaneContentMonitor, PaneTitleManager } from "./pane_monitor.ts";
 import { MessageGenerator, PaneCommunicator } from "./communication.ts";
 import { PaneDisplayer } from "./display.ts";
 import { CIManager } from "./ci.ts";
@@ -115,17 +114,8 @@ export class DIContainer {
         this.get("logger"),
       ));
 
-    // Pane monitoring
-    this.register("paneTitleManager", () =>
-      PaneTitleManager.create(
-        this.get("commandExecutor"),
-        this.get("logger"),
-      ));
-    this.register("paneContentMonitor", () =>
-      PaneContentMonitor.create(
-        this.get("commandExecutor"),
-        this.get("logger"),
-      ));
+    // Note: PaneTitleManager and PaneContentMonitor removed - 
+    // functionality integrated into Pane.handleRefreshEvent
   }
 
   createMonitoringEngine(_options: MonitoringOptions): MonitoringEngine {

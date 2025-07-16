@@ -27,7 +27,6 @@ import type {
  * tmuxリポジトリインターフェース（イベント駆動アーキテクチャ用）
  */
 export interface ITmuxRepository {
-  captureContent(paneId: string): Promise<Result<string, Error>>;
   getTitle(paneId: string): Promise<Result<string, Error>>;
 }
 
@@ -590,73 +589,105 @@ export class Pane {
   }
 
   /**
-   * イベント駆動アーキテクチャ - ペインの自己状態更新
+   * イベント駆動アーキテクチャ - ペインの自己状態更新（統合版）
    *
    * ドメイン境界内の情報を、ペイン自身の責務で更新する。
    * 全域性原則に基づき、すべての状態変更は型安全に実行される。
    *
+   * 【新機能】: tmuxコンテンツキャプチャによる実際のIDLE/WORKING判定を統合
+   *
    * @param tmuxRepository - tmuxからの最新情報取得インターフェース
+   * @param captureDetectionService - キャプチャ内容比較サービス（オプション）
    * @returns 更新結果とともに完了報告
    */
   async handleRefreshEvent(
     tmuxRepository: ITmuxRepository,
+    captureDetectionService?: import("./capture_detection_service.ts").CaptureDetectionService,
   ): Promise<Result<PaneUpdateResult, ValidationError & { message: string }>> {
     try {
-      // 1. 自己の境界内で最新情報を取得
-      const captureResult = await tmuxRepository.captureContent(this._id.value);
-      if (!captureResult.ok) {
-        return {
-          ok: false,
-          error: createError({
-            kind: "CommunicationFailed",
-            target: `pane ${this._id.value}`,
-            details:
-              `Failed to capture content: ${captureResult.error.message}`,
-          }, `Failed to refresh pane ${this._id.value}`),
-        };
-      }
-
-      // 2. タイトル情報の取得
-      const titleResult = await tmuxRepository.getTitle(this._id.value);
-      if (!titleResult.ok) {
-        return {
-          ok: false,
-          error: createError({
-            kind: "CommunicationFailed",
-            target: `pane ${this._id.value}`,
-            details: `Failed to get title: ${titleResult.error.message}`,
-          }, `Failed to get title for pane ${this._id.value}`),
-        };
-      }
-
-      // 3. 自己責任による状態判定と更新
       const oldStatus = this._status;
       const oldTitle = this._title;
+      let statusChanged = false;
+      let titleChanged = false;
+      let captureDetectionResult: import("./capture_detection_service.ts").CaptureDetectionResult | null = null;
 
-      // タイトルから新しい状態を抽出
-      const newStatus = this.extractStatusFromTitle(titleResult.data);
-      const statusChanged = !WorkerStatusParser.isEqual(oldStatus, newStatus);
+      // 方式1: キャプチャ内容比較による判定（優先）
+      if (captureDetectionService) {
+        const detectionResult = await captureDetectionService.detectChanges(
+          this._id.value,
+          [this._title, this._currentCommand] // コンテキストヒント
+        );
 
-      // 4. ドメイン境界内での状態更新
-      if (statusChanged || titleResult.data !== oldTitle) {
-        this._status = newStatus;
-        this._title = titleResult.data;
-
-        // 履歴の追加（不変条件: 最大2件まで）
-        this.addToHistory(newStatus, titleResult.data, this._currentCommand);
+        if (detectionResult.ok) {
+          captureDetectionResult = detectionResult.data;
+          
+          // CaptureDetectionServiceの結果を使用してステータス更新
+          const updateResult = this.updateCaptureStateFromDetection(captureDetectionResult);
+          if (updateResult.ok) {
+            statusChanged = !WorkerStatusParser.isEqual(oldStatus, this._status);
+            console.log(
+              `🔍 Pane ${this._id.value}: Capture-based status ${oldStatus.kind} → ${this._status.kind} (${captureDetectionResult.hasContentChanged ? 'content changed' : 'no change'})`
+            );
+          } else {
+            console.warn(`Failed to apply capture detection results for pane ${this._id.value}: ${updateResult.error.message}`);
+          }
+        } else {
+          console.warn(`Capture detection failed for pane ${this._id.value}: ${detectionResult.error.message}, falling back to title-based detection`);
+        }
       }
 
-      // 5. 完了報告として更新結果を返す
+      // 方式2: タイトルベース判定（フォールバック、またはキャプチャサービス未使用時）
+      if (!captureDetectionService || !captureDetectionResult) {
+        // タイトル情報の取得
+        const titleResult = await tmuxRepository.getTitle(this._id.value);
+        if (!titleResult.ok) {
+          return {
+            ok: false,
+            error: createError({
+              kind: "CommunicationFailed",
+              target: `pane ${this._id.value}`,
+              details: `Failed to get title: ${titleResult.error.message}`,
+            }, `Failed to get title for pane ${this._id.value}`),
+          };
+        }
+
+        // タイトルから新しい状態を抽出
+        const newStatus = this.extractStatusFromTitle(titleResult.data);
+        statusChanged = !WorkerStatusParser.isEqual(oldStatus, newStatus);
+        titleChanged = titleResult.data !== oldTitle;
+
+        // ドメイン境界内での状態更新
+        if (statusChanged || titleChanged) {
+          this._status = newStatus;
+          this._title = titleResult.data;
+
+          // 履歴の追加（不変条件: 最大2件まで）
+          this.addToHistory(newStatus, titleResult.data, this._currentCommand);
+          
+          console.log(
+            `📋 Pane ${this._id.value}: Title-based status ${oldStatus.kind} → ${newStatus.kind} (title: "${titleResult.data}")`
+          );
+        }
+      } else {
+        // キャプチャベース判定が成功した場合でも、タイトルの更新は必要
+        const titleResult = await tmuxRepository.getTitle(this._id.value);
+        if (titleResult.ok && titleResult.data !== oldTitle) {
+          this._title = titleResult.data;
+          titleChanged = true;
+        }
+      }
+
+      // 完了報告として更新結果を返す
       return {
         ok: true,
         data: {
           paneId: this._id.value,
           statusChanged,
           oldStatus: WorkerStatusParser.toString(oldStatus),
-          newStatus: WorkerStatusParser.toString(newStatus),
-          titleChanged: titleResult.data !== oldTitle,
+          newStatus: WorkerStatusParser.toString(this._status),
+          titleChanged,
           oldTitle,
-          newTitle: titleResult.data,
+          newTitle: this._title,
           updatedAt: new Date(),
           captureStateSummary: this.getCaptureStateSummary(),
         },

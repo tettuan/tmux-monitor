@@ -33,8 +33,8 @@ export class MonitoringEngine {
 
     this._appService = new MonitoringApplicationService(
       adapters.tmuxRepository,
-      adapters.contentMonitor,
       adapters.communicator,
+      adapters.captureDetectionService,
     );
   }
 
