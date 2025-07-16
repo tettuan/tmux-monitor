@@ -282,4 +282,3 @@ class MonitoringService {
 
 - [ドメイン駆動設計仕様](./domain_driven_design.md)
 - [全域性原則](./totality.ja.md)
-- [実装テスト](../src/tests/capture_state_test.ts)

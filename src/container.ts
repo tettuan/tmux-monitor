@@ -114,7 +114,7 @@ export class DIContainer {
         this.get("logger"),
       ));
 
-    // Note: PaneTitleManager and PaneContentMonitor removed - 
+    // Note: PaneTitleManager and PaneContentMonitor removed -
     // functionality integrated into Pane.handleRefreshEvent
   }
 

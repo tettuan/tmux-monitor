@@ -78,12 +78,14 @@ export class MonitoringApplicationService {
   private readonly _communicator: IPaneCommunicator;
   private readonly _paneCollection: PaneCollection;
   private _cycleService: MonitoringCycleService | null = null;
-  private readonly _captureDetectionService?: import("../domain/capture_detection_service.ts").CaptureDetectionService;
+  private readonly _captureDetectionService?:
+    import("../domain/capture_detection_service.ts").CaptureDetectionService;
 
   constructor(
     tmuxRepository: ITmuxSessionRepository,
     communicator: IPaneCommunicator,
-    captureDetectionService?: import("../domain/capture_detection_service.ts").CaptureDetectionService,
+    captureDetectionService?:
+      import("../domain/capture_detection_service.ts").CaptureDetectionService,
   ) {
     this._tmuxRepository = tmuxRepository;
     this._communicator = communicator;

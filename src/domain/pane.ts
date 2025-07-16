@@ -602,37 +602,53 @@ export class Pane {
    */
   async handleRefreshEvent(
     tmuxRepository: ITmuxRepository,
-    captureDetectionService?: import("./capture_detection_service.ts").CaptureDetectionService,
+    captureDetectionService?:
+      import("./capture_detection_service.ts").CaptureDetectionService,
   ): Promise<Result<PaneUpdateResult, ValidationError & { message: string }>> {
     try {
       const oldStatus = this._status;
       const oldTitle = this._title;
       let statusChanged = false;
       let titleChanged = false;
-      let captureDetectionResult: import("./capture_detection_service.ts").CaptureDetectionResult | null = null;
+      let captureDetectionResult:
+        | import("./capture_detection_service.ts").CaptureDetectionResult
+        | null = null;
 
       // 方式1: キャプチャ内容比較による判定（優先）
       if (captureDetectionService) {
         const detectionResult = await captureDetectionService.detectChanges(
           this._id.value,
-          [this._title, this._currentCommand] // コンテキストヒント
+          [this._title, this._currentCommand], // コンテキストヒント
         );
 
         if (detectionResult.ok) {
           captureDetectionResult = detectionResult.data;
-          
+
           // CaptureDetectionServiceの結果を使用してステータス更新
-          const updateResult = this.updateCaptureStateFromDetection(captureDetectionResult);
+          const updateResult = this.updateCaptureStateFromDetection(
+            captureDetectionResult,
+          );
           if (updateResult.ok) {
-            statusChanged = !WorkerStatusParser.isEqual(oldStatus, this._status);
+            statusChanged = !WorkerStatusParser.isEqual(
+              oldStatus,
+              this._status,
+            );
             console.log(
-              `🔍 Pane ${this._id.value}: Capture-based status ${oldStatus.kind} → ${this._status.kind} (${captureDetectionResult.hasContentChanged ? 'content changed' : 'no change'})`
+              `🔍 Pane ${this._id.value}: Capture-based status ${oldStatus.kind} → ${this._status.kind} (${
+                captureDetectionResult.hasContentChanged
+                  ? "content changed"
+                  : "no change"
+              })`,
             );
           } else {
-            console.warn(`Failed to apply capture detection results for pane ${this._id.value}: ${updateResult.error.message}`);
+            console.warn(
+              `Failed to apply capture detection results for pane ${this._id.value}: ${updateResult.error.message}`,
+            );
           }
         } else {
-          console.warn(`Capture detection failed for pane ${this._id.value}: ${detectionResult.error.message}, falling back to title-based detection`);
+          console.warn(
+            `Capture detection failed for pane ${this._id.value}: ${detectionResult.error.message}, falling back to title-based detection`,
+          );
         }
       }
 
@@ -663,9 +679,9 @@ export class Pane {
 
           // 履歴の追加（不変条件: 最大2件まで）
           this.addToHistory(newStatus, titleResult.data, this._currentCommand);
-          
+
           console.log(
-            `📋 Pane ${this._id.value}: Title-based status ${oldStatus.kind} → ${newStatus.kind} (title: "${titleResult.data}")`
+            `📋 Pane ${this._id.value}: Title-based status ${oldStatus.kind} → ${newStatus.kind} (title: "${titleResult.data}")`,
           );
         }
       } else {

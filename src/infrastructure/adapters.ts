@@ -8,7 +8,6 @@
  */
 
 import type { Result } from "../types.ts";
-import { createError } from "../types.ts";
 import type {
   IPaneCommunicator,
   ITmuxSessionRepository,
@@ -20,23 +19,6 @@ import {
   InMemoryCaptureHistory,
 } from "../domain/capture_detection_service.ts";
 import { TmuxCaptureAdapter } from "./unified_capture_adapter.ts";
-
-/**
- * CommandExecutorアダプター
- * unified_capture_adapter.tsのICommandExecutorに適合させる
- */
-class CommandExecutorAdapter {
-  constructor(private executor: CommandExecutor) {}
-
-  async execute(command: string[]): Promise<Result<string, Error>> {
-    const result = await this.executor.execute(command);
-    if (result.ok) {
-      return { ok: true, data: result.data };
-    } else {
-      return { ok: false, error: new Error(result.error.message) };
-    }
-  }
-}
 
 // =============================================================================
 // TmuxSessionAdapter - tmuxセッション操作の実装
@@ -376,7 +358,7 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
 
   /**
    * /clearコマンドの専用送信（Enterキーを分離）
-   * 
+   *
    * /clearコマンドを送信し、0.2秒待機してから別途Enterキーを送信します。
    * これによりClaudeの適切なクリア動作を確保します。
    */
@@ -470,7 +452,7 @@ export class InfrastructureAdapterFactory {
         } else {
           return { ok: false, error: new Error(result.error.message) };
         }
-      }
+      },
     };
 
     // 統合サービスの初期化
@@ -490,8 +472,10 @@ export class InfrastructureAdapterFactory {
     communicator: IPaneCommunicator;
     captureDetectionService: CaptureDetectionService;
   } {
-    const captureDetectionService = this.createCaptureDetectionService(commandExecutor);
-    
+    const captureDetectionService = this.createCaptureDetectionService(
+      commandExecutor,
+    );
+
     return {
       tmuxRepository: this.createTmuxSessionAdapter(commandExecutor, logger),
       communicator: this.createPaneCommunicationAdapter(
