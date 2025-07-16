@@ -12,11 +12,11 @@ import { WorkerStatusParser } from "../models.ts";
 import { WORKER_STATUS_TYPES } from "../config.ts";
 import { type CaptureState, PaneId, type PaneName } from "./value_objects.ts";
 import type { WorkerStatus } from "../models.ts";
-import type { 
-  ClearStrategy, 
-  ClearOperationResult, 
+import type {
+  ClearOperationResult,
+  ClearStrategy,
+  ClearVerificationResult,
   PaneClearService,
-  ClearVerificationResult
 } from "./clear_domain.ts";
 
 // =============================================================================
@@ -778,10 +778,10 @@ export class Pane {
 
   /**
    * Determines if this pane should be cleared based on its status.
-   * 
+   *
    * According to requirements, only DONE and IDLE panes should be cleared.
    * Following DDD principles, this business rule is encapsulated within the aggregate.
-   * 
+   *
    * @returns boolean - true if pane should be cleared
    */
   shouldBeCleared(): boolean {
@@ -790,25 +790,26 @@ export class Pane {
 
   /**
    * Clear this pane using the provided clear service.
-   * 
+   *
    * This method delegates the actual clearing to the infrastructure layer
    * while maintaining domain logic about when and how clearing should occur.
    * The aggregate maintains its boundary by controlling the clearing process.
-   * 
+   *
    * @param clearService - The service to perform the actual clearing
    * @param strategy - The clearing strategy to use
    * @returns Promise<ClearOperationResult> - The result of the clear operation
    */
   async clearSelf(
-    clearService: PaneClearService, 
-    strategy: ClearStrategy
+    clearService: PaneClearService,
+    strategy: ClearStrategy,
   ): Promise<ClearOperationResult> {
     // Business rule: Only clear if the pane should be cleared
     if (!this.shouldBeCleared()) {
       return {
         kind: "Skipped",
         paneId: this._id.value,
-        reason: `Pane status is ${this._status.kind}, not in clearable state (DONE/IDLE)`
+        reason:
+          `Pane status is ${this._status.kind}, not in clearable state (DONE/IDLE)`,
       };
     }
 
@@ -817,11 +818,13 @@ export class Pane {
 
   /**
    * Verify if this pane is properly cleared.
-   * 
+   *
    * @param clearService - The service to perform the verification
    * @returns Promise<ClearVerificationResult> - The verification result
    */
-  async verifyClearState(clearService: PaneClearService): Promise<ClearVerificationResult> {
+  async verifyClearState(
+    clearService: PaneClearService,
+  ): Promise<ClearVerificationResult> {
     return await clearService.verifyClearState(this._id.value);
   }
 

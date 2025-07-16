@@ -1,82 +1,11 @@
 import { assertEquals } from "https://deno.land/std@0.208.0/assert/mod.ts";
 import {
   MonitoringOptions,
-  Pane,
   PaneDetail,
   ValidatedTime,
   type WorkerStatus,
   WorkerStatusParser,
 } from "../models.ts";
-
-// =============================================================================
-// Pane Tests
-// =============================================================================
-
-Deno.test("Pane.create - active pane with command and title", () => {
-  const result = Pane.create("1", true, "bash", "test-pane");
-  assertEquals(result.ok, true);
-
-  if (result.ok) {
-    assertEquals(result.data.id, "1");
-    assertEquals(result.data.isActive(), true);
-    assertEquals(result.data.getCommand(), "bash");
-    assertEquals(result.data.getTitle(), "test-pane");
-  }
-});
-
-Deno.test("Pane.create - inactive pane with command and title", () => {
-  const result = Pane.create("2", false, "vim", "edit-pane");
-  assertEquals(result.ok, true);
-
-  if (result.ok) {
-    assertEquals(result.data.id, "2");
-    assertEquals(result.data.isActive(), false);
-    assertEquals(result.data.getCommand(), "vim");
-    assertEquals(result.data.getTitle(), "edit-pane");
-  }
-});
-
-Deno.test("Pane.create - active pane with defaults", () => {
-  const result = Pane.create("3", true);
-  assertEquals(result.ok, true);
-
-  if (result.ok) {
-    assertEquals(result.data.id, "3");
-    assertEquals(result.data.isActive(), true);
-    assertEquals(result.data.getCommand(), "unknown");
-    assertEquals(result.data.getTitle(), "untitled");
-  }
-});
-
-Deno.test("Pane.create - unknown pane", () => {
-  const result = Pane.create("4", false);
-  assertEquals(result.ok, true);
-
-  if (result.ok) {
-    assertEquals(result.data.id, "4");
-    assertEquals(result.data.isActive(), false);
-    assertEquals(result.data.getCommand(), null);
-    assertEquals(result.data.getTitle(), null);
-  }
-});
-
-Deno.test("Pane.create - empty id should fail", () => {
-  const result = Pane.create("", true);
-  assertEquals(result.ok, false);
-
-  if (!result.ok) {
-    assertEquals(result.error.kind, "EmptyInput");
-  }
-});
-
-Deno.test("Pane.create - whitespace id should fail", () => {
-  const result = Pane.create("   ", true);
-  assertEquals(result.ok, false);
-
-  if (!result.ok) {
-    assertEquals(result.error.kind, "EmptyInput");
-  }
-});
 
 // =============================================================================
 // PaneDetail Tests

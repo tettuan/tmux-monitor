@@ -67,7 +67,9 @@ export type ClearVerificationResult =
 export class ClearCommand {
   private constructor(readonly command: string) {}
 
-  static create(command?: string): Result<ClearCommand, ValidationError & { message: string }> {
+  static create(
+    command?: string,
+  ): Result<ClearCommand, ValidationError & { message: string }> {
     const defaultCommand = "/clear";
     const finalCommand = command || defaultCommand;
 
@@ -109,7 +111,8 @@ export class ClearCommand {
  * "> /clear ⎿ (no content)" pattern with normalization for comparison.
  */
 export class ClearPatternMatcher {
-  private static readonly EXPECTED_PATTERN = />\s*\/clear\s*⎿\s*\(no content\)/i;
+  private static readonly EXPECTED_PATTERN =
+    />\s*\/clear\s*⎿\s*\(no content\)/i;
   private static readonly CLEAR_COMMAND_PATTERN = /\/clear/i;
 
   static verifyClearState(content: string): ClearVerificationResult {
@@ -223,7 +226,10 @@ export interface PaneClearService {
    * @param strategy - The clearing strategy to use
    * @returns Promise<ClearOperationResult> - The result of the clear operation
    */
-  clearPane(paneId: string, strategy: ClearStrategy): Promise<ClearOperationResult>;
+  clearPane(
+    paneId: string,
+    strategy: ClearStrategy,
+  ): Promise<ClearOperationResult>;
 
   /**
    * Verify the clear state of a pane.

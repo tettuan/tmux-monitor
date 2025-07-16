@@ -6,14 +6,14 @@
  */
 
 import type {
-  ClearStrategy,
   ClearOperationResult,
-  PaneClearService,
+  ClearStrategy,
   ClearVerificationResult,
+  PaneClearService,
 } from "../domain/clear_domain.ts";
 import type {
-  ITmuxSessionRepository,
   IPaneCommunicator,
+  ITmuxSessionRepository,
 } from "../application/monitoring_service.ts";
 
 /**
@@ -42,7 +42,11 @@ export class TmuxClearService implements PaneClearService {
         case "DirectClear":
           return await this.executeDirectClear(paneId, strategy, startTime);
         case "RecoverySequence":
-          return await this.executeRecoverySequence(paneId, strategy, startTime);
+          return await this.executeRecoverySequence(
+            paneId,
+            strategy,
+            startTime,
+          );
         default:
           return {
             kind: "Failed",
@@ -76,8 +80,12 @@ export class TmuxClearService implements PaneClearService {
 
     while (retryCount <= maxRetries) {
       try {
-        console.log(`🔧 Attempting to clear pane ${paneId} (attempt ${retryCount + 1}/${maxRetries + 1})`);
-        
+        console.log(
+          `🔧 Attempting to clear pane ${paneId} (attempt ${retryCount + 1}/${
+            maxRetries + 1
+          })`,
+        );
+
         // 1. クリアコマンドの送信（Claude特有の方法を試す）
         let sendResult;
         if (retryCount === 0) {
@@ -88,37 +96,51 @@ export class TmuxClearService implements PaneClearService {
           sendResult = await this.communicator.sendCommand(paneId, "\u001b");
         } else {
           // 3回目以降は段階的Escapeキーでクリア（Claude最適化版）
-          console.log(`🔧 Starting incremental escape key clearing for Claude pane ${paneId}`);
-          
+          console.log(
+            `🔧 Starting incremental escape key clearing for Claude pane ${paneId}`,
+          );
+
           // 最大3回のEscapeキーを段階的に送信
           for (let escapeCount = 1; escapeCount <= 3; escapeCount++) {
             await this.communicator.sendCommand(paneId, "\u001b");
             await this.delay(500); // 各Escape後に少し待機
-            
+
             // 各Escape後に検証
             const incrementalVerification = await this.verifyClearState(paneId);
-            
+
             if (incrementalVerification.kind === "ProperlyCleared") {
-              sendResult = { ok: true, data: `Cleared with ${escapeCount} escape keys` };
+              sendResult = {
+                ok: true,
+                data: `Cleared with ${escapeCount} escape keys`,
+              };
               break;
             }
           }
-          
+
           // 3回試してもクリアできない場合
           if (!sendResult || !sendResult.ok) {
-            sendResult = { ok: true, data: "3 escape keys sent (final attempt)" };
+            sendResult = {
+              ok: true,
+              data: "3 escape keys sent (final attempt)",
+            };
           }
         }
-        
+
         if (!sendResult.ok) {
           if (retryCount < maxRetries) {
             retryCount++;
-            const errorMessage = 'error' in sendResult ? sendResult.error.message : 'Unknown error';
-            console.log(`⚠️ Retry ${retryCount} for pane ${paneId} due to: ${errorMessage}`);
+            const errorMessage = "error" in sendResult
+              ? sendResult.error.message
+              : "Unknown error";
+            console.log(
+              `⚠️ Retry ${retryCount} for pane ${paneId} due to: ${errorMessage}`,
+            );
             await this.delay(1000); // 1秒待機してリトライ
             continue;
           }
-          const errorMessage = 'error' in sendResult ? sendResult.error.message : 'Unknown error';
+          const errorMessage = "error" in sendResult
+            ? sendResult.error.message
+            : "Unknown error";
           return {
             kind: "Failed",
             paneId,
@@ -129,10 +151,10 @@ export class TmuxClearService implements PaneClearService {
         }
 
         // 2. 少し待機してからverification（段階的Escapeの場合はスキップ）
-        const isIncrementalEscape = retryCount >= 2 && sendResult.ok && 
-                                   typeof sendResult.data === 'string' && 
-                                   sendResult.data.includes('Cleared with');
-        
+        const isIncrementalEscape = retryCount >= 2 && sendResult.ok &&
+          typeof sendResult.data === "string" &&
+          sendResult.data.includes("Cleared with");
+
         if (!isIncrementalEscape) {
           await this.delay(2000);
         }
@@ -147,9 +169,13 @@ export class TmuxClearService implements PaneClearService {
         } else {
           verificationResult = await this.verifyClearState(paneId);
         }
-        if (verificationResult.kind === "NotCleared" && retryCount < maxRetries) {
+        if (
+          verificationResult.kind === "NotCleared" && retryCount < maxRetries
+        ) {
           retryCount++;
-          console.log(`⚠️ Verification failed for pane ${paneId}, retry ${retryCount}: ${verificationResult.reason}`);
+          console.log(
+            `⚠️ Verification failed for pane ${paneId}, retry ${retryCount}: ${verificationResult.reason}`,
+          );
           await this.delay(1000);
           continue;
         }
@@ -207,12 +233,16 @@ export class TmuxClearService implements PaneClearService {
       ];
 
       for (const step of steps) {
-        const sendResult = await this.communicator.sendCommand(paneId, step.command);
+        const sendResult = await this.communicator.sendCommand(
+          paneId,
+          step.command,
+        );
         if (!sendResult.ok) {
           return {
             kind: "Failed",
             paneId,
-            error: `Failed at step '${step.description}': ${sendResult.error.message}`,
+            error:
+              `Failed at step '${step.description}': ${sendResult.error.message}`,
             strategy,
             retryCount: 0,
           };
@@ -259,43 +289,48 @@ export class TmuxClearService implements PaneClearService {
       ]);
 
       if (!captureResult.ok) {
-        console.log(`❌ Failed to capture pane ${paneId}: ${captureResult.error.message}`);
+        console.log(
+          `❌ Failed to capture pane ${paneId}: ${captureResult.error.message}`,
+        );
         return {
           kind: "NotCleared",
           content: "",
-          reason: `Failed to capture pane content: ${captureResult.error.message}`,
+          reason:
+            `Failed to capture pane content: ${captureResult.error.message}`,
         };
       }
 
       const content = captureResult.data.trim();
-      
+
       // 複数の/clearコマンドが累積している場合は失敗状態
       const clearCommandCount = (content.match(/\/clear/g) || []).length;
-      
+
       if (clearCommandCount > 1) {
         return {
           kind: "NotCleared",
           content,
-          reason: `Multiple /clear commands detected (${clearCommandCount}) - clear functionality not working`,
+          reason:
+            `Multiple /clear commands detected (${clearCommandCount}) - clear functionality not working`,
         };
       }
 
       // 正常なクリア状態のパターンチェック（3行データでの判定）
-      const lines = content.split('\n');
+      const lines = content.split("\n");
       const recentLines = lines.slice(-3); // 最新3行
-      
+
       // │>│ パターンの検出（Claude UIでの正常なプロンプト状態）
-      const hasPromptPattern = recentLines.some(line => 
+      const hasPromptPattern = recentLines.some((line) =>
         /│\s*>\s*│/.test(line) || // │ > │ (正常なClaudeプロンプト)
         /│\s*>\s+│/.test(line) || // │ >   │ (少し空白あり)
         (/│/.test(line) && />\s*$/.test(line)) // │ で始まり > で終わる行
       );
-      
+
       // Claude UI特有のクリーンな状態パターン
-      const isClaudeClean = (content.includes("? for shortcuts") || content.includes("Bypassing Permissions")) && 
-                           content.includes("│ >") &&
-                           (clearCommandCount <= 1); // 1個以下の/clearコマンド
-      
+      const isClaudeClean = (content.includes("? for shortcuts") ||
+        content.includes("Bypassing Permissions")) &&
+        content.includes("│ >") &&
+        (clearCommandCount <= 1); // 1個以下の/clearコマンド
+
       // 正常なクリア状態のパターン
       const clearPatterns = [
         /^\s*$/, // 完全に空のコンテンツ
@@ -303,11 +338,11 @@ export class TmuxClearService implements PaneClearService {
         />\s*$/, // プロンプトのみ
       ];
 
-      const isCleared = hasPromptPattern || 
-                       isClaudeClean ||
-                       clearPatterns.some(pattern => pattern.test(content)) ||
-                       (clearCommandCount === 0 && lines.length <= 3); // コマンドなし、短いコンテンツ
-                       
+      const isCleared = hasPromptPattern ||
+        isClaudeClean ||
+        clearPatterns.some((pattern) => pattern.test(content)) ||
+        (clearCommandCount === 0 && lines.length <= 3); // コマンドなし、短いコンテンツ
+
       if (isCleared) {
         return {
           kind: "ProperlyCleared",

@@ -611,11 +611,13 @@ export class MonitoringApplicationService {
 
   /**
    * Node.jsペインのクリア実行
-   * 
+   *
    * DDDの原則に従い、Pane集約が自身のクリア判定とクリア実行を行う。
    * アプリケーション層はオーケストレーションのみを担当。
    */
-  async clearNodePanes(): Promise<Result<NodeClearResult, ValidationError & { message: string }>> {
+  async clearNodePanes(): Promise<
+    Result<NodeClearResult, ValidationError & { message: string }>
+  > {
     try {
       // 1. 現在のペイン状況を取得
       const discoveryResult = await this._tmuxRepository.discoverPanes();
@@ -626,33 +628,37 @@ export class MonitoringApplicationService {
             kind: "CommunicationFailed",
             target: "tmux session",
             details: discoveryResult.error.message,
-          }, "Failed to discover panes for clearing")
+          }, "Failed to discover panes for clearing"),
         };
       }
 
       // 2. ペインコレクションの構築
       const nodePanes: Pane[] = [];
-      const detectedNodePanes: { paneId: string; command: string; status: string }[] = [];
+      const detectedNodePanes: {
+        paneId: string;
+        command: string;
+        status: string;
+      }[] = [];
 
       for (const rawPaneData of discoveryResult.data) {
         const paneResult = Pane.fromTmuxData(
           rawPaneData.paneId,
           rawPaneData.active === "1",
           rawPaneData.currentCommand,
-          rawPaneData.title
+          rawPaneData.title,
         );
 
         if (paneResult.ok) {
           const pane = paneResult.data;
-          
+
           // Node.jsコマンドかつクリア対象のペインのみを選択
           if (this.isNodeCommand(rawPaneData.currentCommand)) {
             detectedNodePanes.push({
               paneId: rawPaneData.paneId,
               command: rawPaneData.currentCommand,
-              status: pane.status.kind
+              status: pane.status.kind,
             });
-            
+
             if (pane.shouldBeCleared()) {
               nodePanes.push(pane);
             }
@@ -664,22 +670,31 @@ export class MonitoringApplicationService {
       if (detectedNodePanes.length > 0) {
         console.log(`🔍 Detected ${detectedNodePanes.length} Node.js panes:`);
         for (const nodePane of detectedNodePanes) {
-          console.log(`   - ${nodePane.paneId}: ${nodePane.command} (${nodePane.status})`);
+          console.log(
+            `   - ${nodePane.paneId}: ${nodePane.command} (${nodePane.status})`,
+          );
         }
-        console.log(`📝 Clear targets: ${nodePanes.length} panes (DONE/IDLE only)`);
+        console.log(
+          `📝 Clear targets: ${nodePanes.length} panes (DONE/IDLE only)`,
+        );
       } else {
         console.log(`🔍 No Node.js panes detected`);
       }
 
       // 3. クリア戦略の作成（インフラストラクチャ層から）
-      const { TmuxClearService } = await import("../infrastructure/tmux_clear_service.ts");
-      const clearService = new TmuxClearService(this._tmuxRepository, this._communicator);
-      
+      const { TmuxClearService } = await import(
+        "../infrastructure/tmux_clear_service.ts"
+      );
+      const clearService = new TmuxClearService(
+        this._tmuxRepository,
+        this._communicator,
+      );
+
       const clearStrategy = {
         kind: "DirectClear" as const,
         retryOnFailure: true,
         maxRetries: 3,
-        verifyAfterClear: true
+        verifyAfterClear: true,
       };
 
       // 4. 各ペインのクリア実行
@@ -690,9 +705,14 @@ export class MonitoringApplicationService {
       }
 
       // 5. 結果の集計
-      const successCount = clearResults.filter(r => r.kind === "Success").length;
-      const failedCount = clearResults.filter(r => r.kind === "Failed").length;
-      const skippedCount = clearResults.filter(r => r.kind === "Skipped").length;
+      const successCount = clearResults.filter((r) =>
+        r.kind === "Success"
+      ).length;
+      const failedCount = clearResults.filter((r) =>
+        r.kind === "Failed"
+      ).length;
+      const skippedCount =
+        clearResults.filter((r) => r.kind === "Skipped").length;
 
       return {
         ok: true,
@@ -702,10 +722,9 @@ export class MonitoringApplicationService {
           failedCount,
           skippedCount,
           results: clearResults,
-          timestamp: new Date()
-        }
+          timestamp: new Date(),
+        },
       };
-
     } catch (error) {
       return {
         ok: false,
@@ -713,7 +732,7 @@ export class MonitoringApplicationService {
           kind: "UnexpectedError",
           operation: "clearNodePanes",
           details: `${error}`,
-        }, `Unexpected error during Node.js pane clearing: ${error}`)
+        }, `Unexpected error during Node.js pane clearing: ${error}`),
       };
     }
   }
@@ -732,9 +751,29 @@ export class MonitoringApplicationService {
     }
 
     const nodePatterns = [
-      "node", "nodejs", "npm", "npx", "yarn", "pnpm", "deno", "bun",
-      "next", "nuxt", "vite", "webpack", "rollup", "tsc", "typescript",
-      "ts-node", "jest", "vitest", "mocha", "cypress", "eslint", "prettier", "nodemon",
+      "node",
+      "nodejs",
+      "npm",
+      "npx",
+      "yarn",
+      "pnpm",
+      "deno",
+      "bun",
+      "next",
+      "nuxt",
+      "vite",
+      "webpack",
+      "rollup",
+      "tsc",
+      "typescript",
+      "ts-node",
+      "jest",
+      "vitest",
+      "mocha",
+      "cypress",
+      "eslint",
+      "prettier",
+      "nodemon",
     ];
 
     return nodePatterns.some((pattern) => {

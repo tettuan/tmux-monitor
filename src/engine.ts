@@ -317,7 +317,7 @@ export class MonitoringEngine {
 
     try {
       const clearResult = await this._appService.clearNodePanes();
-      
+
       if (!clearResult.ok) {
         this._logger.error(
           `Failed to clear Node.js panes: ${clearResult.error.message}`,
@@ -326,7 +326,7 @@ export class MonitoringEngine {
       }
 
       const result = clearResult.data;
-      
+
       // 結果をカテゴリごとに分類
       const successfulPanes: string[] = [];
       const failedPanes: string[] = [];
@@ -336,15 +336,21 @@ export class MonitoringEngine {
         switch (clearResult.kind) {
           case "Success":
             successfulPanes.push(clearResult.paneId);
-            this._logger.debug(`✅ ${clearResult.paneId}: Cleared successfully in ${clearResult.duration}ms`);
+            this._logger.debug(
+              `✅ ${clearResult.paneId}: Cleared successfully in ${clearResult.duration}ms`,
+            );
             break;
           case "Failed":
             failedPanes.push(clearResult.paneId);
-            this._logger.warn(`❌ ${clearResult.paneId}: Failed - ${clearResult.error}`);
+            this._logger.warn(
+              `❌ ${clearResult.paneId}: Failed - ${clearResult.error}`,
+            );
             break;
           case "Skipped":
             skippedPanes.push(clearResult.paneId);
-            this._logger.debug(`⏭️ ${clearResult.paneId}: Skipped - ${clearResult.reason}`);
+            this._logger.debug(
+              `⏭️ ${clearResult.paneId}: Skipped - ${clearResult.reason}`,
+            );
             break;
         }
       }
@@ -352,25 +358,34 @@ export class MonitoringEngine {
       // IDリスト付きでサマリーを表示
       this._logger.info(`✅ Clear operation completed:`);
       this._logger.info(`   - Total processed: ${result.totalProcessed}`);
-      
+
       if (successfulPanes.length > 0) {
-        this._logger.info(`   - Successful: ${result.successCount} (id: ${successfulPanes.join(',')})`);
+        this._logger.info(
+          `   - Successful: ${result.successCount} (id: ${
+            successfulPanes.join(",")
+          })`,
+        );
       } else {
         this._logger.info(`   - Successful: ${result.successCount}`);
       }
-      
+
       if (failedPanes.length > 0) {
-        this._logger.info(`   - Failed: ${result.failedCount} (id: ${failedPanes.join(',')})`);
+        this._logger.info(
+          `   - Failed: ${result.failedCount} (id: ${failedPanes.join(",")})`,
+        );
       } else {
         this._logger.info(`   - Failed: ${result.failedCount}`);
       }
-      
+
       if (skippedPanes.length > 0) {
-        this._logger.info(`   - Skipped: ${result.skippedCount} (id: ${skippedPanes.join(',')})`);
+        this._logger.info(
+          `   - Skipped: ${result.skippedCount} (id: ${
+            skippedPanes.join(",")
+          })`,
+        );
       } else {
         this._logger.info(`   - Skipped: ${result.skippedCount}`);
       }
-
     } catch (error) {
       this._logger.error(`Clear Node panes error: ${error}`);
     }
