@@ -196,6 +196,10 @@ Start Command: #{pane_start_command}'`,
 
   /**
    * Get the actual visible content of a pane for clear state verification
+   *
+   * 統合CaptureAdapterを使用した新しい実装。
+   * 既存のtmux capture-paneの分散実装を置き換え。
+   *
    * @param paneId - The pane ID to capture content from
    * @param logger - Logger instance
    * @returns Promise<Result<string, ValidationError & { message: string }>> - The pane content
@@ -205,19 +209,56 @@ Start Command: #{pane_start_command}'`,
     logger: Logger,
   ): Promise<Result<string, ValidationError & { message: string }>> {
     try {
-      // Capture last few lines of pane content
-      const commandResult = await this.commandExecutor.executeTmuxCommand(
-        `tmux capture-pane -t "${paneId}" -p -S -10`,
+      // 統合CaptureAdapterを使用（新しい実装）
+      const { TmuxCaptureAdapter } = await import(
+        "./infrastructure/unified_capture_adapter.ts"
       );
 
-      if (!commandResult.ok) {
+      // CommandExecutorのアダプター作成（型の橋渡し）
+      const adaptedExecutor = {
+        execute: async (
+          command: string[],
+        ): Promise<
+          { ok: true; data: string } | { ok: false; error: Error }
+        > => {
+          const tmuxCommand = command.join(" ");
+          const result = await this.commandExecutor.executeTmuxCommand(
+            tmuxCommand,
+          );
+          if (result.ok) {
+            return { ok: true, data: result.data };
+          } else {
+            return {
+              ok: false,
+              error: new Error(
+                result.error.message || "Command execution failed",
+              ),
+            };
+          }
+        },
+      };
+
+      const captureAdapter = new TmuxCaptureAdapter(adaptedExecutor);
+
+      // capture実行（最新10行を取得）
+      const captureResult = await captureAdapter.capturePane(paneId, {
+        startLine: -10, // 最新10行
+      });
+
+      if (!captureResult.ok) {
         logger.warn(
-          `Failed to capture pane content for ${paneId}: ${commandResult.error.message}`,
+          `Failed to capture pane content for ${paneId}: ${captureResult.error.message}`,
         );
-        return { ok: false, error: commandResult.error };
+        return { ok: false, error: captureResult.error };
       }
 
-      return { ok: true, data: commandResult.data };
+      // capture結果から内容を取得
+      const content = captureResult.data.content;
+      logger.debug(
+        `Captured ${captureResult.data.lineCount} lines from pane ${paneId}`,
+      );
+
+      return { ok: true, data: content };
     } catch (error) {
       const errorMessage = `Error capturing pane content: ${error}`;
       logger.error(errorMessage);
@@ -226,7 +267,7 @@ Start Command: #{pane_start_command}'`,
         error: {
           kind: "CommandFailed" as const,
           message: errorMessage,
-          command: `tmux capture-pane -t "${paneId}" -p -S -10`,
+          command: `unified capture adapter for pane ${paneId}`,
           stderr: String(error),
         },
       };

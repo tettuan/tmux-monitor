@@ -3,48 +3,71 @@
  *
  * Implements 30-second interval monitoring of pane content changes
  * to determine WORKING/IDLE status and update pane titles accordingly.
+ *
+ * 【統合版】: 統合CaptureDetectionServiceを使用してcapture機能を統一
  */
 
 import type { CommandExecutor, Logger } from "./services.ts";
 import type { Result, ValidationError } from "./types.ts";
 import { createError } from "./types.ts";
+import {
+  CaptureDetectionService,
+  InMemoryCaptureHistory,
+} from "./domain/capture_detection_service.ts";
+import { TmuxCaptureAdapter } from "./infrastructure/unified_capture_adapter.ts";
+import type { CaptureDetectionResult } from "./domain/capture_detection_service.ts";
 
 /**
- * Pane content capture for comparison
- */
-export interface PaneCapture {
-  paneId: string;
-  content: string;
-  timestamp: Date;
-}
-
-/**
- * Pane monitoring status
- */
-export type PaneMonitorStatus = "WORKING" | "IDLE";
-
-/**
- * Pane monitoring result
+ * 【統合版】Pane監視結果
+ * 古いPaneCaptureとPaneMonitorResultを統合し、CaptureDetectionResultを使用
  */
 export interface PaneMonitorResult {
-  paneId: string;
-  status: PaneMonitorStatus;
-  hasChanges: boolean;
-  lastCapture?: PaneCapture;
-  previousCapture?: PaneCapture;
+  readonly paneId: string;
+  readonly status: "WORKING" | "IDLE";
+  readonly hasChanges: boolean;
+  readonly captureDetectionResult?: CaptureDetectionResult;
+  readonly timestamp: Date;
 }
 
 /**
- * Pane content monitor that tracks changes over time
+ * CommandExecutorアダプター
+ * unified_capture_adapter.tsのICommandExecutorに適合させる
+ */
+class CommandExecutorAdapter {
+  constructor(private executor: CommandExecutor) {}
+
+  async execute(command: string[]): Promise<Result<string, Error>> {
+    const result = await this.executor.execute(command);
+    if (result.ok) {
+      return { ok: true, data: result.data };
+    } else {
+      return { ok: false, error: new Error(result.error.message) };
+    }
+  }
+}
+
+/**
+ * 【統合版】Pane content monitor that tracks changes over time
+ *
+ * 統合CaptureDetectionServiceを使用してcapture機能を一元化。
+ * 既存のPaneCapture履歴管理から新しいサービスベースの実装に移行。
  */
 export class PaneContentMonitor {
-  private captures: Map<string, PaneCapture[]> = new Map();
-  private readonly maxCaptureHistory = 10; // Keep last 10 captures per pane
+  private readonly captureDetectionService: CaptureDetectionService;
 
   constructor(
     private commandExecutor: CommandExecutor,
     private logger: Logger,
-  ) {}
+  ) {
+    // 統合サービスの初期化
+    const commandAdapter = new CommandExecutorAdapter(commandExecutor);
+    const captureAdapter = new TmuxCaptureAdapter(commandAdapter);
+    const captureHistory = new InMemoryCaptureHistory();
+    this.captureDetectionService = new CaptureDetectionService(
+      captureAdapter,
+      captureHistory,
+    );
+  }
 
   /**
    * Create a new PaneContentMonitor instance
@@ -57,102 +80,67 @@ export class PaneContentMonitor {
   }
 
   /**
-   * Capture pane content using tmux capture-pane command
-   */
-  async capturePane(
-    paneId: string,
-  ): Promise<Result<PaneCapture, ValidationError & { message: string }>> {
-    try {
-      const result = await this.commandExecutor.execute([
-        "tmux",
-        "capture-pane",
-        "-t",
-        paneId,
-        "-p", // print to stdout
-      ]);
-
-      if (!result.ok) {
-        return {
-          ok: false,
-          error: createError({
-            kind: "CommandFailed",
-            command: `tmux capture-pane -t ${paneId} -p`,
-            stderr: result.error.message,
-          }),
-        };
-      }
-
-      const capture: PaneCapture = {
-        paneId,
-        content: result.data,
-        timestamp: new Date(),
-      };
-
-      // Store capture in history
-      this.storeCaptureInHistory(paneId, capture);
-
-      return { ok: true, data: capture };
-    } catch (error) {
-      return {
-        ok: false,
-        error: createError({
-          kind: "CommandFailed",
-          command: `tmux capture-pane -t ${paneId} -p`,
-          stderr: `Failed to capture pane ${paneId}: ${error}`,
-        }),
-      };
-    }
-  }
-
-  /**
-   * Compare current pane content with previous capture
+   * 【統合版】Monitor single pane using CaptureDetectionService
+   *
+   * 既存のcapturePane + monitorPaneを統合し、
+   * CaptureDetectionServiceを使用して統一的な監視を実行。
    */
   async monitorPane(
     paneId: string,
   ): Promise<Result<PaneMonitorResult, ValidationError & { message: string }>> {
-    const captureResult = await this.capturePane(paneId);
-    if (!captureResult.ok) {
-      return { ok: false, error: captureResult.error };
-    }
-
-    const currentCapture = captureResult.data;
-    const paneHistory = this.captures.get(paneId) || [];
-
-    // For first capture, assume IDLE (no previous data to compare)
-    if (paneHistory.length <= 1) {
-      this.logger.info(
-        `[MONITOR] First capture for pane ${paneId}, defaulting to IDLE`,
+    try {
+      // 統合capture検出サービスを使用
+      const detectionResult = await this.captureDetectionService.detectChanges(
+        paneId,
       );
-      return {
-        ok: true,
-        data: {
-          paneId,
-          status: "IDLE",
-          hasChanges: false,
-          lastCapture: currentCapture,
-        },
-      };
-    }
 
-    // Compare with previous capture
-    const previousCapture = paneHistory[paneHistory.length - 2]; // Second to last
-    const hasChanges = this.hasContentChanged(previousCapture, currentCapture);
-    const status: PaneMonitorStatus = hasChanges ? "WORKING" : "IDLE";
+      if (!detectionResult.ok) {
+        this.logger.warn(
+          `[MONITOR] Failed to detect changes for pane ${paneId}: ${detectionResult.error.message}`,
+        );
+        return {
+          ok: false,
+          error: createError({
+            kind: "CommandFailed",
+            command: `capture detection for pane ${paneId}`,
+            stderr: detectionResult.error.message,
+          }),
+        };
+      }
 
-    this.logger.info(
-      `[MONITOR] Pane ${paneId}: ${status} (changes: ${hasChanges})`,
-    );
+      const detection = detectionResult.data;
 
-    return {
-      ok: true,
-      data: {
+      // ActivityStatusからモニタリングステータスを判定
+      const activityStatus = detection.captureState.activityStatus;
+      const hasChanges = activityStatus.kind === "WORKING";
+      const status: "WORKING" | "IDLE" = hasChanges ? "WORKING" : "IDLE";
+
+      this.logger.info(
+        `[MONITOR] Pane ${paneId}: ${status} (activity: ${activityStatus.kind})`,
+      );
+
+      const result: PaneMonitorResult = {
         paneId,
         status,
         hasChanges,
-        lastCapture: currentCapture,
-        previousCapture,
-      },
-    };
+        captureDetectionResult: detection,
+        timestamp: new Date(),
+      };
+
+      return { ok: true, data: result };
+    } catch (error) {
+      this.logger.error(
+        `[MONITOR] Unexpected error monitoring pane ${paneId}: ${error}`,
+      );
+      return {
+        ok: false,
+        error: createError({
+          kind: "UnexpectedError",
+          operation: "monitorPane",
+          details: `Unexpected error: ${error}`,
+        }),
+      };
+    }
   }
 
   /**
@@ -174,6 +162,7 @@ export class PaneContentMonitor {
           paneId,
           status: "IDLE",
           hasChanges: false,
+          timestamp: new Date(),
         });
       }
     }
@@ -182,66 +171,30 @@ export class PaneContentMonitor {
   }
 
   /**
-   * Check if content has changed between two captures
+   * 【廃止予定】Legacy methods - replaced by CaptureDetectionService
+   *
+   * 以下のメソッドは統合版で非推奨。CaptureDetectionServiceを直接使用すること。
    */
-  private hasContentChanged(
-    previous: PaneCapture,
-    current: PaneCapture,
-  ): boolean {
-    if (!previous || !current) return false;
 
-    // Normalize content for comparison (trim whitespace and normalize line endings)
-    const prevContent = this.normalizeContent(previous.content);
-    const currContent = this.normalizeContent(current.content);
-
-    return prevContent !== currContent;
+  getCaptureHistory(
+    paneId: string,
+  ): Array<{ content: string; timestamp: Date }> {
+    this.logger.warn(
+      `getCaptureHistory is deprecated for pane ${paneId}. Use CaptureDetectionService instead.`,
+    );
+    return [];
   }
 
-  /**
-   * Normalize content for comparison
-   */
-  private normalizeContent(content: string): string {
-    return content
-      .trim()
-      .replace(/\r\n/g, "\n") // Normalize line endings
-      .replace(/\s+$/gm, ""); // Remove trailing whitespace from each line
-  }
-
-  /**
-   * Store capture in pane history with size limit
-   */
-  private storeCaptureInHistory(paneId: string, capture: PaneCapture): void {
-    let history = this.captures.get(paneId) || [];
-
-    history.push(capture);
-
-    // Keep only recent captures
-    if (history.length > this.maxCaptureHistory) {
-      history = history.slice(-this.maxCaptureHistory);
-    }
-
-    this.captures.set(paneId, history);
-  }
-
-  /**
-   * Get capture history for a pane
-   */
-  getCaptureHistory(paneId: string): PaneCapture[] {
-    return this.captures.get(paneId) || [];
-  }
-
-  /**
-   * Clear capture history for a pane
-   */
   clearPaneHistory(paneId: string): void {
-    this.captures.delete(paneId);
+    this.logger.warn(
+      `clearPaneHistory is deprecated for pane ${paneId}. History is managed by CaptureDetectionService.`,
+    );
   }
 
-  /**
-   * Clear all capture history
-   */
   clearAllHistory(): void {
-    this.captures.clear();
+    this.logger.warn(
+      "clearAllHistory is deprecated. History is managed by CaptureDetectionService.",
+    );
   }
 }
 
@@ -295,7 +248,7 @@ export class PaneTitleManager {
    */
   async updatePaneTitle(
     paneId: string,
-    status: PaneMonitorStatus,
+    status: "WORKING" | "IDLE",
     originalTitle?: string,
     paneName?: string,
   ): Promise<Result<void, ValidationError & { message: string }>> {

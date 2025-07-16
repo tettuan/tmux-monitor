@@ -169,15 +169,212 @@ Pane %4: [STATUS] name4: title4
 
 #### 4.2 ペインクリア機能
 
+**4.2.1 基本クリア機能テスト**
+
+**準備:**
+```bash
+# 各ペインにテスト用のコンテンツを配置
+for pane_id in $(tmux list-panes -a -F "#{pane_id}" | grep -v "%0"); do
+  tmux send-keys -t "$pane_id" "echo 'Test content before clear - Pane $pane_id'" C-m 2>/dev/null || true
+  tmux send-keys -t "$pane_id" "echo 'Line 2 for pane $pane_id'" C-m 2>/dev/null || true
+  tmux send-keys -t "$pane_id" "echo 'Line 3 for pane $pane_id'" C-m 2>/dev/null || true
+done
+
+# クリア前のペイン内容を記録
+echo "=== クリア前のペイン内容 ==="
+for pane_id in $(tmux list-panes -a -F "#{pane_id}"); do
+  echo "--- Pane $pane_id ---"
+  tmux capture-pane -t "$pane_id" -p 2>/dev/null || echo "Failed to capture $pane_id"
+done
+```
+
 **実行コマンド:**
 ```bash
 timeout 30s deno task start --clear --onetime
 ```
 
+**検証:**
+```bash
+# クリア後のペイン内容を確認
+echo "=== クリア後のペイン内容 ==="
+for pane_id in $(tmux list-panes -a -F "#{pane_id}"); do
+  echo "--- Pane $pane_id ---"
+  tmux capture-pane -t "$pane_id" -p 2>/dev/null || echo "Failed to capture $pane_id"
+  echo ""
+done
+
+# ペインタイトルの変化を確認
+echo "=== クリア後のペインタイトル ==="
+tmux list-panes -a -F "#{pane_id}: #{pane_title}"
+```
+
 **成功の定義:**
-- [ ] 対象ペインがクリアされる
-- [ ] メイン操作ペインが保護される
-- [ ] 安全に実行される
+- [ ] worker pane（%0以外）の内容がクリアされる
+- [ ] main pane（%0）の内容が保護される（クリアされない）
+- [ ] 全対象ペインに`clear`コマンドが送信される
+- [ ] ペインタイトルが適切に更新される
+- [ ] エラーなく安全に実行される
+
+**4.2.2 詳細クリア検証テスト**
+
+**準備:**
+```bash
+# より詳細なテスト用コンテンツを各ペインに配置
+echo "=== 詳細クリア検証用のコンテンツ配置 ==="
+for pane_id in $(tmux list-panes -a -F "#{pane_id}"); do
+  echo "Setting up pane $pane_id"
+  # 複数行のテストコンテンツを送信
+  tmux send-keys -t "$pane_id" "echo '=== Pane $pane_id Test Content ==='" C-m 2>/dev/null || true
+  tmux send-keys -t "$pane_id" "echo 'Current time: $(date)'" C-m 2>/dev/null || true
+  tmux send-keys -t "$pane_id" "echo 'Working directory: $(pwd)'" C-m 2>/dev/null || true
+  tmux send-keys -t "$pane_id" "echo 'Line count test:'" C-m 2>/dev/null || true
+  tmux send-keys -t "$pane_id" "for i in {1..5}; do echo \"Line \$i\"; done" C-m 2>/dev/null || true
+  sleep 0.5
+done
+
+# 配置完了後の状態を記録
+echo "=== 配置完了後の全ペイン状態 ==="
+for pane_id in $(tmux list-panes -a -F "#{pane_id}"); do
+  echo "--- Pane $pane_id (lines: $(tmux capture-pane -t "$pane_id" -p 2>/dev/null | wc -l || echo 0)) ---"
+  tmux capture-pane -t "$pane_id" -p 2>/dev/null | tail -10 || echo "Failed to capture $pane_id"
+  echo ""
+done
+```
+
+**実行コマンド:**
+```bash
+# アプリケーションのクリア機能を実行
+echo "=== tmux-monitor クリア機能実行 ==="
+timeout 45s deno task start --clear --onetime
+```
+
+**詳細検証:**
+```bash
+# 実行後の全ペイン状態を詳細確認
+echo "=== クリア実行後の全ペイン詳細状態 ==="
+for pane_id in $(tmux list-panes -a -F "#{pane_id}"); do
+  echo "----------------------------------------"
+  echo "Pane ID: $pane_id"
+  echo "Title: $(tmux display-message -t "$pane_id" -p '#{pane_title}' 2>/dev/null || echo 'N/A')"
+  echo "Active: $(tmux display-message -t "$pane_id" -p '#{pane_active}' 2>/dev/null || echo 'N/A')"
+  echo "Command: $(tmux display-message -t "$pane_id" -p '#{pane_current_command}' 2>/dev/null || echo 'N/A')"
+  
+  # ペイン内容のライン数
+  line_count=$(tmux capture-pane -t "$pane_id" -p 2>/dev/null | wc -l || echo 0)
+  echo "Line count: $line_count"
+  
+  # 最後の10行を表示
+  echo "Last 10 lines:"
+  tmux capture-pane -t "$pane_id" -p 2>/dev/null | tail -10 || echo "Failed to capture $pane_id"
+  
+  # 空行チェック（クリアされたかの判定）
+  non_empty_lines=$(tmux capture-pane -t "$pane_id" -p 2>/dev/null | grep -v '^[[:space:]]*$' | wc -l || echo 0)
+  echo "Non-empty lines: $non_empty_lines"
+  
+  if [ "$pane_id" = "%0" ]; then
+    echo "🔍 Main pane - should NOT be cleared"
+  else
+    echo "🧹 Worker pane - should be cleared"
+  fi
+  echo ""
+done
+
+# クリア効果の統計
+echo "=== クリア効果統計 ==="
+main_pane_lines=$(tmux capture-pane -t "%0" -p 2>/dev/null | grep -v '^[[:space:]]*$' | wc -l || echo 0)
+echo "Main pane (%0) non-empty lines: $main_pane_lines"
+
+worker_pane_count=0
+cleared_worker_count=0
+for pane_id in $(tmux list-panes -a -F "#{pane_id}" | grep -v "%0"); do
+  worker_pane_count=$((worker_pane_count + 1))
+  non_empty_lines=$(tmux capture-pane -t "$pane_id" -p 2>/dev/null | grep -v '^[[:space:]]*$' | wc -l || echo 0)
+  if [ "$non_empty_lines" -lt 3 ]; then  # クリアされたと判定する基準
+    cleared_worker_count=$((cleared_worker_count + 1))
+  fi
+  echo "Worker pane $pane_id: $non_empty_lines non-empty lines"
+done
+
+echo "Worker panes total: $worker_pane_count"
+echo "Cleared worker panes: $cleared_worker_count"
+echo "Clear success rate: $(echo "scale=2; $cleared_worker_count * 100 / $worker_pane_count" | bc -l 2>/dev/null || echo "N/A")%"
+```
+
+**4.2.3 クリア処理の詳細ログ確認**
+
+**実行コマンド:**
+```bash
+# ログレベルを上げてクリア処理の詳細を確認
+echo "=== 詳細ログでのクリア処理確認 ==="
+timeout 45s deno task start --clear --onetime 2>&1 | tee clear_process.log
+
+# ログからクリア関連の処理を抽出
+echo "=== クリア処理関連ログ ==="
+grep -i "clear\|pane\|send" clear_process.log || echo "No clear-related logs found"
+
+# 各ペインへの処理確認
+echo "=== 各ペインへの処理確認 ==="
+for pane_id in $(tmux list-panes -a -F "#{pane_id}"); do
+  echo "Pane $pane_id processing:"
+  grep "$pane_id" clear_process.log || echo "No logs for $pane_id"
+done
+```
+
+**成功の定義（詳細版）:**
+- [ ] アプリケーションが全worker paneを正しく識別する
+- [ ] 各worker paneに`clear`コマンドが送信される
+- [ ] main pane（%0）には`clear`コマンドが送信されない
+- [ ] worker paneの画面内容が実際にクリアされる（非空行数が大幅減少）
+- [ ] main paneの内容が保護される（内容が維持される）
+- [ ] ペインタイトルが適切に更新される
+- [ ] 処理中にエラーが発生しない
+- [ ] 全ての対象ペインに対して処理が完了する
+
+**4.2.4 エラーケース対応テスト**
+
+**準備:**
+```bash
+# エラーケース用のテスト環境準備
+echo "=== エラーケース準備 ==="
+
+# 一部のペインを意図的に削除してエラーケースを作成
+DELETED_PANE=""
+for pane_id in $(tmux list-panes -a -F "#{pane_id}" | tail -1); do
+  if [ "$pane_id" != "%0" ]; then
+    echo "Deleting pane $pane_id for error case testing"
+    tmux kill-pane -t "$pane_id" 2>/dev/null && DELETED_PANE="$pane_id" || echo "Failed to delete $pane_id"
+    break
+  fi
+done
+
+echo "Deleted pane: $DELETED_PANE"
+```
+
+**実行コマンド:**
+```bash
+# 削除されたペインが存在する状態でクリア実行
+echo "=== エラーケース実行 ==="
+timeout 45s deno task start --clear --onetime 2>&1 | tee error_case.log
+```
+
+**検証:**
+```bash
+# エラーハンドリングの確認
+echo "=== エラーハンドリング確認 ==="
+grep -i "error\|fail\|exception" error_case.log || echo "No errors found"
+
+# 残存ペインの状態確認
+echo "=== 残存ペイン状態確認 ==="
+for pane_id in $(tmux list-panes -a -F "#{pane_id}"); do
+  echo "Pane $pane_id: $(tmux capture-pane -t "$pane_id" -p 2>/dev/null | grep -v '^[[:space:]]*$' | wc -l || echo 0) non-empty lines"
+done
+```
+
+**成功の定義（エラーケース）:**
+- [ ] 削除されたペインでエラーが発生してもアプリケーションがクラッシュしない
+- [ ] 残存する他のペインの処理が継続される
+- [ ] 適切なエラーメッセージが出力される
+- [ ] 処理完了まで到達する
 
 #### 4.3 ペインタイトル管理テスト
 

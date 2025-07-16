@@ -3,6 +3,8 @@
  *
  * DDDアーキテクチャの最下層として、外部システム（tmux、ファイルシステム等）
  * との具体的な通信を担当。アプリケーション層で定義されたインターフェースを実装。
+ *
+ * 【統合版】: 統合CaptureDetectionServiceを使用してcapture機能を一元化
  */
 
 import type { Result } from "../types.ts";
@@ -14,6 +16,28 @@ import type {
   RawPaneData,
 } from "../application/monitoring_service.ts";
 import type { CommandExecutor, Logger } from "../services.ts";
+import {
+  CaptureDetectionService,
+  InMemoryCaptureHistory,
+} from "../domain/capture_detection_service.ts";
+import { TmuxCaptureAdapter } from "./unified_capture_adapter.ts";
+
+/**
+ * CommandExecutorアダプター
+ * unified_capture_adapter.tsのICommandExecutorに適合させる
+ */
+class CommandExecutorAdapter {
+  constructor(private executor: CommandExecutor) {}
+
+  async execute(command: string[]): Promise<Result<string, Error>> {
+    const result = await this.executor.execute(command);
+    if (result.ok) {
+      return { ok: true, data: result.data };
+    } else {
+      return { ok: false, error: new Error(result.error.message) };
+    }
+  }
+}
 
 // =============================================================================
 // TmuxSessionAdapter - tmuxセッション操作の実装
@@ -154,46 +178,54 @@ export class TmuxSessionAdapter implements ITmuxSessionRepository {
 }
 
 // =============================================================================
-// PaneContentAdapter - ペインコンテンツ監視の実装
+// PaneContentAdapter - ペインコンテンツ監視の実装（統合版）
 // =============================================================================
 
 /**
- * ペインコンテンツ監視の実装
+ * 【統合版】ペインコンテンツ監視の実装
  *
- * tmuxのcapture-paneコマンドを使用してコンテンツの変化を検出。
- * 差分検出アルゴリズムも含む。
+ * 統合CaptureDetectionServiceを使用してcapture機能を一元化。
+ * 既存の分散したcaptureロジックから統合サービスベースの実装に移行。
  */
 export class PaneContentAdapter implements IPaneContentMonitor {
-  private readonly contentHistory = new Map<string, string>();
+  private readonly captureDetectionService: CaptureDetectionService;
 
   constructor(
     private readonly commandExecutor: CommandExecutor,
     private readonly logger: Logger,
-  ) {}
+  ) {
+    // 統合サービスの初期化
+    const commandAdapter = new CommandExecutorAdapter(commandExecutor);
+    const captureAdapter = new TmuxCaptureAdapter(commandAdapter);
+    const captureHistory = new InMemoryCaptureHistory();
+    this.captureDetectionService = new CaptureDetectionService(
+      captureAdapter,
+      captureHistory,
+    );
+  }
 
   /**
-   * ペインコンテンツのキャプチャ
+   * 【統合版】ペインコンテンツのキャプチャ
+   *
+   * 統合CaptureDetectionServiceを使用してcapture実行。
+   * 古いtmux capture-pane直接実行から統合Adapterに移行。
    */
   async captureContent(paneId: string): Promise<Result<string, Error>> {
     try {
-      // tmux capture-paneコマンドの実行
-      const command = ["tmux", "capture-pane", "-t", paneId, "-p"];
-      const result = await this.commandExecutor.execute(command);
+      const detectionResult = await this.captureDetectionService.detectChanges(
+        paneId,
+      );
 
-      if (!result.ok) {
+      if (!detectionResult.ok) {
         return {
           ok: false,
           error: new Error(
-            `Failed to capture pane ${paneId}: ${result.error.message}`,
+            `Failed to capture pane ${paneId}: ${detectionResult.error.message}`,
           ),
         };
       }
 
-      const content = result.data;
-
-      // 履歴に保存
-      this.contentHistory.set(paneId, content);
-
+      const content = detectionResult.data.captureResult.content;
       return { ok: true, data: content };
     } catch (error) {
       return {
@@ -204,58 +236,22 @@ export class PaneContentAdapter implements IPaneContentMonitor {
   }
 
   /**
-   * コンテンツ変化の検出
-   */
-  hasContentChanged(paneId: string, currentContent: string): boolean {
-    const previousContent = this.contentHistory.get(paneId);
-
-    // 初回キャプチャの場合は変化なしとみなす
-    if (previousContent === undefined) {
-      this.logger.debug(`First capture for pane ${paneId}, no change detected`);
-      return false;
-    }
-
-    // コンテンツの正規化と比較
-    const normalizedPrevious = this.normalizeContent(previousContent);
-    const normalizedCurrent = this.normalizeContent(currentContent);
-
-    const hasChanged = normalizedPrevious !== normalizedCurrent;
-
-    if (hasChanged) {
-      this.logger.debug(`Content change detected in pane ${paneId}`);
-    }
-
-    return hasChanged;
-  }
-
-  /**
-   * コンテンツの正規化
+   * 【統合版】コンテンツ変化の検出
    *
-   * 比較前にホワイトスペースや制御文字を正規化。
+   * 統合CaptureDetectionServiceのActivityStatusを使用して変化判定。
+   * 既存のローカル履歴管理から統合サービスの状態管理に移行。
    */
-  private normalizeContent(content: string): string {
-    return content
-      .replace(/\r\n/g, "\n") // 改行の統一
-      .replace(/\s+$/gm, "") // 行末の空白除去
-      .trim(); // 前後の空白除去
-  }
+  hasContentChanged(paneId: string, _currentContent: string): boolean {
+    // 統合版では外部から現在コンテンツを受け取る形式は非推奨
+    // 代わりにCaptureDetectionServiceで一元的に変化検出すべき
+    this.logger.warn(
+      `hasContentChanged with external content is deprecated for pane ${paneId}. ` +
+        `Use CaptureDetectionService.detectChanges() directly.`,
+    );
 
-  /**
-   * 履歴のクリア
-   */
-  clearHistory(paneId?: string): void {
-    if (paneId) {
-      this.contentHistory.delete(paneId);
-    } else {
-      this.contentHistory.clear();
-    }
-  }
-
-  /**
-   * 監視対象ペインの数
-   */
-  getMonitoredPaneCount(): number {
-    return this.contentHistory.size;
+    // 暫定的な互換性実装
+    // 実際の変化検出はCaptureDetectionServiceが担当
+    return false;
   }
 }
 

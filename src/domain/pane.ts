@@ -10,7 +10,7 @@ import type { Result, ValidationError } from "../types.ts";
 import { createError } from "../types.ts";
 import { WorkerStatusParser } from "../models.ts";
 import { WORKER_STATUS_TYPES } from "../config.ts";
-import { PaneId, type PaneName } from "./value_objects.ts";
+import { type CaptureState, PaneId, type PaneName } from "./value_objects.ts";
 import type { WorkerStatus } from "../models.ts";
 
 // =============================================================================
@@ -37,6 +37,12 @@ export interface PaneUpdateResult {
   readonly oldTitle: string;
   readonly newTitle: string;
   readonly updatedAt: Date;
+  readonly captureStateSummary: {
+    activity: string;
+    input: string;
+    timestamp: string;
+    available: boolean;
+  } | null;
 }
 
 // =============================================================================
@@ -103,6 +109,10 @@ export class Pane {
   private readonly _history: PaneHistoryEntry[];
   private readonly _createdAt: Date;
 
+  // Capture状態管理
+  private _captureState: CaptureState | null;
+  private _previousCaptureContent: string | null;
+
   private constructor(
     id: PaneId,
     isActive: boolean,
@@ -119,6 +129,10 @@ export class Pane {
     this._name = name;
     this._history = [];
     this._createdAt = new Date();
+
+    // Capture状態の初期化
+    this._captureState = null;
+    this._previousCaptureContent = null;
   }
 
   /**
@@ -245,6 +259,14 @@ export class Pane {
 
   get createdAt(): Date {
     return this._createdAt;
+  }
+
+  get captureState(): CaptureState | null {
+    return this._captureState;
+  }
+
+  get previousCaptureContent(): string | null {
+    return this._previousCaptureContent;
   }
 
   // =============================================================================
@@ -630,6 +652,7 @@ export class Pane {
           oldTitle,
           newTitle: titleResult.data,
           updatedAt: new Date(),
+          captureStateSummary: this.getCaptureStateSummary(),
         },
       };
     } catch (error) {
@@ -677,4 +700,75 @@ export class Pane {
     // デフォルト状態（型安全性保証）
     return { kind: "UNKNOWN" };
   }
+
+  /**
+   * Capture状態の更新（統合版）
+   *
+   * 新しい統合CaptureDetectionServiceを使用して
+   * capture状態を更新する。既存の分散実装を置き換え。
+   *
+   * @param captureDetectionResult - 統合検出結果
+   * @returns 更新結果
+   */
+  updateCaptureStateFromDetection(
+    captureDetectionResult:
+      import("./capture_detection_service.ts").CaptureDetectionResult,
+  ): Result<void, ValidationError & { message: string }> {
+    // 統合結果からcapture状態を更新
+    this._captureState = captureDetectionResult.captureState;
+    this._previousCaptureContent = captureDetectionResult.previousContent;
+
+    // 導出されたWorkerStatusを適用
+    const statusUpdateResult = this.updateStatus(
+      captureDetectionResult.derivedWorkerStatus,
+    );
+    if (!statusUpdateResult.ok) {
+      // ステータス更新に失敗した場合はログに記録するが、
+      // capture状態の更新自体は成功とする
+      console.warn(
+        `Failed to update worker status for pane ${this._id.value}:`,
+        statusUpdateResult.error.message,
+        `\nDerivation: ${
+          captureDetectionResult.derivationReasoning.join(", ")
+        }`,
+      );
+    }
+
+    return { ok: true, data: undefined };
+  }
+
+  /**
+   * ペインが新しいタスクに利用可能かを判定
+   *
+   * @returns 利用可能性
+   */
+  isAvailableForNewTask(): boolean {
+    if (!this._captureState) {
+      return false; // capture状態未評価の場合は利用不可
+    }
+
+    return this._captureState.isAvailableForNewTask();
+  }
+
+  /**
+   * Capture状態のサマリー取得（デバッグ・表示用）
+   */
+  getCaptureStateSummary(): {
+    activity: string;
+    input: string;
+    timestamp: string;
+    available: boolean;
+  } | null {
+    if (!this._captureState) {
+      return null;
+    }
+
+    const summary = this._captureState.getSummary();
+    return {
+      ...summary,
+      available: this.isAvailableForNewTask(),
+    };
+  }
+
+  // ...existing code...
 }
