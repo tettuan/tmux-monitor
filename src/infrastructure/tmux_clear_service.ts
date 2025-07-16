@@ -97,10 +97,8 @@ export class TmuxClearService implements PaneClearService {
             
             // 各Escape後に検証
             const incrementalVerification = await this.verifyClearState(paneId);
-            console.log(`🔍 After ${escapeCount} escape(s): ${incrementalVerification.kind}`);
             
             if (incrementalVerification.kind === "ProperlyCleared") {
-              console.log(`✅ Claude pane ${paneId} cleared successfully with ${escapeCount} escape key(s)`);
               sendResult = { ok: true, data: `Cleared with ${escapeCount} escape keys` };
               break;
             }
@@ -249,8 +247,6 @@ export class TmuxClearService implements PaneClearService {
    */
   async verifyClearState(paneId: string): Promise<ClearVerificationResult> {
     try {
-      console.log(`🔍 Verifying clear state for pane ${paneId}...`);
-      
       // tmuxからペインのコンテンツを取得（最新数行）
       const captureResult = await this.tmuxRepository.executeTmuxCommand([
         "tmux",
@@ -272,14 +268,11 @@ export class TmuxClearService implements PaneClearService {
       }
 
       const content = captureResult.data.trim();
-      console.log(`📄 Captured content from pane ${paneId}: "${content}"`);
       
       // 複数の/clearコマンドが累積している場合は失敗状態
       const clearCommandCount = (content.match(/\/clear/g) || []).length;
-      console.log(`🔢 Clear command count in pane ${paneId}: ${clearCommandCount}`);
       
       if (clearCommandCount > 1) {
-        console.log(`❌ Multiple /clear commands detected (${clearCommandCount}) - clear not working`);
         return {
           kind: "NotCleared",
           content,
@@ -315,10 +308,6 @@ export class TmuxClearService implements PaneClearService {
                        clearPatterns.some(pattern => pattern.test(content)) ||
                        (clearCommandCount === 0 && lines.length <= 3); // コマンドなし、短いコンテンツ
                        
-      console.log(`🔍 Debug: hasPromptPattern=${hasPromptPattern}, lines.length=${lines.length}`);
-      console.log(`🔍 Recent 3 lines:`, recentLines);
-      console.log(`✅ Clear state check for pane ${paneId}: ${isCleared ? 'CLEARED' : 'NOT_CLEARED'}`);
-
       if (isCleared) {
         return {
           kind: "ProperlyCleared",
