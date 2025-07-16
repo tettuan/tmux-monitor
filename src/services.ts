@@ -41,6 +41,9 @@ export class CommandExecutor {
       return { ok: false, error: createError({ kind: "EmptyInput" }) };
     }
 
+    // デバッグ: 実行するコマンドをログ出力
+    console.log(`🔧 CommandExecutor.execute: [${args.join(", ")}]`);
+
     try {
       const process = new Deno.Command(args[0], {
         args: args.slice(1),
@@ -52,6 +55,7 @@ export class CommandExecutor {
 
       if (!result.success) {
         const stderr = new TextDecoder().decode(result.stderr);
+        console.log(`❌ Command failed with exit code ${result.code}: ${stderr}`);
         return {
           ok: false,
           error: createError({
@@ -63,8 +67,10 @@ export class CommandExecutor {
       }
 
       const stdout = new TextDecoder().decode(result.stdout).trim();
+      console.log(`✅ Command successful, output length: ${stdout.length}`);
       return { ok: true, data: stdout };
     } catch (error) {
+      console.log(`💥 Command execution error: ${error}`);
       return {
         ok: false,
         error: createError({

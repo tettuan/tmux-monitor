@@ -1,10 +1,10 @@
 import { createError, type Result, type ValidationError } from "./types.ts";
 import {
-  Pane,
   PaneDetail,
   type WorkerStatus,
   WorkerStatusParser,
 } from "./models.ts";
+import { Pane } from "./domain/pane.ts";
 import type { CommandExecutor, Logger } from "./services.ts";
 import { WORKER_STATUS_TYPES } from "./config.ts";
 
@@ -55,7 +55,7 @@ export class PaneDataProcessor {
     const title = parts.length > 3 ? parts.slice(3).join(" ") : undefined;
 
     const active = activeStr === "1";
-    return Pane.create(paneId, active, command, title);
+    return Pane.fromTmuxData(paneId, active, command || "unknown", title || "untitled");
   }
 
   async getPaneDetail(

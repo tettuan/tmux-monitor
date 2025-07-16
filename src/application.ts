@@ -96,12 +96,10 @@ export class Application {
 
     // Handle clear-panes option early
     if (options.shouldClearPanes()) {
-      logger.info("🧹 Clearing Node.js panes...");
+      logger.info("🧹 Starting clear operation...");
       const engine = this.container.createMonitoringEngine(options);
       await engine.clearNodePanes();
-
-      logger.info("✅ Clear operation completed");
-      // Exit early after clearing panes
+      // clearNodePanes()内で詳細ログが出力されるので、ここでは最終メッセージのみ
       return;
     }
 

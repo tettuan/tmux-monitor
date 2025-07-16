@@ -608,6 +608,141 @@ export class MonitoringApplicationService {
       availableForTask: allPanes.filter((p) => p.canAssignTask()).length,
     };
   }
+
+  /**
+   * Node.jsペインのクリア実行
+   * 
+   * DDDの原則に従い、Pane集約が自身のクリア判定とクリア実行を行う。
+   * アプリケーション層はオーケストレーションのみを担当。
+   */
+  async clearNodePanes(): Promise<Result<NodeClearResult, ValidationError & { message: string }>> {
+    try {
+      // 1. 現在のペイン状況を取得
+      const discoveryResult = await this._tmuxRepository.discoverPanes();
+      if (!discoveryResult.ok) {
+        return {
+          ok: false,
+          error: createError({
+            kind: "CommunicationFailed",
+            target: "tmux session",
+            details: discoveryResult.error.message,
+          }, "Failed to discover panes for clearing")
+        };
+      }
+
+      // 2. ペインコレクションの構築
+      const nodePanes: Pane[] = [];
+      const detectedNodePanes: { paneId: string; command: string; status: string }[] = [];
+
+      for (const rawPaneData of discoveryResult.data) {
+        const paneResult = Pane.fromTmuxData(
+          rawPaneData.paneId,
+          rawPaneData.active === "1",
+          rawPaneData.currentCommand,
+          rawPaneData.title
+        );
+
+        if (paneResult.ok) {
+          const pane = paneResult.data;
+          
+          // Node.jsコマンドかつクリア対象のペインのみを選択
+          if (this.isNodeCommand(rawPaneData.currentCommand)) {
+            detectedNodePanes.push({
+              paneId: rawPaneData.paneId,
+              command: rawPaneData.currentCommand,
+              status: pane.status.kind
+            });
+            
+            if (pane.shouldBeCleared()) {
+              nodePanes.push(pane);
+            }
+          }
+        }
+      }
+
+      // Node.jsペインの検出状況をログ出力
+      if (detectedNodePanes.length > 0) {
+        console.log(`🔍 Detected ${detectedNodePanes.length} Node.js panes:`);
+        for (const nodePane of detectedNodePanes) {
+          console.log(`   - ${nodePane.paneId}: ${nodePane.command} (${nodePane.status})`);
+        }
+        console.log(`📝 Clear targets: ${nodePanes.length} panes (DONE/IDLE only)`);
+      } else {
+        console.log(`🔍 No Node.js panes detected`);
+      }
+
+      // 3. クリア戦略の作成（インフラストラクチャ層から）
+      const { TmuxClearService } = await import("../infrastructure/tmux_clear_service.ts");
+      const clearService = new TmuxClearService(this._tmuxRepository, this._communicator);
+      
+      const clearStrategy = {
+        kind: "DirectClear" as const,
+        retryOnFailure: true,
+        maxRetries: 3,
+        verifyAfterClear: true
+      };
+
+      // 4. 各ペインのクリア実行
+      const clearResults = [];
+      for (const pane of nodePanes) {
+        const clearResult = await pane.clearSelf(clearService, clearStrategy);
+        clearResults.push(clearResult);
+      }
+
+      // 5. 結果の集計
+      const successCount = clearResults.filter(r => r.kind === "Success").length;
+      const failedCount = clearResults.filter(r => r.kind === "Failed").length;
+      const skippedCount = clearResults.filter(r => r.kind === "Skipped").length;
+
+      return {
+        ok: true,
+        data: {
+          totalProcessed: nodePanes.length,
+          successCount,
+          failedCount,
+          skippedCount,
+          results: clearResults,
+          timestamp: new Date()
+        }
+      };
+
+    } catch (error) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "UnexpectedError",
+          operation: "clearNodePanes",
+          details: `${error}`,
+        }, `Unexpected error during Node.js pane clearing: ${error}`)
+      };
+    }
+  }
+
+  /**
+   * Node.jsコマンドの判定ヘルパー
+   */
+  private isNodeCommand(command: string): boolean {
+    if (!command || typeof command !== "string") {
+      return false;
+    }
+
+    const normalizedCommand = command.trim().toLowerCase();
+    if (normalizedCommand === "") {
+      return false;
+    }
+
+    const nodePatterns = [
+      "node", "nodejs", "npm", "npx", "yarn", "pnpm", "deno", "bun",
+      "next", "nuxt", "vite", "webpack", "rollup", "tsc", "typescript",
+      "ts-node", "jest", "vitest", "mocha", "cypress", "eslint", "prettier", "nodemon",
+    ];
+
+    return nodePatterns.some((pattern) => {
+      return normalizedCommand === pattern ||
+        normalizedCommand.includes(`${pattern} `) ||
+        normalizedCommand.includes(`/${pattern}`);
+    });
+  }
 }
 
 // =============================================================================
@@ -637,6 +772,18 @@ export interface MonitoringPhaseResult {
   >;
   newlyIdlePanes: string[];
   newlyWorkingPanes: string[];
+}
+
+/**
+ * Node.jsペインクリア結果
+ */
+export interface NodeClearResult {
+  totalProcessed: number;
+  successCount: number;
+  failedCount: number;
+  skippedCount: number;
+  results: import("../domain/clear_domain.ts").ClearOperationResult[];
+  timestamp: Date;
 }
 
 export interface MonitoringStats {

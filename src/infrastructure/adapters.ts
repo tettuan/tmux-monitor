@@ -105,17 +105,21 @@ export class TmuxSessionAdapter implements ITmuxSessionRepository {
    */
   async executeTmuxCommand(command: string[]): Promise<Result<string, Error>> {
     try {
+      console.log(`🔧 Executing tmux command: [${command.join(', ')}]`);
       const result = await this.commandExecutor.execute(command);
 
       if (!result.ok) {
+        console.log(`❌ Tmux command failed: ${result.error.message}`);
         return {
           ok: false,
           error: new Error(`tmux command failed: ${result.error.message}`),
         };
       }
 
+      console.log(`✅ Tmux command successful, output length: ${result.data.length}`);
       return { ok: true, data: result.data };
     } catch (error) {
+      console.log(`💥 Unexpected error in tmux command: ${error}`);
       return {
         ok: false,
         error: new Error(`Unexpected error executing tmux command: ${error}`),
@@ -315,7 +319,25 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
     command: string,
   ): Promise<Result<void, Error>> {
     try {
-      // コマンドを送信してEnterを押す
+      // Escapeキーの場合は特別な処理
+      if (command === "\u001b") {
+        const sendCommand = ["tmux", "send-keys", "-t", paneId, "Escape"];
+        const result = await this.commandExecutor.execute(sendCommand);
+        
+        if (!result.ok) {
+          return {
+            ok: false,
+            error: new Error(
+              `Failed to send Escape key to pane ${paneId}: ${result.error.message}`,
+            ),
+          };
+        }
+        
+        this.logger.info(`Escape key sent to pane ${paneId}`);
+        return { ok: true, data: undefined };
+      }
+      
+      // 通常のコマンドの場合
       const sendCommand = ["tmux", "send-keys", "-t", paneId, command, "Enter"];
 
       const result = await this.commandExecutor.execute(sendCommand);
