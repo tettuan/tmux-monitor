@@ -4,7 +4,7 @@
 # Automated Version Management Script for @aidevtool/tmux-monitor (Deno/JSR)
 #
 # Purpose:
-#   - Ensures version consistency between deno.json and src/version.ts
+#   - Ensures version consistency between deno.json and src/core/version.ts
 #   - Handles version bumping (major/minor/patch) with atomic updates
 #   - Performs pre-release checks (git status, local CI, GitHub Actions)
 #   - Manages GitHub tags and JSR version synchronization
@@ -46,7 +46,7 @@ set -euo pipefail
 
 # Constants
 DENO_JSON="deno.json"
-VERSION_TS="src/version.ts"
+VERSION_TS="src/core/version.ts"
 JSR_META_URL="https://jsr.io/@aidevtool/tmux-monitor/meta.json"
 
 # Helper Functions
@@ -275,7 +275,7 @@ tmp_ts="${VERSION_TS}.tmp"
 # Update deno.json version
 jq --arg v "$new_version" '.version = $v' "$DENO_JSON" > "$tmp_deno"
 
-# Update src/version.ts with proper formatting
+# Update src/core/version.ts with proper formatting
 cat > "$tmp_ts" <<EOF
 // This file is auto-generated. Do not edit manually.
 // The version is synchronized with deno.json.
@@ -335,7 +335,7 @@ echo -e "\nPerforming Git Operations..."
 git add "$DENO_JSON" "$VERSION_TS"
 git commit -m "chore: bump version to $new_version
 
-- Update version in deno.json and src/version.ts
+- Update version in deno.json and src/core/version.ts
 - Maintain version consistency across project files
 - Ready for JSR publication as @aidevtool/tmux-monitor@$new_version"
 
