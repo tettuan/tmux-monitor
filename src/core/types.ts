@@ -141,7 +141,9 @@ export type ValidationError =
   | { kind: "RepositoryError"; operation?: string; details?: string }
   | { kind: "CommunicationFailed"; target?: string; details?: string }
   | { kind: "CommandExecutionFailed"; command?: string; details?: string }
-  | { kind: "MigrationFailed"; from?: string; to?: string; details?: string };
+  | { kind: "MigrationFailed"; from?: string; to?: string; details?: string }
+  | { kind: "HelpRequested" }
+  | { kind: "UnknownOption"; option: string };
 
 /**
  * Error creation helper function for consistent error message generation.
@@ -256,5 +258,9 @@ export const getDefaultMessage = (error: ValidationError): string => {
           error.details || "migration error"
         }`
         : `Migration failed: ${error.details || "migration error"}`;
+    case "HelpRequested":
+      return "Help information requested";
+    case "UnknownOption":
+      return `Unknown command line option: ${error.option}`;
   }
 };

@@ -87,6 +87,7 @@ export class DIContainer {
           this.get("timeManager"),
           this.get("logger"),
           undefined,
+          false, // isTestMode = false for production
         ),
     );
 

@@ -223,6 +223,10 @@ export const TestHelpers = {
             to: "test",
             details: "test",
           };
+        case "HelpRequested":
+          return { kind: "HelpRequested" };
+        case "UnknownOption":
+          return { kind: "UnknownOption", option: "test" };
       }
     })();
     return createError(baseError, message);

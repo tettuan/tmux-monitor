@@ -158,7 +158,7 @@ Deno.test("ArgumentParser: parse() - instruction file -i path", () => {
 });
 
 Deno.test("ArgumentParser: parse() - combined arguments", () => {
-  setupMockArgs(["-c", "--time=14:30", "--instruction=test.md"]);
+  setupMockArgs(["--time=14:30", "--instruction=test.md"]);
 
   const timeManager = new MockTimeManager();
   const logger = new MockLogger();
@@ -167,7 +167,7 @@ Deno.test("ArgumentParser: parse() - combined arguments", () => {
   const result = parser.parse();
 
   assert(result.ok);
-  assert(result.data.isContinuous());
+  assert(result.data.isContinuous()); // Default is continuous mode
 
   const scheduledTime = result.data.getScheduledTime();
   assertExists(scheduledTime);

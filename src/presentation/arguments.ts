@@ -30,10 +30,27 @@ export class ArgumentParser {
     private timeManager: TimeManager,
     private logger: Logger,
     private timeCalculator?: TimeCalculator,
+    private isTestMode: boolean = false,
   ) {}
 
   parse(): Result<MonitoringOptions, ValidationError & { message: string }> {
     const args = Deno.args;
+
+    // Check for help flag first - if found, display help and exit
+    if (args.includes("--help") || args.includes("-h")) {
+      this.displayHelp();
+      if (!this.isTestMode) {
+        Deno.exit(0);
+      }
+      return {
+        ok: false,
+        error: {
+          kind: "HelpRequested",
+          message: "Help requested",
+        },
+      };
+    }
+
     let scheduledTime: Date | null = null;
     let instructionFile: string | null = null;
     let killAllPanes = false;
@@ -76,6 +93,21 @@ export class ArgumentParser {
         clearPanes = true;
       } else if (arg === CLI_OPTIONS.START_CLAUDE) {
         startClaude = true;
+      } else if (arg.startsWith("-") && !this.isValidOption(arg)) {
+        // Handle unknown options
+        console.error(`❌ Error: Unknown option '${arg}'`);
+        this.displayHelp();
+        if (!this.isTestMode) {
+          Deno.exit(1);
+        }
+        return {
+          ok: false,
+          error: {
+            kind: "UnknownOption",
+            option: arg,
+            message: `Unknown option '${arg}'`,
+          },
+        };
       }
     }
 
@@ -96,5 +128,90 @@ export class ArgumentParser {
     );
 
     return { ok: true, data: options };
+  }
+
+  /**
+   * Check if the given argument is a valid option
+   */
+  private isValidOption(arg: string): boolean {
+    const validOptions = [
+      "--help",
+      "-h",
+      "--onetime",
+      "-o",
+      "--time",
+      "-t",
+      "--instruction",
+      "-i",
+      "--clear",
+      "--kill-all-panes",
+      "--start-claude",
+    ];
+
+    // Check exact matches
+    if (validOptions.includes(arg)) {
+      return true;
+    }
+
+    // Check options with = syntax
+    const validPrefixes = ["--time=", "--instruction="];
+    return validPrefixes.some((prefix) => arg.startsWith(prefix));
+  }
+
+  /**
+   * Display help message and usage information
+   */
+  private displayHelp(): void {
+    const helpMessage = `
+tmux-monitor - tmux session monitoring tool
+
+USAGE:
+    deno task start [OPTIONS]
+
+OPTIONS:
+    -h, --help              Show this help message
+    -o, --onetime           Run monitoring once (default: continuous monitoring)
+    -t, --time <HH:MM>      Start at specified time (e.g., --time=14:30)
+    -i, --instruction <FILE> Specify instruction file
+    --clear                 Clear DONE/IDLE panes (one-time execution mode)
+    --kill-all-panes        Kill all worker panes
+    --start-claude          Start Claude
+
+EXAMPLES:
+    # Continuous monitoring mode (default)
+    deno task start
+
+    # Run once
+    deno task start --onetime
+
+    # Start at 14:30
+    deno task start --time=14:30
+
+    # Use instruction file
+    deno task start --instruction=commands.txt
+
+    # Clear panes (one-time execution)
+    deno task start --clear
+
+    # Time specification + instruction + one-time execution
+    deno task start --time=09:00 --instruction=morning.txt --onetime
+
+DESCRIPTION:
+    tmux-monitor monitors panes within tmux sessions and tracks the status
+    of each pane (IDLE/WORKING/DONE/UNKNOWN). In continuous monitoring mode,
+    it checks pane status every 30 seconds and sends commands as needed.
+    
+    Monitoring targets:
+    - Pane %0: Main pane (manager role)
+    - Pane %1+: Worker panes
+
+    Time specification is processed in Asia/Tokyo timezone. If a past time
+    is specified, it will be interpreted as the same time on the next day.
+
+More information:
+    https://github.com/tettuan/tmux-monitor
+`;
+
+    console.log(helpMessage);
   }
 }
