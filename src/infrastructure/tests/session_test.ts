@@ -3,6 +3,7 @@ import {
   assertExists,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { TmuxSession } from "../session.ts";
+import { MockLogger } from "../../core/test-utils.ts";
 
 // Mock CommandExecutor
 class MockCommandExecutor {
@@ -38,14 +39,6 @@ class MockCommandExecutor {
   killAllPanes = () => {
     return Promise.resolve({ ok: true as const, data: "mock kill all panes" });
   };
-}
-
-// Mock Logger
-class MockLogger {
-  debug = (msg: string) => console.log(`DEBUG: ${msg}`);
-  info = (msg: string) => console.log(`INFO: ${msg}`);
-  error = (msg: string) => console.error(`ERROR: ${msg}`);
-  warn = (msg: string) => console.warn(`WARN: ${msg}`);
 }
 
 Deno.test("TmuxSession - create", () => {

@@ -1,5 +1,9 @@
-import { createError, type Result, type ValidationError } from "./types.ts";
-import type { PaneDetail } from "./models.ts";
+import {
+  createError,
+  type Result,
+  type ValidationError,
+} from "../core/types.ts";
+import type { PaneDetail } from "../core/models.ts";
 
 /**
  * Default instruction file path

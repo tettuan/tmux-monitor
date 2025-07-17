@@ -3,7 +3,7 @@ import {
   assertExists,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { DIContainer } from "../container.ts";
-import type { ArgumentParser } from "../arguments.ts";
+import type { ArgumentParser } from "../../presentation/arguments.ts";
 
 Deno.test("DIContainer - singleton pattern", () => {
   const container1 = DIContainer.getInstance();

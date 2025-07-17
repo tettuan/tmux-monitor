@@ -88,8 +88,8 @@
 // Imports from the src module directory - CLI entry point minimal imports
 // =============================================================================
 
-import { Logger } from "./src/services.ts";
-import { Application } from "./src/application.ts";
+import { Logger } from "./src/infrastructure/services.ts";
+import { Application } from "./src/presentation/application.ts";
 
 // =============================================================================
 // Main Entry Point with Totality-based Design
@@ -137,17 +137,17 @@ if (import.meta.main) {
 // =============================================================================
 
 // Only export essential types for CLI usage
-export type { Result, ValidationError } from "./src/types.ts";
+export type { Result, ValidationError } from "./src/core/types.ts";
 
 export {
   // Core application for CLI
   Application,
-} from "./src/application.ts";
+} from "./src/presentation/application.ts";
 
 export {
   // Essential logger for CLI usage
   Logger,
-} from "./src/services.ts";
+} from "./src/infrastructure/services.ts";
 
 // Export version information
-export { getVersion, getVersionInfo, VERSION } from "./src/version.ts";
+export { getVersion, getVersionInfo, VERSION } from "./src/core/version.ts";

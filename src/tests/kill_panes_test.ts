@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.208.0/assert/mod.ts";
-import { MonitoringOptions } from "../models.ts";
+import { MonitoringOptions } from "../core/models.ts";
 
 Deno.test("MonitoringOptions - kill all panes option", () => {
   const options = MonitoringOptions.create(false, null, null, true, false);

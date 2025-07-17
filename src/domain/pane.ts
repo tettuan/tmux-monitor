@@ -6,12 +6,12 @@
  * 観測・制御する境界そのものを表現する。
  */
 
-import type { Result, ValidationError } from "../types.ts";
-import { createError } from "../types.ts";
-import { WorkerStatusParser } from "../models.ts";
-import { WORKER_STATUS_TYPES } from "../config.ts";
+import type { Result, ValidationError } from "../core/types.ts";
+import { createError } from "../core/types.ts";
+import { WorkerStatusParser } from "../core/models.ts";
+import { WORKER_STATUS_TYPES } from "../core/config.ts";
 import { type CaptureState, PaneId, type PaneName } from "./value_objects.ts";
-import type { WorkerStatus } from "../models.ts";
+import type { WorkerStatus } from "../core/models.ts";
 import type {
   ClearOperationResult,
   ClearStrategy,
@@ -873,6 +873,196 @@ export class Pane {
     clearService: PaneClearService,
   ): Promise<ClearVerificationResult> {
     return await clearService.verifyClearState(this._id.value);
+  }
+
+  // =============================================================================
+  // イベント駆動メソッド - Paneが自分自身で何をするべきか知っている
+  // =============================================================================
+
+  /**
+   * 自身の30秒サイクル処理を実行
+   *
+   * Paneが自分自身で何をするべきかを知っている状態を実現。
+   * 各ペインは自身の状態に応じて適切なアクションを決定する。
+   */
+  async processCycleEvent(
+    eventDispatcher: import("./events.ts").EventDispatcher,
+    tmuxRepository?: ITmuxRepository,
+  ): Promise<void> {
+    const { DomainEventFactory } = await import("./events.ts");
+
+    // 1. 自身の状態に応じたEnter送信判定
+    if (this.shouldSendEnter()) {
+      const enterEvent = DomainEventFactory.createPaneEnterSendRequestedEvent(
+        this._id.value,
+        this.determineEnterReason(),
+      );
+      await eventDispatcher.dispatch(enterEvent);
+    }
+
+    // 2. 自身のクリア必要性判定
+    if (this.shouldBeCleared()) {
+      const clearEvent = DomainEventFactory.createPaneClearRequestedEvent(
+        this._id.value,
+        this._status.kind === "IDLE" ? "IDLE_STATE" : "DONE_STATE",
+        "CLEAR_COMMAND",
+      );
+      await eventDispatcher.dispatch(clearEvent);
+    }
+
+    // 3. タイトル更新が必要か判定
+    if (tmuxRepository && this.shouldUpdateTitle()) {
+      await this.updateTitleIfNeeded(tmuxRepository, eventDispatcher);
+    }
+
+    // 4. キャプチャ状態更新イベント発行（状態が変更されている場合）
+    if (this._captureState) {
+      const summary = this.getCaptureStateSummary();
+      if (summary) {
+        const captureEvent = DomainEventFactory
+          .createPaneCaptureStateUpdatedEvent(
+            this._id.value,
+            summary.activity as "WORKING" | "IDLE" | "NOT_EVALUATED",
+            summary.input as
+              | "EMPTY"
+              | "HAS_INPUT"
+              | "NO_INPUT_FIELD"
+              | "PARSE_ERROR",
+            summary.available,
+          );
+        await eventDispatcher.dispatch(captureEvent);
+      }
+    }
+  }
+
+  /**
+   * Enter送信が必要かを判定
+   */
+  private shouldSendEnter(): boolean {
+    // 非アクティブペインで、IDLE状態またはINPUT欄が空の場合
+    return !this._isActive &&
+      (this._status.kind === "IDLE" || this.hasEmptyInput());
+  }
+
+  /**
+   * Enter送信の理由を決定
+   */
+  private determineEnterReason():
+    | "REGULAR_CYCLE"
+    | "INPUT_COMPLETION"
+    | "COMMAND_EXECUTION" {
+    if (this._status.kind === "IDLE") {
+      return "INPUT_COMPLETION";
+    }
+    if (this.hasEmptyInput()) {
+      return "COMMAND_EXECUTION";
+    }
+    return "REGULAR_CYCLE";
+  }
+
+  /**
+   * 入力欄が空かどうかを判定
+   */
+  private hasEmptyInput(): boolean {
+    const summary = this.getCaptureStateSummary();
+    return summary?.input === "EMPTY";
+  }
+
+  /**
+   * タイトル更新が必要かを判定
+   */
+  private shouldUpdateTitle(): boolean {
+    // ステータスが変更された場合、または定期更新が必要な場合
+    return this._status.kind !== "UNKNOWN";
+  }
+
+  /**
+   * 必要に応じてタイトルを更新
+   */
+  private async updateTitleIfNeeded(
+    tmuxRepository: ITmuxRepository,
+    eventDispatcher: import("./events.ts").EventDispatcher,
+  ): Promise<void> {
+    try {
+      const currentTitleResult = await tmuxRepository.getTitle(this._id.value);
+      if (currentTitleResult.ok) {
+        const currentTitle = currentTitleResult.data;
+        const expectedTitle = this.generateExpectedTitle();
+
+        if (currentTitle !== expectedTitle) {
+          const oldTitle = this._title;
+          this._title = expectedTitle;
+
+          const { DomainEventFactory } = await import("./events.ts");
+          const titleEvent = DomainEventFactory.createPaneTitleChangedEvent(
+            this._id.value,
+            oldTitle,
+            expectedTitle,
+          );
+          await eventDispatcher.dispatch(titleEvent);
+        }
+      }
+    } catch (error) {
+      // タイトル更新エラーは非致命的なので、ログ出力のみ
+      console.warn(
+        `Failed to update title for pane ${this._id.value}: ${error}`,
+      );
+    }
+  }
+
+  /**
+   * 期待されるタイトルを生成
+   */
+  private generateExpectedTitle(): string {
+    const statusIcon = this.getStatusIcon();
+    const roleName = this._name?.value || "unknown";
+    return `${statusIcon} ${roleName} | ${this._status.kind}`;
+  }
+
+  /**
+   * ステータスに応じたアイコンを取得
+   */
+  private getStatusIcon(): string {
+    switch (this._status.kind) {
+      case "WORKING":
+        return "🔄";
+      case "IDLE":
+        return "⏸️";
+      case "DONE":
+        return "✅";
+      case "BLOCKED":
+        return "🚫";
+      case "TERMINATED":
+        return "❌";
+      case "UNKNOWN":
+        return "❓";
+      default:
+        return "❓";
+    }
+  }
+
+  /**
+   * ステータス変更時のイベント発行を含む更新
+   */
+  async updateStatusWithEvent(
+    newStatus: WorkerStatus,
+    eventDispatcher: import("./events.ts").EventDispatcher,
+    changedBy: "monitoring-cycle" | "manual" | "system" = "monitoring-cycle",
+  ): Promise<void> {
+    const oldStatus = this._status;
+
+    // 既存のupdateStatusを呼び出し
+    this.updateStatus(newStatus);
+
+    // ステータス変更イベントを発行
+    const { DomainEventFactory } = await import("./events.ts");
+    const statusEvent = DomainEventFactory.createPaneStatusChangedEvent(
+      this._id.value,
+      oldStatus,
+      newStatus,
+      changedBy,
+    );
+    await eventDispatcher.dispatch(statusEvent);
   }
 
   // ...existing code...

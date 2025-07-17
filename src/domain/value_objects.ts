@@ -7,7 +7,11 @@
  * - Result型による失敗の明示的表現
  */
 
-import { createError, type Result, type ValidationError } from "../types.ts";
+import {
+  createError,
+  type Result,
+  type ValidationError,
+} from "../core/types.ts";
 
 // =============================================================================
 // PaneId値オブジェクト - tmuxシステムのペイン識別子

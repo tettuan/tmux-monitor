@@ -2,15 +2,19 @@
  * 監視エンジン
  *
  * Domain-Driven Designアーキテクチャに基づいた
- * 監視エンジンの実装。
+ * イベント駆動監視エンジンの実装。
  */
 
-import type { PaneCollection } from "./domain/services.ts";
-import { MonitoringApplicationService } from "./application/monitoring_service.ts";
-import { InfrastructureAdapterFactory } from "./infrastructure/adapters.ts";
-import type { CommandExecutor, Logger } from "./services.ts";
-import type { Result, ValidationError } from "./types.ts";
-import { createError } from "./types.ts";
+import type { PaneCollection } from "../domain/services.ts";
+import { MonitoringApplicationService } from "./monitoring_service.ts";
+import { InfrastructureAdapterFactory } from "../infrastructure/adapters.ts";
+import type { CommandExecutor, Logger } from "../infrastructure/services.ts";
+import type { Result, ValidationError } from "../core/types.ts";
+import { createError } from "../core/types.ts";
+
+// イベント駆動アーキテクチャのインポート
+import { SimpleDomainEventDispatcher } from "../domain/event_dispatcher.ts";
+import { MonitoringCycleCoordinator } from "../domain/monitoring_cycle_coordinator.ts";
 
 /**
  * 監視エンジン
@@ -18,12 +22,21 @@ import { createError } from "./types.ts";
 export class MonitoringEngine {
   private readonly _appService: MonitoringApplicationService;
   private readonly _logger: Logger;
+  private readonly _eventDispatcher: SimpleDomainEventDispatcher;
+  private readonly _cycleCoordinator: MonitoringCycleCoordinator;
 
   constructor(
     commandExecutor: CommandExecutor,
     logger: Logger,
   ) {
     this._logger = logger;
+
+    // イベント駆動アーキテクチャのセットアップ
+    this._eventDispatcher = new SimpleDomainEventDispatcher(logger);
+    this._cycleCoordinator = new MonitoringCycleCoordinator(
+      this._eventDispatcher,
+      logger,
+    );
 
     // アーキテクチャのセットアップ
     const adapters = InfrastructureAdapterFactory.createAllAdapters(
@@ -39,21 +52,27 @@ export class MonitoringEngine {
   }
 
   /**
-   * 監視開始
+   * 監視開始 - イベント駆動アーキテクチャでPaneが自分自身の責務を知る
    */
   async monitor(): Promise<void> {
-    this._logger.info("🚀 Starting monitoring");
+    this._logger.info("🚀 Starting event-driven monitoring");
 
     try {
       const startResult = await this._appService.startMonitoring();
       if (!startResult.ok) {
+        this._logger.error(`Failed to start: ${startResult.error.message}`);
+        return;
+      }
+
+      const cycleResult = await this._cycleCoordinator.startCycle();
+      if (!cycleResult.ok) {
         this._logger.error(
-          `Failed to start monitoring: ${startResult.error.message}`,
+          `Failed to start cycle: ${cycleResult.error.message}`,
         );
         return;
       }
 
-      await this.continuousMonitoringLoop();
+      await this.monitoringLoop();
     } catch (error) {
       this._logger.error(`Monitoring error: ${error}`);
       throw error;
@@ -61,75 +80,61 @@ export class MonitoringEngine {
   }
 
   /**
-   * 継続的監視ループ
+   * メインループ - Paneが自分自身で何をするべきかを知っている状態を実現
    */
-  private async continuousMonitoringLoop(): Promise<void> {
+  private async monitoringLoop(): Promise<void> {
     let cycleCount = 0;
     const maxCycles = 1000;
 
-    // 初回統計情報の表示
     const initialStats = this._appService.getMonitoringStats();
     this._logger.info(
-      `🎯 Initial state: ${initialStats.totalPanes} total panes, ${initialStats.workingPanes} working, ${initialStats.idlePanes} idle`,
+      `🎯 Initial: ${initialStats.totalPanes} panes, ${initialStats.workingPanes} working, ${initialStats.idlePanes} idle`,
     );
 
     while (cycleCount < maxCycles) {
       try {
-        const cycleResult = await this._appService.executeSingleCycle();
+        const paneCollection = this._appService.getPaneCollection();
+        const cycleResult = await this._cycleCoordinator.executeSingleCycle(
+          paneCollection,
+        );
 
         if (!cycleResult.ok) {
-          this._logger.error(
-            `Monitoring cycle failed: ${cycleResult.error.message}`,
-          );
+          this._logger.error(`Cycle failed: ${cycleResult.error.message}`);
           break;
         }
 
         const result = cycleResult.data;
-
-        // より詳細なサイクル情報をログ出力
         this._logger.info(
-          `📊 Cycle ${result.cycleCount} (${result.phase}): ${result.statusChanges.length} status changes`,
+          `🔄 Cycle ${result.cycleNumber}: ${result.totalProcessed} panes, ${result.statusChanges} changes, ${result.entersSent} enters, ${result.clearsExecuted} clears`,
         );
 
-        if (result.statusChanges.length > 0) {
-          this._logger.info(
-            `📊 Status changes: ${result.newlyWorkingPanes.length} newly working, ${result.newlyIdlePanes.length} newly idle`,
-          );
+        if (result.errors.length > 0) {
+          this._logger.warn(`⚠️ Errors: ${result.errors.join(", ")}`);
         }
 
-        if (cycleCount % 10 === 0) {
+        if (result.cycleNumber % 10 === 0) {
           const stats = this._appService.getMonitoringStats();
           this._logger.info(
             `📈 Stats: ${stats.totalPanes} total, ${stats.workingPanes} working, ${stats.idlePanes} idle`,
           );
         }
 
-        // デバッグ用：より詳細なログを追加
-        if (cycleCount <= 3) {
-          const stats = this._appService.getMonitoringStats();
-          this._logger.info(
-            `🔍 Debug Cycle ${cycleCount}: ${stats.totalPanes} total, ${stats.workingPanes} working, ${stats.idlePanes} idle`,
-          );
-        }
-
         cycleCount++;
-        // デバッグ用：最初の数サイクルは短い間隔で実行
-        const interval = cycleCount <= 5 ? 5000 : 30000;
-        this._logger.info(`⏱️ Next cycle in ${interval / 1000}s...`);
-        await new Promise((resolve) => setTimeout(resolve, interval));
-      } catch (error) {
-        this._logger.error(
-          `Unexpected error in monitoring cycle: ${error}`,
+        await new Promise((resolve) =>
+          setTimeout(resolve, result.nextCycleDelay)
         );
+      } catch (error) {
+        this._logger.error(`Unexpected error: ${error}`);
         break;
       }
     }
 
+    this._cycleCoordinator.stopCycle();
     this._logger.info(`Monitoring completed after ${cycleCount} cycles`);
   }
 
   /**
-   * ワンタイム監視
+   * ワンタイム監視 - イベント駆動アーキテクチャで統一
    */
   async oneTimeMonitor(): Promise<void> {
     this._logger.info("🔍 One-time monitoring");
@@ -143,11 +148,14 @@ export class MonitoringEngine {
         return;
       }
 
-      const cycleResult = await this._appService.executeSingleCycle();
+      const paneCollection = this._appService.getPaneCollection();
+      const cycleResult = await this._cycleCoordinator.executeSingleCycle(
+        paneCollection,
+      );
       if (cycleResult.ok) {
-        const stats = this._appService.getMonitoringStats();
+        const result = cycleResult.data;
         this._logger.info(
-          `✅ One-time monitoring completed: ${stats.totalPanes} panes monitored`,
+          `✅ One-time monitoring completed: ${result.totalProcessed} panes, ${result.statusChanges} changes`,
         );
       }
     } catch (error) {
@@ -172,36 +180,33 @@ export class MonitoringEngine {
   }
 
   /**
-   * 高度な監視統計
+   * 統計とアクセサ
    */
   getAdvancedStats() {
     const stats = this._appService.getMonitoringStats();
     const collection = this._appService.getPaneCollection();
-
     return {
       ...stats,
       managerPanes: collection.getPanesByRole("manager").length,
       workerPanes: collection.getPanesByRole("worker").length,
       secretaryPanes: collection.getPanesByRole("secretary").length,
-      architecture: "Domain-Driven Design",
-      typesSafety: "Strong",
-      businessRulesEnforced: true,
+      architecture: "Event-Driven DDD",
+      typesSafety: "Totality",
     };
   }
 
-  /**
-   * ペインコレクションへのアクセス
-   */
   getPaneCollection(): PaneCollection {
     return this._appService.getPaneCollection();
   }
+  getEventDispatcher(): SimpleDomainEventDispatcher {
+    return this._eventDispatcher;
+  }
+  getCycleCoordinator(): MonitoringCycleCoordinator {
+    return this._cycleCoordinator;
+  }
 
-  /**
-   * ドメインサービスの状態確認
-   */
   getDomainServiceHealth() {
     const stats = this._appService.getMonitoringStats();
-
     return {
       isHealthy: stats.totalPanes > 0,
       domainObjectCount: stats.totalPanes,
@@ -211,7 +216,7 @@ export class MonitoringEngine {
   }
 
   /**
-   * 継続的監視開始（application.ts互換性のため）
+   * 互換性メソッド
    */
   async startContinuousMonitoring(): Promise<void> {
     await this.monitor();
@@ -264,8 +269,10 @@ export class MonitoringEngine {
       }
 
       // 指示ファイルパスをメッセージとして送信（ファイル読み取り権限不要）
-      const { PaneCommunicator } = await import("./communication.ts");
-      const { CommandExecutor } = await import("./services.ts");
+      const { PaneCommunicator } = await import(
+        "../infrastructure/communication.ts"
+      );
+      const { CommandExecutor } = await import("../infrastructure/services.ts");
 
       const communicator = PaneCommunicator.create(
         new CommandExecutor(),

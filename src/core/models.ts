@@ -1,5 +1,5 @@
 import { createError, type Result, type ValidationError } from "./types.ts";
-import { TimeCalculator } from "./time_calculator.ts";
+import { TimeCalculator } from "../utils/time_calculator.ts";
 
 // =============================================================================
 // Domain Models with Totality Principles

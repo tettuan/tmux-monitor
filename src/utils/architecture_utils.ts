@@ -3,9 +3,9 @@
  */
 
 import { Pane } from "../domain/pane.ts";
-import type { Result, ValidationError } from "../types.ts";
-import { createError } from "../types.ts";
-import type { MonitoringEngine } from "../engine.ts";
+import type { Result, ValidationError } from "../core/types.ts";
+import { createError } from "../core/types.ts";
+import type { MonitoringEngine } from "../application/engine.ts";
 
 /**
  * アーキテクチャ管理ユーティリティ

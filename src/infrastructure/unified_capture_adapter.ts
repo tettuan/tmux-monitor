@@ -5,8 +5,8 @@
  * 単一責任のcapture機能を提供する。
  */
 
-import type { Result, ValidationError } from "../types.ts";
-import { createError } from "../types.ts";
+import type { Result, ValidationError } from "../core/types.ts";
+import { createError } from "../core/types.ts";
 
 // =============================================================================
 // 統一Interface定義

@@ -11,7 +11,7 @@
  */
 
 // Import for convenience functions
-import { Application } from "./src/application.ts";
+import { Application } from "./src/presentation/application.ts";
 
 // =============================================================================
 // Minimal Library Exports for Programmatic Use

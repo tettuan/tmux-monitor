@@ -3,33 +3,8 @@ import {
   assertExists,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { MessageGenerator, PaneCommunicator } from "../communication.ts";
-import { PaneDetail } from "../models.ts";
-
-// Mock Logger
-class MockLogger {
-  debug = (msg: string) => console.log(`DEBUG: ${msg}`);
-  info = (msg: string) => console.log(`INFO: ${msg}`);
-  error = (msg: string) => console.error(`ERROR: ${msg}`);
-  warn = (msg: string) => console.warn(`WARN: ${msg}`);
-}
-
-// Mock CommandExecutor
-class MockCommandExecutor {
-  execute = (command: string[]) => {
-    if (command.includes("tmux") && command.includes("send-keys")) {
-      return Promise.resolve({ ok: true, data: "" });
-    }
-    return Promise.resolve({ ok: false, error: "Unknown command" });
-  };
-
-  executeTmuxCommand = (_command: string) => {
-    return Promise.resolve({ ok: true as const, data: "mock output" });
-  };
-
-  killAllPanes = () => {
-    return Promise.resolve({ ok: true as const, data: "mock kill all panes" });
-  };
-}
+import { PaneDetail } from "../../core/models.ts";
+import { MockCommandExecutor, MockLogger } from "../../core/test-utils.ts";
 
 // Mock PaneDetail factory
 function createMockPaneDetail(

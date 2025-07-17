@@ -24,6 +24,25 @@
 export type Result<T, E> = { ok: true; data: T } | { ok: false; error: E };
 
 /**
+ * Commonly used Result type with ValidationError for domain operations.
+ *
+ * This type alias eliminates ~100 repetitions of "Result<T, ValidationError & { message: string }>"
+ * across the codebase while maintaining type safety and totality principles.
+ *
+ * @template T - The type of successful result data
+ * @example
+ * ```typescript
+ * function validatePaneId(id: string): ValidationResult<PaneId> {
+ *   return PaneId.create(id);
+ * }
+ * ```
+ */
+export type ValidationResult<T> = Result<
+  T,
+  ValidationError & { message: string }
+>;
+
+/**
  * Interface for keyboard interrupt handling and cancellation management.
  *
  * Provides methods for setting up keyboard interrupt detection,
@@ -121,6 +140,7 @@ export type ValidationError =
   | { kind: "IllegalState"; currentState?: string; expectedState?: string }
   | { kind: "RepositoryError"; operation?: string; details?: string }
   | { kind: "CommunicationFailed"; target?: string; details?: string }
+  | { kind: "CommandExecutionFailed"; command?: string; details?: string }
   | { kind: "MigrationFailed"; from?: string; to?: string; details?: string };
 
 /**
@@ -224,6 +244,12 @@ export const getDefaultMessage = (error: ValidationError): string => {
           error.details || "connection error"
         }`
         : `Communication failed: ${error.details || "connection error"}`;
+    case "CommandExecutionFailed":
+      return error.command
+        ? `Command execution failed: ${error.command}: ${
+          error.details || "execution error"
+        }`
+        : `Command execution failed: ${error.details || "execution error"}`;
     case "MigrationFailed":
       return error.from
         ? `Migration failed from ${error.from} to ${error.to || "target"}: ${

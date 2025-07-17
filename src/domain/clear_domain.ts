@@ -1,4 +1,8 @@
-import { createError, type Result, type ValidationError } from "../types.ts";
+import {
+  createError,
+  type Result,
+  type ValidationError,
+} from "../core/types.ts";
 
 // =============================================================================
 // Clear Domain Models - Following Totality Principles

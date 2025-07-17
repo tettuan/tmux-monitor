@@ -1,5 +1,5 @@
-import type { PaneDetail } from "./models.ts";
-import type { Logger } from "./services.ts";
+import type { PaneDetail } from "../core/models.ts";
+import type { Logger } from "../infrastructure/services.ts";
 
 /**
  * Pane display manager for formatting and outputting pane information.

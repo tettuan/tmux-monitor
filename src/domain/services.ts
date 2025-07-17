@@ -5,16 +5,16 @@
  * 単一の集約に属さない概念を扱うサービス。
  */
 
-import type { Result, ValidationError } from "../types.ts";
-import { createError } from "../types.ts";
+import type { Result, ValidationError } from "../core/types.ts";
+import { createError } from "../core/types.ts";
 import type { Pane } from "./pane.ts";
 import {
   type MonitoringCycle,
   type PaneId,
   PaneName,
 } from "./value_objects.ts";
-import type { WorkerStatus } from "../models.ts";
-import { PANE_NAMES } from "../config.ts";
+import type { WorkerStatus } from "../core/models.ts";
+import { PANE_NAMES } from "../core/config.ts";
 
 // =============================================================================
 // PaneCollection - ペイン群の管理

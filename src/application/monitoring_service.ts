@@ -5,21 +5,16 @@
  * ドメインロジックのオーケストレーションと外部サービスとの協調を担当。
  */
 
-import type { Result, ValidationError } from "../types.ts";
-import { createError } from "../types.ts";
+import type { Result, ValidationError } from "../core/types.ts";
+import { createError } from "../core/types.ts";
 import { Pane } from "../domain/pane.ts";
+import { PaneId, type PaneName as _PaneName } from "../domain/value_objects.ts";
 import {
-  MonitoringCycle,
-  PaneId,
-  type PaneName as _PaneName,
-} from "../domain/value_objects.ts";
-import {
-  MonitoringCycleService,
   PaneCollection,
   PaneNamingService,
   StatusTransitionService,
 } from "../domain/services.ts";
-import type { WorkerStatus } from "../models.ts";
+import type { WorkerStatus } from "../core/models.ts";
 
 // =============================================================================
 // インフラストラクチャ層のインターフェース定義
@@ -77,7 +72,6 @@ export class MonitoringApplicationService {
   private readonly _tmuxRepository: ITmuxSessionRepository;
   private readonly _communicator: IPaneCommunicator;
   private readonly _paneCollection: PaneCollection;
-  private _cycleService: MonitoringCycleService | null = null;
   private readonly _captureDetectionService?:
     import("../domain/capture_detection_service.ts").CaptureDetectionService;
 
@@ -106,7 +100,7 @@ export class MonitoringApplicationService {
    */
   async startMonitoring(
     sessionName?: string,
-    intervalSeconds: number = 30,
+    _intervalSeconds: number = 30,
   ): Promise<Result<void, ValidationError & { message: string }>> {
     try {
       // フェーズ1: セッション発見とペイン作成
@@ -122,19 +116,6 @@ export class MonitoringApplicationService {
       }
 
       // フェーズ3: 監視サイクル開始
-      const cycleResult = MonitoringCycle.create("Discovery", intervalSeconds);
-      if (!cycleResult.ok) {
-        return {
-          ok: false,
-          error: cycleResult.error,
-        };
-      }
-
-      this._cycleService = new MonitoringCycleService(
-        cycleResult.data,
-        this._paneCollection,
-      );
-
       return { ok: true, data: undefined };
     } catch (error) {
       return {
@@ -142,65 +123,6 @@ export class MonitoringApplicationService {
         error: createError({
           kind: "UnexpectedError",
           operation: "monitoring startup",
-          details: error instanceof Error ? error.message : String(error),
-        }),
-      };
-    }
-  }
-
-  /**
-   * 単一監視サイクルの実行
-   *
-   * 30秒間隔での監視処理を実行
-   */
-  async executeSingleCycle(): Promise<
-    Result<MonitoringCycleResult, ValidationError & { message: string }>
-  > {
-    if (!this._cycleService) {
-      return {
-        ok: false,
-        error: createError({
-          kind: "IllegalState",
-          currentState: "not initialized",
-          expectedState: "monitoring started",
-        }),
-      };
-    }
-
-    try {
-      // 現在のフェーズを実行
-      const phaseResult = this._cycleService.executeCurrentPhase();
-      if (!phaseResult.ok) {
-        return phaseResult;
-      }
-
-      // 具体的な監視処理
-      const monitoringResult = await this.executeMonitoringPhase();
-      if (!monitoringResult.ok) {
-        return monitoringResult;
-      }
-
-      // サイクルを次に進める
-      const advanceResult = this._cycleService.advance();
-      if (!advanceResult.ok) {
-        return advanceResult;
-      }
-
-      const result: MonitoringCycleResult = {
-        phase: this._cycleService.currentCycle.phase,
-        cycleCount: this._cycleService.currentCycle.cycleCount,
-        statusChanges: monitoringResult.data.statusChanges,
-        newlyIdlePanes: monitoringResult.data.newlyIdlePanes,
-        newlyWorkingPanes: monitoringResult.data.newlyWorkingPanes,
-      };
-
-      return { ok: true, data: result };
-    } catch (error) {
-      return {
-        ok: false,
-        error: createError({
-          kind: "UnexpectedError",
-          operation: "monitoring cycle execution",
           details: error instanceof Error ? error.message : String(error),
         }),
       };
@@ -437,90 +359,6 @@ export class MonitoringApplicationService {
   /**
    * 監視フェーズの実行
    */
-  /**
-   * 監視フェーズの実行（イベント駆動アーキテクチャ）
-   *
-   * Paneのイベント受信による自己状態更新を活用し、
-   * 監視サービスは完了報告を受け取って統計を更新する
-   */
-  private async executeMonitoringPhase(): Promise<
-    Result<MonitoringPhaseResult, ValidationError & { message: string }>
-  > {
-    const targetPanes = this._paneCollection.getMonitoringTargets();
-    const statusChanges: Array<
-      { paneId: string; oldStatus: string; newStatus: string }
-    > = [];
-    const newlyIdlePanes: string[] = [];
-    const newlyWorkingPanes: string[] = [];
-
-    // イベント駆動アーキテクチャ: 各Paneにリフレッシュイベントを送信
-    for (const pane of targetPanes) {
-      try {
-        // Paneの境界内で自己状態更新を実行（キャプチャサービス統合版）
-        const updateResult = await pane.handleRefreshEvent({
-          getTitle: (paneId: string) =>
-            this._tmuxRepository.executeTmuxCommand([
-              "tmux",
-              "display-message",
-              "-p",
-              "-t",
-              paneId,
-              "#{pane_title}",
-            ]).then((result) =>
-              result.ok ? { ok: true, data: result.data.trim() } : result
-            ),
-        }, this._captureDetectionService); // キャプチャサービスを統合
-
-        if (updateResult.ok) {
-          const update = updateResult.data;
-
-          // 完了報告を受け取って統計を更新
-          if (update.statusChanged) {
-            statusChanges.push({
-              paneId: update.paneId,
-              oldStatus: update.oldStatus,
-              newStatus: update.newStatus,
-            });
-
-            // 新しい状態に基づく分類
-            if (update.newStatus === "IDLE") {
-              newlyIdlePanes.push(update.paneId);
-            } else if (update.newStatus === "WORKING") {
-              newlyWorkingPanes.push(update.paneId);
-            }
-          }
-
-          // 状態変更があった場合のみログ出力（冗長性を削減）
-          if (update.oldStatus !== update.newStatus) {
-            console.log(
-              `✅ Pane ${update.paneId} updated: ${update.oldStatus} → ${update.newStatus}`,
-            );
-          }
-        } else {
-          console.warn(
-            `⚠️ Pane ${pane.id.value} failed to self-update: ${updateResult.error.message}`,
-          );
-          // エラーは続行（堅牢性のため）
-        }
-      } catch (error) {
-        console.error(
-          `❌ Error sending refresh event to pane ${pane.id.value}:`,
-          error,
-        );
-        // エラーは続行
-      }
-    }
-
-    return {
-      ok: true,
-      data: {
-        statusChanges,
-        newlyIdlePanes,
-        newlyWorkingPanes,
-      },
-    };
-  }
-
   /**
    * コマンドの分類
    */
@@ -781,29 +619,11 @@ export class MonitoringApplicationService {
 // 結果型の定義
 // =============================================================================
 
-export interface MonitoringCycleResult {
-  phase: string;
-  cycleCount: number;
-  statusChanges: Array<
-    { paneId: string; oldStatus: string; newStatus: string }
-  >;
-  newlyIdlePanes: string[];
-  newlyWorkingPanes: string[];
-}
-
 export interface StatusUpdateResult {
   updatedCount: number;
   changedPanes: string[];
   newIdlePanes: string[];
   newDonePanes: string[];
-}
-
-export interface MonitoringPhaseResult {
-  statusChanges: Array<
-    { paneId: string; oldStatus: string; newStatus: string }
-  >;
-  newlyIdlePanes: string[];
-  newlyWorkingPanes: string[];
 }
 
 /**

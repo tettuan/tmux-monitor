@@ -1,5 +1,9 @@
-import { createError, type Result, type ValidationError } from "./types.ts";
-import { globalCancellationToken } from "./cancellation.ts";
+import {
+  createError,
+  type Result,
+  type ValidationError,
+} from "../core/types.ts";
+import { globalCancellationToken } from "../core/cancellation.ts";
 
 // =============================================================================
 // Core Infrastructure Services

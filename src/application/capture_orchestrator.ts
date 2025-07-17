@@ -5,8 +5,8 @@
  * DDD設計に従い、ドメインサービスを活用してアプリケーション機能を実現。
  */
 
-import type { Result, ValidationError } from "../types.ts";
-import { createError } from "../types.ts";
+import type { Result, ValidationError } from "../core/types.ts";
+import { createError } from "../core/types.ts";
 import { CaptureDetectionService } from "../domain/capture_detection_service.ts";
 import {
   type ICommandExecutor,

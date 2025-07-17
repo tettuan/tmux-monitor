@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.208.0/assert/mod.ts";
-import { MonitoringOptions } from "../models.ts";
+import { MonitoringOptions } from "../../core/models.ts";
 
 // 単純なMonitoringOptionsのテストのみに集中
 Deno.test("ArgumentParser - start-claude flag creates correct MonitoringOptions", () => {

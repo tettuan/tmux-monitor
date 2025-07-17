@@ -4,7 +4,7 @@ import {
   assertExists,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { ArgumentParser } from "../arguments.ts";
-import { Logger, TimeManager } from "../services.ts";
+import { Logger, TimeManager } from "../../infrastructure/services.ts";
 
 // =============================================================================
 // Mock classes for testing
@@ -13,6 +13,11 @@ import { Logger, TimeManager } from "../services.ts";
 class MockTimeManager extends TimeManager {
   constructor() {
     super();
+  }
+
+  // Override methods for predictable testing
+  override getCurrentTime(): Date {
+    return new Date("2024-01-01T10:00:00");
   }
 }
 

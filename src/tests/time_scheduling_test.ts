@@ -2,7 +2,7 @@ import {
   assert,
   assertEquals,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { ValidatedTime } from "../models.ts";
+import { ValidatedTime } from "../core/models.ts";
 
 /**
  * Unit tests for time scheduling and conversion logic

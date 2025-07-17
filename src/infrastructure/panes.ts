@@ -1,8 +1,16 @@
-import { createError, type Result, type ValidationError } from "./types.ts";
-import { PaneDetail, type WorkerStatus, WorkerStatusParser } from "./models.ts";
-import { Pane } from "./domain/pane.ts";
+import {
+  createError,
+  type Result,
+  type ValidationError,
+} from "../core/types.ts";
+import {
+  PaneDetail,
+  type WorkerStatus,
+  WorkerStatusParser,
+} from "../core/models.ts";
+import { Pane } from "../domain/pane.ts";
 import type { CommandExecutor, Logger } from "./services.ts";
-import { WORKER_STATUS_TYPES } from "./config.ts";
+import { WORKER_STATUS_TYPES } from "../core/config.ts";
 
 // =============================================================================
 // Pane Processing and Management
@@ -212,7 +220,7 @@ Start Command: #{pane_start_command}'`,
     try {
       // 統合CaptureAdapterを使用（新しい実装）
       const { TmuxCaptureAdapter } = await import(
-        "./infrastructure/unified_capture_adapter.ts"
+        "./unified_capture_adapter.ts"
       );
 
       // CommandExecutorのアダプター作成（型の橋渡し）

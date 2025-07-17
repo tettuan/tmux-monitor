@@ -2,9 +2,9 @@ import {
   assert,
   assertEquals,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { ArgumentParser } from "../arguments.ts";
-import { Logger, TimeManager } from "../services.ts";
-import { TimeCalculator } from "../time_calculator.ts";
+import { ArgumentParser } from "../presentation/arguments.ts";
+import { Logger, TimeManager } from "../infrastructure/services.ts";
+import { TimeCalculator } from "../utils/time_calculator.ts";
 
 /**
  * Unit tests for ArgumentParser time scheduling integration

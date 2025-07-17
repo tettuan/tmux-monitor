@@ -7,13 +7,13 @@
  * 【統合版】: 統合CaptureDetectionServiceを使用してcapture機能を一元化
  */
 
-import type { Result } from "../types.ts";
+import type { Result } from "../core/types.ts";
 import type {
   IPaneCommunicator,
   ITmuxSessionRepository,
   RawPaneData,
 } from "../application/monitoring_service.ts";
-import type { CommandExecutor, Logger } from "../services.ts";
+import type { CommandExecutor, Logger } from "./services.ts";
 import {
   CaptureDetectionService,
   InMemoryCaptureHistory,
@@ -60,7 +60,7 @@ export class TmuxSessionAdapter implements ITmuxSessionRepository {
       }
 
       // 出力のパース
-      const lines = result.data.split("\n").filter((line) =>
+      const lines = result.data.split("\n").filter((line: string) =>
         line.trim() !== ""
       );
       const panes: RawPaneData[] = [];

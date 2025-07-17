@@ -1,21 +1,10 @@
 import { assertExists } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { MonitoringEngine } from "../engine.ts";
+import { MockLogger, MockTimeManager } from "../../core/test-utils.ts";
 
 class MockCommunicator {
   sendInstructionFile = () => Promise.resolve({ ok: true, data: null });
   sendToPane = () => Promise.resolve({ ok: true, data: null });
-}
-
-class MockTimeManager {
-  sleep = (_ms: number) => Promise.resolve();
-  now = () => new Date();
-}
-
-class MockLogger {
-  debug = (msg: string) => console.log(`DEBUG: ${msg}`);
-  info = (msg: string) => console.log(`INFO: ${msg}`);
-  error = (msg: string) => console.error(`ERROR: ${msg}`);
-  warn = (msg: string) => console.warn(`WARN: ${msg}`);
 }
 
 // Test basic functionality without full MonitoringEngine construction

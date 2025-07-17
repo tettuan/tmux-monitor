@@ -1,5 +1,9 @@
-import { createError, type Result, type ValidationError } from "./types.ts";
-import { PaneDetail } from "./models.ts";
+import {
+  createError,
+  type Result,
+  type ValidationError,
+} from "../core/types.ts";
+import { PaneDetail } from "../core/models.ts";
 import type { CommandExecutor, Logger } from "./services.ts";
 
 /**

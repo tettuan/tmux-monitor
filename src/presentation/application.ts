@@ -1,8 +1,12 @@
-import type { CommandExecutor, Logger } from "./services.ts";
+import type { CommandExecutor, Logger } from "../infrastructure/services.ts";
 import type { ArgumentParser } from "./arguments.ts";
-import type { KeyboardHandler, RuntimeTracker, TimeManager } from "./types.ts";
-import { DIContainer } from "./container.ts";
-import { globalCancellationToken } from "./cancellation.ts";
+import type {
+  KeyboardHandler,
+  RuntimeTracker,
+  TimeManager,
+} from "../core/types.ts";
+import { DIContainer } from "../core/container.ts";
+import { globalCancellationToken } from "../core/cancellation.ts";
 
 /**
  * Main Application Class - Orchestrates the entire tmux monitoring process.

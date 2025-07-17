@@ -2,8 +2,8 @@ import {
   assert,
   assertEquals,
 } from "https://deno.land/std@0.208.0/assert/mod.ts";
-import { MonitoringOptions, ValidatedTime } from "../models.ts";
-import { TIMING } from "../config.ts";
+import { MonitoringOptions, ValidatedTime } from "../core/models.ts";
+import { MONITORING_CONFIG } from "../core/constants.ts";
 
 /**
  * 時間指定の指示書実行機能のテスト
@@ -216,8 +216,8 @@ Deno.test("Requirements - 4時間実行制限の設定確認", () => {
 });
 
 Deno.test("Requirements - 30秒ENTERサイクル設定の確認", () => {
-  // TIMING.ENTER_SEND_CYCLE_DELAY が 30秒（30000ms）に設定されていることを確認
-  assertEquals(TIMING.ENTER_SEND_CYCLE_DELAY, 30000); // 30 seconds
+  // MONITORING_CONFIG.CYCLE_INTERVAL_MS が 30秒（30000ms）に設定されていることを確認
+  assertEquals(MONITORING_CONFIG.CYCLE_INTERVAL_MS, 30000); // 30 seconds
 
   console.log("✅ 30秒ENTERサイクル設定を確認");
 });

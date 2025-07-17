@@ -1,7 +1,8 @@
-import type { Result, ValidationError } from "./types.ts";
-import { MonitoringOptions, ValidatedTime } from "./models.ts";
-import type { Logger, TimeManager } from "./services.ts";
-import type { TimeCalculator } from "./time_calculator.ts";
+import type { Result, ValidationError } from "../core/types.ts";
+import { MonitoringOptions, ValidatedTime } from "../core/models.ts";
+import type { Logger, TimeManager } from "../infrastructure/services.ts";
+import type { TimeCalculator } from "../utils/time_calculator.ts";
+import { CLI_OPTIONS } from "../core/constants.ts";
 
 // =============================================================================
 // Command Line Argument Processing
@@ -69,11 +70,11 @@ export class ArgumentParser {
         instructionFile = filePath.trim() === "" ? null : filePath;
       } else if (arg === "-i" && i + 1 < args.length) {
         instructionFile = args[i + 1];
-      } else if (arg === "--kill-all-panes") {
+      } else if (arg === CLI_OPTIONS.KILL_ALL_PANES) {
         killAllPanes = true;
-      } else if (arg === "--clear") {
+      } else if (arg === CLI_OPTIONS.CLEAR) {
         clearPanes = true;
-      } else if (arg === "--start-claude") {
+      } else if (arg === CLI_OPTIONS.START_CLAUDE) {
         startClaude = true;
       }
     }

@@ -6,8 +6,8 @@
  * 単一責任のcapture変化検出を提供。
  */
 
-import type { Result, ValidationError } from "../types.ts";
-import { createError } from "../types.ts";
+import type { Result, ValidationError } from "../core/types.ts";
+import { createError } from "../core/types.ts";
 import type {
   ICaptureAdapter,
   PaneCaptureResult,
@@ -20,7 +20,7 @@ import {
   StatusContextBuilder,
   StatusMapping,
 } from "./value_objects.ts";
-import type { WorkerStatus } from "../models.ts";
+import type { WorkerStatus } from "../core/models.ts";
 
 // =============================================================================
 // ドメインサービスインターフェース

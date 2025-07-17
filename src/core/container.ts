@@ -5,18 +5,21 @@ import {
   Logger,
   RuntimeTracker,
   TimeManager,
-} from "./services.ts";
-import { ArgumentParser } from "./arguments.ts";
+} from "../infrastructure/services.ts";
+import { ArgumentParser } from "../presentation/arguments.ts";
 import {
   PaneDataProcessor,
   PaneStatusManager,
   StatusAnalyzer,
-} from "./panes.ts";
-import { MessageGenerator, PaneCommunicator } from "./communication.ts";
-import { PaneDisplayer } from "./display.ts";
-import { CIManager } from "./ci.ts";
-import { TmuxSession } from "./session.ts";
-import { MonitoringEngine } from "./engine.ts";
+} from "../infrastructure/panes.ts";
+import {
+  MessageGenerator,
+  PaneCommunicator,
+} from "../infrastructure/communication.ts";
+import { PaneDisplayer } from "../presentation/display.ts";
+import { CIManager } from "../infrastructure/ci.ts";
+import { TmuxSession } from "../infrastructure/session.ts";
+import { MonitoringEngine } from "../application/engine.ts";
 
 /**
  * Dependency injection container for managing application dependencies.

@@ -3,7 +3,7 @@ import {
   comparePaneIds,
   extractPaneNumber,
   sortPaneIds,
-} from "../src/utils.ts";
+} from "../src/utils/pane_utils.ts";
 
 Deno.test("extractPaneNumber - extracts number from pane ID", () => {
   assertEquals(extractPaneNumber("%1"), 1);

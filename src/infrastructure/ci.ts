@@ -1,4 +1,4 @@
-import type { Result, ValidationError } from "./types.ts";
+import type { Result, ValidationError } from "../core/types.ts";
 import type { CommandExecutor, Logger } from "./services.ts";
 
 /**
