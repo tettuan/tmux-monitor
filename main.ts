@@ -64,7 +64,7 @@
  * - `--time=HH:MM` or `-t HH:MM`: Schedule monitoring start time
  * - `--instruction=PATH` or `-i PATH`: Load instruction file with startup commands
  * - `--kill-all-panes`: Safely terminate all tmux panes (SIGTERM first, then SIGKILL)
- * - `--clear`: Send "/clear" command to Node.js panes only (one-time execution then exit)
+ * - `--clear`: Send complete clear sequence to Node.js panes (Escape x2, Tab, "/clear", Enter with 0.2s intervals, one-time execution then exit)
  * - `--start-claude`: Start Claude (`cld` command) if not already running in any pane
  *
  * ## Default Behavior

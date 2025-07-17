@@ -81,15 +81,16 @@ export class TmuxClearService implements PaneClearService {
     while (retryCount <= maxRetries) {
       try {
         console.log(
-          `🔧 Attempting to clear pane ${paneId} (attempt ${retryCount + 1}/${
+          `Attempting to clear pane ${paneId} (attempt ${retryCount + 1}/${
             maxRetries + 1
           })`,
         );
 
-        // 1. クリアコマンドの送信（Claude特有の方法を試す）
+        // 1. クリアコマンドの送信（ユーザー提供のbashスクリプトと同等の手順を試す）
         let sendResult;
         if (retryCount === 0) {
-          // 最初は /clear を試す（通常のペイン用）- 0.2秒間隔でEnterを分離送信
+          // 最初は完全なクリアシーケンスを試す:
+          // Escape x2 -> Tab -> /clear -> Enter（各ステップ0.2秒間隔）
           sendResult = await this.communicator.sendClearCommand(paneId);
         } else if (retryCount === 1) {
           // 2回目は単一 Escape キー（Claude UI用）
@@ -97,7 +98,7 @@ export class TmuxClearService implements PaneClearService {
         } else {
           // 3回目以降は段階的Escapeキーでクリア（Claude最適化版）
           console.log(
-            `🔧 Starting incremental escape key clearing for Claude pane ${paneId}`,
+            `Starting incremental escape key clearing for Claude pane ${paneId}`,
           );
 
           // 最大3回のEscapeキーを段階的に送信
@@ -133,7 +134,7 @@ export class TmuxClearService implements PaneClearService {
               ? sendResult.error.message
               : "Unknown error";
             console.log(
-              `⚠️ Retry ${retryCount} for pane ${paneId} due to: ${errorMessage}`,
+              `Retry ${retryCount} for pane ${paneId} due to: ${errorMessage}`,
             );
             await this.delay(1000); // 1秒待機してリトライ
             continue;
@@ -174,7 +175,7 @@ export class TmuxClearService implements PaneClearService {
         ) {
           retryCount++;
           console.log(
-            `⚠️ Verification failed for pane ${paneId}, retry ${retryCount}: ${verificationResult.reason}`,
+            `Verification failed for pane ${paneId}, retry ${retryCount}: ${verificationResult.reason}`,
           );
           await this.delay(1000);
           continue;
@@ -290,7 +291,7 @@ export class TmuxClearService implements PaneClearService {
 
       if (!captureResult.ok) {
         console.log(
-          `❌ Failed to capture pane ${paneId}: ${captureResult.error.message}`,
+          `Failed to capture pane ${paneId}: ${captureResult.error.message}`,
         );
         return {
           kind: "NotCleared",
@@ -356,7 +357,7 @@ export class TmuxClearService implements PaneClearService {
         };
       }
     } catch (error) {
-      console.log(`💥 Verification error for pane ${paneId}: ${error}`);
+      console.log(`Verification error for pane ${paneId}: ${error}`);
       return {
         kind: "NotCleared",
         content: "",

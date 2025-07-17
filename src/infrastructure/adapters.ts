@@ -357,14 +357,79 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
   }
 
   /**
-   * /clearコマンドの専用送信（Enterキーを分離）
+   * /clearコマンドの専用送信（ユーザー提供コマンドと同等の処理）
    *
-   * /clearコマンドを送信し、0.2秒待機してから別途Enterキーを送信します。
-   * これによりClaudeの適切なクリア動作を確保します。
+   * 以下の手順でクリアコマンドを送信します：
+   * 1. Escapeキー2回送信（0.2秒間隔）- コマンドモードから確実に抜ける
+   * 2. Tabキー送信 - オートコンプリート等をクリア
+   * 3. /clearコマンド送信
+   * 4. Enterキー送信
+   * これによりユーザー提供のbashスクリプトと同等の動作を実現します。
    */
   async sendClearCommand(paneId: string): Promise<Result<void, Error>> {
-    try {
-      // 1. /clearコマンドを送信（Enterキーなし）
+    try { // 1. 事前のEscapeキー2回送信（0.2秒間隔）
+      this.logger.debug(`Sending preparatory Escape keys to pane ${paneId}`);
+
+      // 1回目のEscape
+      const escape1Result = await this.commandExecutor.execute([
+        "tmux",
+        "send-keys",
+        "-t",
+        paneId,
+        "Escape",
+      ]);
+      if (!escape1Result.ok) {
+        return {
+          ok: false,
+          error: new Error(
+            `Failed to send first Escape key to pane ${paneId}: ${escape1Result.error.message}`,
+          ),
+        };
+      }
+
+      // 0.2秒待機
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // 2回目のEscape
+      const escape2Result = await this.commandExecutor.execute([
+        "tmux",
+        "send-keys",
+        "-t",
+        paneId,
+        "Escape",
+      ]);
+      if (!escape2Result.ok) {
+        return {
+          ok: false,
+          error: new Error(
+            `Failed to send second Escape key to pane ${paneId}: ${escape2Result.error.message}`,
+          ),
+        };
+      }
+
+      this.logger.debug(`Escape keys sent to pane ${paneId}`);
+
+      // 2. Tabキーを送信
+      const tabResult = await this.commandExecutor.execute([
+        "tmux",
+        "send-keys",
+        "-t",
+        paneId,
+        "Tab",
+      ]);
+      if (!tabResult.ok) {
+        return {
+          ok: false,
+          error: new Error(
+            `Failed to send Tab key to pane ${paneId}: ${tabResult.error.message}`,
+          ),
+        };
+      }
+
+      // 0.2秒待機
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // 3. /clearコマンドを送信（Enterキーなし）
       const clearCommand = ["tmux", "send-keys", "-t", paneId, "/clear"];
       const clearResult = await this.commandExecutor.execute(clearCommand);
 
@@ -379,10 +444,10 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
 
       this.logger.debug(`/clear command sent to pane ${paneId}`);
 
-      // 2. 0.2秒待機
+      // 0.2秒待機
       await new Promise((resolve) => setTimeout(resolve, 200));
 
-      // 3. Enterキーを送信
+      // 4. Enterキーを送信
       const enterResult = await this.sendEnter(paneId);
       if (!enterResult.ok) {
         return {
@@ -393,13 +458,15 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
         };
       }
 
-      this.logger.info(`Clear command sequence completed for pane ${paneId}`);
+      this.logger.info(
+        `Complete clear command sequence executed for pane ${paneId}`,
+      );
       return { ok: true, data: undefined };
     } catch (error) {
       return {
         ok: false,
         error: new Error(
-          `Unexpected error sending clear command to pane ${paneId}: ${error}`,
+          `Unexpected error sending clear command sequence to pane ${paneId}: ${error}`,
         ),
       };
     }
