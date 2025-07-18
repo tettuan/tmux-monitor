@@ -448,7 +448,7 @@ export class MonitoringApplicationService {
 
   /**
    * 全ペインのcapture処理実行
-   * 
+   *
    * MonitoringCycleCoordinatorから呼び出されるcapture処理の統合ポイント
    */
   async processAllPanesCapture(): Promise<
@@ -458,10 +458,12 @@ export class MonitoringApplicationService {
     >
   > {
     const allPanes = this._paneCollection.getAllPanes();
-    
+
     if (this._captureOrchestrator) {
       // CaptureOrchestratorを使用した統合処理
-      const captureResult = await this._captureOrchestrator.processAllPanes(allPanes);
+      const captureResult = await this._captureOrchestrator.processAllPanes(
+        allPanes,
+      );
       if (captureResult.ok) {
         return {
           ok: true,
@@ -477,19 +479,22 @@ export class MonitoringApplicationService {
       // フォールバック: CaptureDetectionServiceを直接使用
       const changedPaneIds: string[] = [];
       for (const pane of allPanes) {
-        const detectionResult = await this._captureDetectionService.detectChanges(
-          pane.id.value,
-          [pane.title, pane.currentCommand],
-        );
-        
+        const detectionResult = await this._captureDetectionService
+          .detectChanges(
+            pane.id.value,
+            [pane.title, pane.currentCommand],
+          );
+
         if (detectionResult.ok) {
-          const updateResult = pane.updateCaptureStateFromDetection(detectionResult.data);
+          const updateResult = pane.updateCaptureStateFromDetection(
+            detectionResult.data,
+          );
           if (updateResult.ok && detectionResult.data.hasContentChanged) {
             changedPaneIds.push(pane.id.value);
           }
         }
       }
-      
+
       return {
         ok: true,
         data: {

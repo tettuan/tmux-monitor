@@ -396,7 +396,14 @@ export class Pane {
   ): boolean {
     // 許可される遷移パターンの定義
     const allowedTransitions: Record<string, string[]> = {
-      "UNKNOWN": ["UNKNOWN", "IDLE", "WORKING", "BLOCKED", "DONE", "TERMINATED"], // UNKNOWN -> UNKNOWN を許可
+      "UNKNOWN": [
+        "UNKNOWN",
+        "IDLE",
+        "WORKING",
+        "BLOCKED",
+        "DONE",
+        "TERMINATED",
+      ], // UNKNOWN -> UNKNOWN を許可
       "IDLE": ["IDLE", "WORKING", "BLOCKED", "TERMINATED"], // IDLE -> IDLE を許可
       "WORKING": ["WORKING", "IDLE", "DONE", "BLOCKED", "TERMINATED"], // WORKING -> WORKING を許可
       "BLOCKED": ["BLOCKED", "IDLE", "WORKING", "TERMINATED"], // BLOCKED -> BLOCKED を許可
