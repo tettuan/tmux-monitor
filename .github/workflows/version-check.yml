@@ -49,45 +49,45 @@ jobs:
           }
           EOF
 
-      - name: Check src/version.ts VERSION matches deno.json and tag
+      - name: Check src/core/version.ts VERSION matches deno.json and tag
         if: steps.check_tags.outputs.tags_exist == 'true'
         run: |
           deno run --allow-read - <<'EOF'
           const denoJson = JSON.parse(await Deno.readTextFile("deno.json"));
           const denoVersion = denoJson.version.replace(/^v/, "");
           const tagVersion = "${{ steps.check_tags.outputs.tag_version }}".replace(/^v/, "");
-          const versionTs = await Deno.readTextFile("src/version.ts");
+          const versionTs = await Deno.readTextFile("src/core/version.ts");
           const match = versionTs.match(/export const VERSION = \"([^\"]+)\"/);
           if (!match) {
-            console.error("VERSION constant not found in src/version.ts");
+            console.error("VERSION constant not found in src/core/version.ts");
             Deno.exit(1);
           }
           const versionConst = match[1].replace(/^v/, "");
           if (denoVersion !== versionConst || tagVersion !== versionConst) {
-            console.error(`Version mismatch!\n deno.json: ${denoVersion}\n src/version.ts: ${versionConst}\n git tag: ${tagVersion}`);
+            console.error(`Version mismatch!\n deno.json: ${denoVersion}\n src/core/version.ts: ${versionConst}\n git tag: ${tagVersion}`);
             Deno.exit(1);
           } else {
             console.log(`All versions match: ${denoVersion}`);
           }
           EOF
 
-      - name: Check src/version.ts VERSION matches deno.json (no tags)
+      - name: Check src/core/version.ts VERSION matches deno.json (no tags)
         if: steps.check_tags.outputs.tags_exist == 'false'
         run: |
           deno run --allow-read - <<'EOF'
           const denoJson = JSON.parse(await Deno.readTextFile("deno.json"));
           const denoVersion = denoJson.version.replace(/^v/, "");
-          const versionTs = await Deno.readTextFile("src/version.ts");
+          const versionTs = await Deno.readTextFile("src/core/version.ts");
           const match = versionTs.match(/export const VERSION = \"([^\"]+)\"/);
           if (!match) {
-            console.error("VERSION constant not found in src/version.ts");
+            console.error("VERSION constant not found in src/core/version.ts");
             Deno.exit(1);
           }
           const versionConst = match[1].replace(/^v/, "");
           if (denoVersion !== versionConst) {
-            console.error(`Version mismatch!\n deno.json: ${denoVersion}\n src/version.ts: ${versionConst}`);
+            console.error(`Version mismatch!\n deno.json: ${denoVersion}\n src/core/version.ts: ${versionConst}`);
             Deno.exit(1);
           } else {
-            console.log(`deno.json and src/version.ts versions match: ${denoVersion}`);
+            console.log(`deno.json and src/core/version.ts versions match: ${denoVersion}`);
           }
           EOF
