@@ -496,6 +496,21 @@ export class Pane {
     return !this.isTerminated() && !this._isActive;
   }
 
+  /**
+   * worker役割かどうか
+   */
+  isWorkerRole(): boolean {
+    return this._name?.isWorker() || false;
+  }
+
+  /**
+   * clear処理の対象かどうか
+   * worker役割のペインのみがclear対象
+   */
+  shouldBeClearedWhenIdle(): boolean {
+    return this.isWorkerRole() && (this.isIdle() || this.isDone());
+  }
+
   // =============================================================================
   // 等価性とハッシュ
   // =============================================================================

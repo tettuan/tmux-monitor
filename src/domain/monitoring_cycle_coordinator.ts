@@ -386,9 +386,9 @@ export class MonitoringCycleCoordinator
             break;
 
           case "CLEAR_IDLE_PANES":
-            // アイドル状態ペインのクリア要求
+            // worker役割かつアイドル状態ペインのクリア要求
             for (const pane of paneCollection.getAllPanes()) {
-              if (pane.status.kind === "IDLE" || pane.status.kind === "DONE") {
+              if (pane.shouldBeClearedWhenIdle()) {
                 const clearEvent = DomainEventFactory
                   .createPaneClearRequestedEvent(
                     pane.id.value,

@@ -39,9 +39,13 @@ Deno.test("PaneNamingService - sequential assignment with sorted panes", () => {
       const assignments = assignmentResult.data;
 
       // Verify assignments follow the expected order
+      // %0 → index 0 → PANE_NAMES[0] = "main"
       assertEquals(assignments.get("%0")?.value, "main");
+      // %1 → index 1 → PANE_NAMES[1] = "manager1"
       assertEquals(assignments.get("%1")?.value, "manager1");
+      // %2 → index 2 → PANE_NAMES[2] = "manager2"
       assertEquals(assignments.get("%2")?.value, "manager2");
+      // %10 → index 3 → PANE_NAMES[3] = "secretary"
       assertEquals(assignments.get("%10")?.value, "secretary");
     }
   }
@@ -80,11 +84,11 @@ Deno.test("PaneNamingService - handles more panes than configured names", () => 
     assertEquals(assignments.get("%4")?.value, "worker1");
 
     // Verify later ones use dynamic generation
-    // %24 is at index 24 in sorted array → worker21 (24 - 24 + 21 = 21)
+    // %24 → index 24 → dynamic generation = worker21 (24 - 24 + 21)
     assertEquals(assignments.get("%24")?.value, "worker21");
-    // %25 is at index 25 in sorted array → worker22 (25 - 24 + 21 = 22)
+    // %25 → index 25 → dynamic generation = worker22 (25 - 24 + 21)
     assertEquals(assignments.get("%25")?.value, "worker22");
-    // %29 is at index 29 in sorted array → worker26 (29 - 24 + 21 = 26)
+    // %29 → index 29 → dynamic generation = worker26 (29 - 24 + 21)
     assertEquals(assignments.get("%29")?.value, "worker26");
   }
 });
