@@ -3,46 +3,52 @@ import { MonitoringOptions } from "../core/models.ts";
 
 Deno.test("MonitoringOptions - start Claude option", () => {
   const options = MonitoringOptions.create(
-    false,
-    null,
-    null,
-    false,
-    false,
-    true,
+    false, // continuous
+    null, // scheduledTime
+    null, // instructionFile
+    false, // killAllPanes
+    false, // clearPanes
+    false, // clearAllPanes
+    true, // startClaude
   );
   assertEquals(options.shouldStartClaude(), true);
   assertEquals(options.shouldKillAllPanes(), false);
   assertEquals(options.shouldClearPanes(), false);
+  assertEquals(options.shouldClearAllPanes(), false);
 });
 
 Deno.test("MonitoringOptions - default start Claude to false", () => {
   const options = MonitoringOptions.create(
-    false,
-    null,
-    null,
-    false,
-    false,
-    false,
+    false, // continuous
+    null, // scheduledTime
+    null, // instructionFile
+    false, // killAllPanes
+    false, // clearPanes
+    false, // clearAllPanes
+    false, // startClaude
   );
   assertEquals(options.shouldStartClaude(), false);
   assertEquals(options.shouldKillAllPanes(), false);
   assertEquals(options.shouldClearPanes(), false);
+  assertEquals(options.shouldClearAllPanes(), false);
 });
 
 Deno.test("MonitoringOptions - start Claude with other options", () => {
   const scheduledTime = new Date();
   const options = MonitoringOptions.create(
-    true,
-    scheduledTime,
-    "test.txt",
-    false,
-    false,
-    true,
+    true, // continuous
+    scheduledTime, // scheduledTime
+    "test.txt", // instructionFile
+    false, // killAllPanes
+    false, // clearPanes
+    false, // clearAllPanes
+    true, // startClaude
   );
 
   assertEquals(options.shouldStartClaude(), true);
   assertEquals(options.shouldKillAllPanes(), false);
   assertEquals(options.shouldClearPanes(), false);
+  assertEquals(options.shouldClearAllPanes(), false);
   assertEquals(options.isContinuous(), true);
   assertEquals(options.isScheduled(), true);
   assertEquals(options.getScheduledTime(), scheduledTime);
@@ -52,17 +58,19 @@ Deno.test("MonitoringOptions - start Claude with other options", () => {
 Deno.test("MonitoringOptions - all flags combined", () => {
   const scheduledTime = new Date();
   const options = MonitoringOptions.create(
-    true,
-    scheduledTime,
-    "instruction.txt",
-    true,
-    true,
-    true,
+    true, // continuous
+    scheduledTime, // scheduledTime
+    "instruction.txt", // instructionFile
+    true, // killAllPanes
+    true, // clearPanes
+    true, // clearAllPanes
+    true, // startClaude
   );
 
   assertEquals(options.shouldStartClaude(), true);
   assertEquals(options.shouldKillAllPanes(), true);
   assertEquals(options.shouldClearPanes(), true);
+  assertEquals(options.shouldClearAllPanes(), true);
   assertEquals(options.isContinuous(), true);
   assertEquals(options.isScheduled(), true);
   assertEquals(options.getScheduledTime(), scheduledTime);
