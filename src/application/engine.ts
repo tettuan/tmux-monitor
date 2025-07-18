@@ -15,6 +15,11 @@ import { createError } from "../core/types.ts";
 // イベント駆動アーキテクチャのインポート
 import { SimpleDomainEventDispatcher } from "../domain/event_dispatcher.ts";
 import { MonitoringCycleCoordinator } from "../domain/monitoring_cycle_coordinator.ts";
+import {
+  EnterSendEventHandler,
+  PaneClearEventHandler,
+  PaneTitleUpdateEventHandler,
+} from "../infrastructure/event_handlers.ts";
 
 /**
  * 監視エンジン
@@ -33,6 +38,10 @@ export class MonitoringEngine {
 
     // イベント駆動アーキテクチャのセットアップ
     this._eventDispatcher = new SimpleDomainEventDispatcher(logger);
+
+    // イベントハンドラーの登録
+    this.registerEventHandlers(commandExecutor, logger);
+
     this._cycleCoordinator = new MonitoringCycleCoordinator(
       this._eventDispatcher,
       logger,
@@ -396,5 +405,38 @@ export class MonitoringEngine {
     } catch (error) {
       this._logger.error(`Clear Node panes error: ${error}`);
     }
+  }
+
+  /**
+   * イベントハンドラーの登録
+   */
+  private registerEventHandlers(
+    commandExecutor: CommandExecutor,
+    logger: Logger,
+  ): void {
+    // Enter送信イベントハンドラーの登録
+    const enterHandler = new EnterSendEventHandler(
+      commandExecutor,
+      logger,
+    );
+    this._eventDispatcher.subscribe("PaneEnterSendRequested", enterHandler);
+
+    // ペインクリアイベントハンドラーの登録
+    const clearHandler = new PaneClearEventHandler(
+      commandExecutor,
+      logger,
+    );
+    this._eventDispatcher.subscribe("PaneClearRequested", clearHandler);
+
+    // ペインタイトル更新イベントハンドラーの登録
+    const titleHandler = new PaneTitleUpdateEventHandler(
+      commandExecutor,
+      logger,
+    );
+    this._eventDispatcher.subscribe("PaneTitleChanged", titleHandler);
+
+    logger.info(
+      "✅ Event handlers registered: Enter, Clear, Title handlers",
+    );
   }
 }

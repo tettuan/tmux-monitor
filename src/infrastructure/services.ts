@@ -260,11 +260,15 @@ export class CommandExecutor {
 export class Logger {
   /**
    * Logs a debug message.
+   * Only outputs when LOG_LEVEL environment variable is set to DEBUG.
    *
    * @param message - The debug message to log
    */
   debug(message: string): void {
-    console.log(`[DEBUG] ${message}`);
+    const logLevel = Deno.env.get("LOG_LEVEL");
+    if (logLevel === "DEBUG") {
+      console.log(`[DEBUG] ${message}`);
+    }
   }
 
   /**

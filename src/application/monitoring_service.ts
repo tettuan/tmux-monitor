@@ -413,8 +413,9 @@ export class MonitoringApplicationService {
   getMonitoringStats(): MonitoringStats {
     const allPanes = this._paneCollection.getAllPanes();
 
-    // デバッグ用：ペインの詳細情報をログ出力
-    if (allPanes.length > 0) {
+    // デバッグ用：ペインの詳細情報をログ出力（LOG_LEVEL=DEBUG時のみ）
+    const logLevel = Deno.env.get("LOG_LEVEL");
+    if (logLevel === "DEBUG" && allPanes.length > 0) {
       console.log(`🔍 DEBUG: Found ${allPanes.length} panes:`);
       allPanes.slice(0, 5).forEach((pane) => {
         const statusStr = pane.status.kind || "unknown";

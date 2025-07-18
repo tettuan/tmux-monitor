@@ -11,7 +11,12 @@ import type { ICommandExecutor, ILogger, ITimeManager } from "./interfaces.ts";
  * 6ファイルで重複していた実装を集約
  */
 export class MockLogger implements ILogger {
-  readonly debug = (msg: string): void => console.log(`DEBUG: ${msg}`);
+  readonly debug = (msg: string): void => {
+    const logLevel = Deno.env.get("LOG_LEVEL");
+    if (logLevel === "DEBUG") {
+      console.log(`DEBUG: ${msg}`);
+    }
+  };
   readonly info = (msg: string): void => console.log(`INFO: ${msg}`);
   readonly error = (msg: string): void => console.error(`ERROR: ${msg}`);
   readonly warn = (msg: string): void => console.warn(`WARN: ${msg}`);
