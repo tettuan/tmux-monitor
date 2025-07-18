@@ -79,6 +79,7 @@ export class MonitoringCycleCoordinator
   private _currentCycleNumber: number = 0;
   private _isRunning: boolean = false;
   private _cycleInterval: number | null = null;
+  private _appService: import("../application/monitoring_service.ts").MonitoringApplicationService | null = null;
 
   constructor(
     eventDispatcher: EventDispatcher,
@@ -91,6 +92,13 @@ export class MonitoringCycleCoordinator
     this._eventDispatcher.subscribe("MonitoringCycleStarted", this);
     this._eventDispatcher.subscribe("PaneStatusChanged", this);
     this._eventDispatcher.subscribe("PaneCaptureStateUpdated", this);
+  }
+
+  /**
+   * MonitoringApplicationServiceの注入
+   */
+  setAppService(appService: import("../application/monitoring_service.ts").MonitoringApplicationService): void {
+    this._appService = appService;
   }
 
   /**
@@ -312,7 +320,7 @@ export class MonitoringCycleCoordinator
     plan: CyclePlan,
     paneCollection: PaneCollection,
   ): Promise<CycleExecutionResult> {
-    const statusChanges = 0;
+    let statusChanges = 0;
     let entersSent = 0;
     let clearsExecuted = 0;
     const errors: string[] = [];
@@ -321,10 +329,30 @@ export class MonitoringCycleCoordinator
       try {
         switch (action) {
           case "CAPTURE_PANE_STATES":
-            // ペイン状態キャプチャの要求を各ペインに送信
-            for (const _pane of paneCollection.getAllPanes()) {
-              // Paneが自身で状態更新を行うことをトリガー
-              // 実際の実装では、PaneのupdateCaptureStateを呼び出す
+            // MonitoringApplicationServiceを使用した統合capture処理
+            if (this._appService) {
+              const captureResult = await this._appService.processAllPanesCapture();
+              
+              if (captureResult.ok) {
+                // 変化検出結果に基づいてstatusChangesを更新
+                statusChanges += captureResult.data.changedPanes.length;
+                this._logger.debug(
+                  `📊 Capture completed: ${captureResult.data.processedPanes} panes, ${captureResult.data.changedPanes.length} changes`
+                );
+              } else {
+                errors.push(`Capture processing failed: ${captureResult.error.message}`);
+                this._logger.warn(`Failed to process captures: ${captureResult.error.message}`);
+              }
+            } else {
+              // フォールバック: 各ペインの基本的なprocessCycleEvent
+              for (const pane of paneCollection.getAllPanes()) {
+                try {
+                  await pane.processCycleEvent(this._eventDispatcher);
+                } catch (error) {
+                  this._logger.warn(`Failed to process capture for pane ${pane.id.value}: ${error}`);
+                  errors.push(`Capture failed for pane ${pane.id.value}: ${error}`);
+                }
+              }
             }
             break;
 
@@ -360,9 +388,18 @@ export class MonitoringCycleCoordinator
             break;
 
           case "UPDATE_PANE_TITLES":
-            // ペインタイトル更新は各ペインの責務
+            // ペインタイトル更新を実際に実行
+            for (const pane of paneCollection.getAllPanes()) {
+              try {
+                // 各ペインのprocessCycleEventを呼び出してタイトル更新を実行
+                await pane.processCycleEvent(this._eventDispatcher);
+              } catch (error) {
+                this._logger.warn(`Failed to update title for pane ${pane.id.value}: ${error}`);
+                errors.push(`Title update failed for pane ${pane.id.value}: ${error}`);
+              }
+            }
             this._logger.debug(
-              `📝 Title update requested for ${plan.targetPaneIds.length} panes`,
+              `📝 Title update completed for ${plan.targetPaneIds.length} panes`,
             );
             break;
 

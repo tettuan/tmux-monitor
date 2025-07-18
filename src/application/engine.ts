@@ -42,11 +42,6 @@ export class MonitoringEngine {
     // イベントハンドラーの登録
     this.registerEventHandlers(commandExecutor, logger);
 
-    this._cycleCoordinator = new MonitoringCycleCoordinator(
-      this._eventDispatcher,
-      logger,
-    );
-
     // アーキテクチャのセットアップ
     const adapters = InfrastructureAdapterFactory.createAllAdapters(
       commandExecutor,
@@ -58,6 +53,14 @@ export class MonitoringEngine {
       adapters.communicator,
       adapters.captureDetectionService,
     );
+
+    this._cycleCoordinator = new MonitoringCycleCoordinator(
+      this._eventDispatcher,
+      logger,
+    );
+
+    // MonitoringApplicationServiceをCycleCoordinatorに注入
+    this._cycleCoordinator.setAppService(this._appService);
   }
 
   /**

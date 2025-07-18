@@ -74,17 +74,22 @@ export class MonitoringApplicationService {
   private readonly _paneCollection: PaneCollection;
   private readonly _captureDetectionService?:
     import("../domain/capture_detection_service.ts").CaptureDetectionService;
+  private readonly _captureOrchestrator?:
+    import("./capture_orchestrator.ts").CaptureOrchestrator;
 
   constructor(
     tmuxRepository: ITmuxSessionRepository,
     communicator: IPaneCommunicator,
     captureDetectionService?:
       import("../domain/capture_detection_service.ts").CaptureDetectionService,
+    captureOrchestrator?:
+      import("./capture_orchestrator.ts").CaptureOrchestrator,
   ) {
     this._tmuxRepository = tmuxRepository;
     this._communicator = communicator;
     this._paneCollection = new PaneCollection();
     this._captureDetectionService = captureDetectionService;
+    this._captureOrchestrator = captureOrchestrator;
   }
 
   // =============================================================================
@@ -439,6 +444,69 @@ export class MonitoringApplicationService {
       terminatedPanes: allPanes.filter((p) => p.isTerminated()).length,
       availableForTask: allPanes.filter((p) => p.canAssignTask()).length,
     };
+  }
+
+  /**
+   * 全ペインのcapture処理実行
+   * 
+   * MonitoringCycleCoordinatorから呼び出されるcapture処理の統合ポイント
+   */
+  async processAllPanesCapture(): Promise<
+    Result<
+      { changedPanes: string[]; processedPanes: number },
+      ValidationError & { message: string }
+    >
+  > {
+    const allPanes = this._paneCollection.getAllPanes();
+    
+    if (this._captureOrchestrator) {
+      // CaptureOrchestratorを使用した統合処理
+      const captureResult = await this._captureOrchestrator.processAllPanes(allPanes);
+      if (captureResult.ok) {
+        return {
+          ok: true,
+          data: {
+            changedPanes: captureResult.data.changedPanes,
+            processedPanes: captureResult.data.processedPanes,
+          },
+        };
+      } else {
+        return { ok: false, error: captureResult.error };
+      }
+    } else if (this._captureDetectionService) {
+      // フォールバック: CaptureDetectionServiceを直接使用
+      const changedPaneIds: string[] = [];
+      for (const pane of allPanes) {
+        const detectionResult = await this._captureDetectionService.detectChanges(
+          pane.id.value,
+          [pane.title, pane.currentCommand],
+        );
+        
+        if (detectionResult.ok) {
+          const updateResult = pane.updateCaptureStateFromDetection(detectionResult.data);
+          if (updateResult.ok && detectionResult.data.hasContentChanged) {
+            changedPaneIds.push(pane.id.value);
+          }
+        }
+      }
+      
+      return {
+        ok: true,
+        data: {
+          changedPanes: changedPaneIds,
+          processedPanes: allPanes.length,
+        },
+      };
+    } else {
+      return {
+        ok: false,
+        error: createError({
+          kind: "BusinessRuleViolation",
+          rule: "CaptureServiceRequired",
+          context: "No capture service available for processing",
+        }),
+      };
+    }
   }
 
   /**

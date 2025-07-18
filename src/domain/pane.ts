@@ -284,6 +284,12 @@ export class Pane {
   updateStatus(
     newStatus: WorkerStatus,
   ): Result<void, ValidationError & { message: string }> {
+    // ビジネスルール0: キャプチャ不十分によるUNKNOWN状態の場合、既存ステータスを維持
+    if (newStatus.kind === "UNKNOWN" && this._status.kind !== "UNKNOWN") {
+      // 既存のステータスがUNKNOWN以外の場合、キャプチャ不十分でもステータスを維持
+      return { ok: true, data: undefined };
+    }
+
     // ビジネスルール1: ステータス遷移の検証
     if (!this.isValidStatusTransition(this._status, newStatus)) {
       return {
@@ -390,12 +396,12 @@ export class Pane {
   ): boolean {
     // 許可される遷移パターンの定義
     const allowedTransitions: Record<string, string[]> = {
-      "UNKNOWN": ["IDLE", "WORKING", "BLOCKED", "DONE", "TERMINATED"],
-      "IDLE": ["WORKING", "BLOCKED", "TERMINATED"],
-      "WORKING": ["IDLE", "DONE", "BLOCKED", "TERMINATED"],
-      "BLOCKED": ["IDLE", "WORKING", "TERMINATED"],
-      "DONE": ["IDLE", "WORKING"],
-      "TERMINATED": ["IDLE", "WORKING"], // 復活可能
+      "UNKNOWN": ["UNKNOWN", "IDLE", "WORKING", "BLOCKED", "DONE", "TERMINATED"], // UNKNOWN -> UNKNOWN を許可
+      "IDLE": ["IDLE", "WORKING", "BLOCKED", "TERMINATED"], // IDLE -> IDLE を許可
+      "WORKING": ["WORKING", "IDLE", "DONE", "BLOCKED", "TERMINATED"], // WORKING -> WORKING を許可
+      "BLOCKED": ["BLOCKED", "IDLE", "WORKING", "TERMINATED"], // BLOCKED -> BLOCKED を許可
+      "DONE": ["DONE", "IDLE", "WORKING", "TERMINATED"], // DONE -> TERMINATED を許可（エラー検出時）
+      "TERMINATED": ["TERMINATED", "IDLE", "WORKING"], // 復活可能、TERMINATED -> TERMINATED を許可
     };
 
     const allowedTargets = allowedTransitions[from.kind] || [];
