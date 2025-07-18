@@ -11,6 +11,7 @@
 export const CLI_OPTIONS = {
   KILL_ALL_PANES: "--kill-all-panes",
   CLEAR: "--clear",
+  CLEAR_ALL: "--clear-all",
   ONETIME: "--onetime",
   TIME: "--time",
   START_CLAUDE: "--start-claude",

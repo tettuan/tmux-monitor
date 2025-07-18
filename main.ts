@@ -41,6 +41,9 @@
  * # With clear command for Node.js panes (requires run permission)
  * deno run --allow-run jsr:@aidevtool/tmux-monitor --clear
  *
+ * # With clear-all command for all panes (requires run permission)
+ * deno run --allow-run jsr:@aidevtool/tmux-monitor --clear-all
+ *
  * # Start Claude if not running (requires run permission)
  * deno run --allow-run jsr:@aidevtool/tmux-monitor --start-claude
  * ```
@@ -56,6 +59,7 @@
  * tmux-monitor --time=14:30
  * tmux-monitor --instruction=./startup.txt
  * tmux-monitor --clear
+ * tmux-monitor --clear-all
  * tmux-monitor --start-claude
  * ```
  *
@@ -65,6 +69,7 @@
  * - `--instruction=PATH` or `-i PATH`: Load instruction file with startup commands
  * - `--kill-all-panes`: Safely terminate all tmux panes (SIGTERM first, then SIGKILL)
  * - `--clear`: Send complete clear sequence to Node.js panes (Escape x2, Tab, "/clear", Enter with 0.2s intervals, one-time execution then exit)
+ * - `--clear-all`: Send complete clear sequence to all panes regardless of state (Escape x2, Tab, "/clear", Tab, Enter with 0.2s intervals, one-time execution then exit)
  * - `--start-claude`: Start Claude (`cld` command) if not already running in any pane
  *
  * ## Default Behavior

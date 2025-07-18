@@ -55,6 +55,7 @@ export class ArgumentParser {
     let instructionFile: string | null = null;
     let killAllPanes = false;
     let clearPanes = false;
+    let clearAllPanes = false;
     let startClaude = false;
 
     // Look for time parameter (--time=HH:MM, --time HH:MM, or -t HH:MM)
@@ -91,6 +92,8 @@ export class ArgumentParser {
         killAllPanes = true;
       } else if (arg === CLI_OPTIONS.CLEAR) {
         clearPanes = true;
+      } else if (arg === CLI_OPTIONS.CLEAR_ALL) {
+        clearAllPanes = true;
       } else if (arg === CLI_OPTIONS.START_CLAUDE) {
         startClaude = true;
       } else if (arg.startsWith("-") && !this.isValidOption(arg)) {
@@ -111,9 +114,9 @@ export class ArgumentParser {
       }
     }
 
-    // Check for one-time mode override (--onetime or --clear)
+    // Check for one-time mode override (--onetime, --clear, or --clear-all)
     const oneTime = args.includes("--onetime") || args.includes("-o") ||
-      clearPanes;
+      clearPanes || clearAllPanes;
 
     // Default to continuous monitoring mode unless --onetime or --clear is specified
     const continuous = !oneTime;
@@ -124,6 +127,7 @@ export class ArgumentParser {
       instructionFile,
       killAllPanes,
       clearPanes,
+      clearAllPanes,
       startClaude,
     );
 
@@ -144,6 +148,7 @@ export class ArgumentParser {
       "--instruction",
       "-i",
       "--clear",
+      "--clear-all",
       "--kill-all-panes",
       "--start-claude",
     ];
@@ -174,6 +179,7 @@ OPTIONS:
     -t, --time <HH:MM>      Start at specified time (e.g., --time=14:30)
     -i, --instruction <FILE> Specify instruction file
     --clear                 Clear DONE/IDLE panes (one-time execution mode)
+    --clear-all             Clear all panes regardless of state (one-time execution mode)
     --kill-all-panes        Kill all worker panes
     --start-claude          Start Claude
 
@@ -192,6 +198,9 @@ EXAMPLES:
 
     # Clear panes (one-time execution)
     deno task start --clear
+
+    # Clear all panes (one-time execution)
+    deno task start --clear-all
 
     # Time specification + instruction + one-time execution
     deno task start --time=09:00 --instruction=morning.txt --onetime

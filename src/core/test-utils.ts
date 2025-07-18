@@ -50,6 +50,13 @@ export class MockCommandExecutor implements ICommandExecutor {
     console.log("Mock killAllPanes");
     return Promise.resolve({ ok: true, data: "all panes killed" });
   };
+
+  readonly clearAllPanes = (): Promise<
+    Result<string, ValidationError & { message: string }>
+  > => {
+    console.log("Mock clearAllPanes");
+    return Promise.resolve({ ok: true, data: "all panes cleared" });
+  };
 }
 
 /**

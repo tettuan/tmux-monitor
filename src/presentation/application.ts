@@ -107,6 +107,24 @@ export class Application {
       return;
     }
 
+    // Handle clear-all-panes option early
+    if (options.shouldClearAllPanes()) {
+      logger.info("🧹 Starting clear-all operation...");
+      const commandExecutor = this.container.get<CommandExecutor>(
+        "commandExecutor",
+      );
+      const clearAllResult = await commandExecutor.clearAllPanes();
+
+      if (clearAllResult.ok) {
+        logger.info(`Clear-all operation completed: ${clearAllResult.data}`);
+      } else {
+        logger.error(`Failed to clear all panes: ${clearAllResult.error.message}`);
+      }
+
+      // Exit early after clearing all panes
+      return;
+    }
+
     // Get scheduled time before logging startup information
     const scheduledTime = options.getScheduledTime();
 

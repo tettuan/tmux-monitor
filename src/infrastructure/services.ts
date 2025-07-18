@@ -241,6 +241,133 @@ export class CommandExecutor {
       };
     }
   }
+
+  /**
+   * Clears all panes by sending escape sequences and clear commands.
+   * 
+   * This method sends a comprehensive clear sequence to all panes:
+   * 1. Send two Escape keypresses (with 0.2s delay)
+   * 2. Send Tab, "/clear", Tab, Enter sequence (with 0.2s delays)
+   *
+   * @returns Promise resolving to a Result indicating success or failure
+   * @example
+   * ```typescript
+   * const result = await executor.clearAllPanes();
+   * if (result.ok) {
+   *   console.log("All panes cleared successfully");
+   * }
+   * ```
+   */
+  async clearAllPanes(): Promise<
+    Result<string, ValidationError & { message: string }>
+  > {
+    try {
+      // First, get all pane IDs with session:window.pane format
+      const listResult = await this.executeTmuxCommand(
+        "tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index}'",
+      );
+      if (!listResult.ok) {
+        return {
+          ok: false,
+          error: createError({
+            kind: "CommandFailed",
+            command: "tmux list-panes",
+            stderr: listResult.error.message,
+          }),
+        };
+      }
+
+      const paneTargets = listResult.data.split("\n").filter((target) =>
+        target.trim() !== ""
+      );
+      if (paneTargets.length === 0) {
+        return { ok: true, data: "No panes to clear" };
+      }
+
+      console.log(`[INFO] Found ${paneTargets.length} panes to clear`);
+
+      // Step 1: Send two Escape keypresses to all panes
+      console.log("[INFO] Sending Escape keypresses to all panes...");
+      for (const paneTarget of paneTargets) {
+        // First Escape
+        await this.execute([
+          "tmux",
+          "send-keys",
+          "-t",
+          paneTarget,
+          "Escape",
+        ]);
+        // Wait 0.2 seconds
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        
+        // Second Escape
+        await this.execute([
+          "tmux",
+          "send-keys",
+          "-t",
+          paneTarget,
+          "Escape",
+        ]);
+      }
+
+      // Small delay between phases
+      console.log("[INFO] Waiting before sending clear commands...");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Step 2: Send Tab, "/clear", Tab, Enter sequence to all panes
+      console.log("[INFO] Sending clear commands to all panes...");
+      for (const paneTarget of paneTargets) {
+        // Send Tab
+        await this.execute([
+          "tmux",
+          "send-keys",
+          "-t",
+          paneTarget,
+          "Tab",
+        ]);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        // Send "/clear"
+        await this.execute([
+          "tmux",
+          "send-keys",
+          "-t",
+          paneTarget,
+          "/clear",
+        ]);
+        
+        // Send Tab (note: there's a typo in the original - "send-kers" should be "send-keys")
+        await this.execute([
+          "tmux",
+          "send-keys",
+          "-t",
+          paneTarget,
+          "Tab",
+        ]);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        // Send Enter
+        await this.execute([
+          "tmux",
+          "send-keys",
+          "-t",
+          paneTarget,
+          "Enter",
+        ]);
+      }
+
+      return { ok: true, data: `Cleared ${paneTargets.length} panes` };
+    } catch (error) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "CommandFailed",
+          command: "clear all panes",
+          stderr: String(error),
+        }),
+      };
+    }
+  }
 }
 
 /**

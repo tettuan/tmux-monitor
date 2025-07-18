@@ -39,6 +39,10 @@ class MockCommandExecutor {
   killAllPanes = () => {
     return Promise.resolve({ ok: true as const, data: "mock kill all panes" });
   };
+
+  clearAllPanes = () => {
+    return Promise.resolve({ ok: true as const, data: "mock clear all panes" });
+  };
 }
 
 Deno.test("TmuxSession - create", () => {
@@ -69,6 +73,8 @@ Deno.test("TmuxSession - findMostActiveSession no sessions", async () => {
     executeTmuxCommand: () => Promise.resolve({ ok: true as const, data: "" }),
     killAllPanes: () =>
       Promise.resolve({ ok: true as const, data: "mock kill all panes" }),
+    clearAllPanes: () =>
+      Promise.resolve({ ok: true as const, data: "mock clear all panes" }),
   };
 
   const session = TmuxSession.create(mockExecutor, new MockLogger());
@@ -102,6 +108,8 @@ Deno.test("TmuxSession - findMostActiveSession command failure", async () => {
       }),
     killAllPanes: () =>
       Promise.resolve({ ok: true as const, data: "mock kill all panes" }),
+    clearAllPanes: () =>
+      Promise.resolve({ ok: true as const, data: "mock clear all panes" }),
   };
 
   const session = TmuxSession.create(mockExecutor, new MockLogger());
@@ -151,6 +159,8 @@ Deno.test("TmuxSession - getAllPanes command failure", async () => {
       }),
     killAllPanes: () =>
       Promise.resolve({ ok: true as const, data: "mock kill all panes" }),
+    clearAllPanes: () =>
+      Promise.resolve({ ok: true as const, data: "mock clear all panes" }),
   };
 
   const session = TmuxSession.create(mockExecutor, new MockLogger());
@@ -167,6 +177,8 @@ Deno.test("TmuxSession - getAllPanes invalid data", async () => {
       Promise.resolve({ ok: true as const, data: "invalid:data" }),
     killAllPanes: () =>
       Promise.resolve({ ok: true as const, data: "mock kill all panes" }),
+    clearAllPanes: () =>
+      Promise.resolve({ ok: true as const, data: "mock clear all panes" }),
   };
 
   const session = TmuxSession.create(mockExecutor, new MockLogger());

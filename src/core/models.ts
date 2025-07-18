@@ -230,6 +230,7 @@ export class MonitoringOptions {
     readonly instruction: InstructionConfig,
     readonly killAllPanes: boolean = false,
     readonly clearPanes: boolean = false,
+    readonly clearAllPanes: boolean = false,
     readonly startClaude: boolean = false,
   ) {}
 
@@ -239,6 +240,7 @@ export class MonitoringOptions {
     instructionFile: string | null,
     killAllPanes: boolean = false,
     clearPanes: boolean = false,
+    clearAllPanes: boolean = false,
     startClaude: boolean = false,
   ): MonitoringOptions {
     let mode: MonitoringMode;
@@ -259,6 +261,7 @@ export class MonitoringOptions {
       instruction,
       killAllPanes,
       clearPanes,
+      clearAllPanes,
       startClaude,
     );
   }
@@ -279,6 +282,10 @@ export class MonitoringOptions {
 
   shouldClearPanes(): boolean {
     return this.clearPanes;
+  }
+
+  shouldClearAllPanes(): boolean {
+    return this.clearAllPanes;
   }
 
   shouldStartClaude(): boolean {

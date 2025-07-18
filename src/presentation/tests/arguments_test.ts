@@ -372,3 +372,80 @@ Deno.test("ArgumentParser: parse() - clear and kill-all-panes together", () => {
 
   restoreMockArgs();
 });
+
+Deno.test("ArgumentParser: parse() - clear-all flag --clear-all", () => {
+  setupMockArgs(["--clear-all"]);
+
+  const timeManager = new MockTimeManager();
+  const logger = new MockLogger();
+  const parser = new ArgumentParser(timeManager, logger);
+
+  const result = parser.parse();
+
+  assert(result.ok);
+  assert(!result.data.isContinuous()); // --clear-all forces one-time mode
+  assertEquals(result.data.shouldClearAllPanes(), true);
+  assertEquals(result.data.shouldClearPanes(), false);
+  assertEquals(result.data.shouldKillAllPanes(), false);
+
+  restoreMockArgs();
+});
+
+Deno.test("ArgumentParser: parse() - clear-all with other options", () => {
+  setupMockArgs(["--clear-all", "--time=16:30", "--instruction=test.txt"]);
+
+  const timeManager = new MockTimeManager();
+  const logger = new MockLogger();
+  const parser = new ArgumentParser(timeManager, logger);
+
+  const result = parser.parse();
+
+  assert(result.ok);
+  assert(!result.data.isContinuous()); // --clear-all forces one-time mode
+  assertEquals(result.data.shouldClearAllPanes(), true);
+  assertEquals(result.data.shouldClearPanes(), false);
+
+  const scheduledTime = result.data.getScheduledTime();
+  assertExists(scheduledTime);
+  assertEquals(scheduledTime.getHours(), 16);
+  assertEquals(scheduledTime.getMinutes(), 30);
+  assertEquals(result.data.getInstructionFile(), "test.txt");
+
+  restoreMockArgs();
+});
+
+Deno.test("ArgumentParser: parse() - clear-all and clear together", () => {
+  setupMockArgs(["--clear-all", "--clear"]);
+
+  const timeManager = new MockTimeManager();
+  const logger = new MockLogger();
+  const parser = new ArgumentParser(timeManager, logger);
+
+  const result = parser.parse();
+
+  assert(result.ok);
+  assert(!result.data.isContinuous()); // Both flags force one-time mode
+  assertEquals(result.data.shouldClearAllPanes(), true);
+  assertEquals(result.data.shouldClearPanes(), true);
+  assertEquals(result.data.shouldKillAllPanes(), false);
+
+  restoreMockArgs();
+});
+
+Deno.test("ArgumentParser: parse() - clear-all and kill-all-panes together", () => {
+  setupMockArgs(["--clear-all", "--kill-all-panes"]);
+
+  const timeManager = new MockTimeManager();
+  const logger = new MockLogger();
+  const parser = new ArgumentParser(timeManager, logger);
+
+  const result = parser.parse();
+
+  assert(result.ok);
+  assert(!result.data.isContinuous()); // --clear-all forces one-time mode
+  assertEquals(result.data.shouldClearAllPanes(), true);
+  assertEquals(result.data.shouldClearPanes(), false);
+  assertEquals(result.data.shouldKillAllPanes(), true);
+
+  restoreMockArgs();
+});

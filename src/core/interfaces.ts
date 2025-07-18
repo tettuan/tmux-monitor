@@ -53,6 +53,15 @@ export interface ICommandExecutor extends ITmuxCommandExecutor {
   killAllPanes(): Promise<
     Result<string, ValidationError & { message: string }>
   >;
+
+  /**
+   * 全ペインをクリアする
+   *
+   * @returns Promise<Result<string, ValidationError & { message: string }>>
+   */
+  clearAllPanes(): Promise<
+    Result<string, ValidationError & { message: string }>
+  >;
 }
 
 /**

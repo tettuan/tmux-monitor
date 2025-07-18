@@ -64,6 +64,7 @@ export interface ICaptureAdapter {
  */
 export interface ICommandExecutor {
   execute(command: string[]): Promise<Result<string, Error>>;
+  clearAllPanes?(): Promise<Result<string, Error>>;
 }
 
 // =============================================================================
