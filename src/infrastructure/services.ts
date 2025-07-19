@@ -244,7 +244,7 @@ export class CommandExecutor {
 
   /**
    * Clears all panes by sending escape sequences and clear commands.
-   * 
+   *
    * This method sends a comprehensive clear sequence to all panes:
    * 1. Send two Escape keypresses (with 0.2s delay)
    * 2. Send Tab, "/clear", Tab, Enter sequence (with 0.2s delays)
@@ -299,7 +299,7 @@ export class CommandExecutor {
         ]);
         // Wait 0.2 seconds
         await new Promise((resolve) => setTimeout(resolve, 200));
-        
+
         // Second Escape
         await this.execute([
           "tmux",
@@ -335,7 +335,7 @@ export class CommandExecutor {
           paneTarget,
           "/clear",
         ]);
-        
+
         // Send Tab (note: there's a typo in the original - "send-kers" should be "send-keys")
         await this.execute([
           "tmux",

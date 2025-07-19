@@ -118,7 +118,9 @@ export class Application {
       if (clearAllResult.ok) {
         logger.info(`Clear-all operation completed: ${clearAllResult.data}`);
       } else {
-        logger.error(`Failed to clear all panes: ${clearAllResult.error.message}`);
+        logger.error(
+          `Failed to clear all panes: ${clearAllResult.error.message}`,
+        );
       }
 
       // Exit early after clearing all panes
