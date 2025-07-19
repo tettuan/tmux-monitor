@@ -10,6 +10,7 @@ Deno.test("ArgumentParser - start-claude flag creates correct MonitoringOptions"
     null,
     false,
     false,
+    false,
     true,
   );
 
@@ -24,6 +25,7 @@ Deno.test("ArgumentParser - start-claude with continuous monitoring", () => {
     true,
     null,
     null,
+    false,
     false,
     false,
     true,
@@ -43,6 +45,7 @@ Deno.test("ArgumentParser - all options combined", () => {
     "test.txt",
     true,
     true,
+    false,
     true,
   );
 
