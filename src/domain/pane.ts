@@ -854,13 +854,14 @@ export class Pane {
   /**
    * Determines if this pane should be cleared based on its status.
    *
-   * According to requirements, only DONE and IDLE panes should be cleared.
+   * According to requirements, only worker role panes in DONE or IDLE state should be cleared.
    * Following DDD principles, this business rule is encapsulated within the aggregate.
+   * Delegates to shouldBeClearedWhenIdle() for proper role-based clearing logic.
    *
    * @returns boolean - true if pane should be cleared
    */
   shouldBeCleared(): boolean {
-    return this._status.kind === "DONE" || this._status.kind === "IDLE";
+    return this.shouldBeClearedWhenIdle();
   }
 
   /**
