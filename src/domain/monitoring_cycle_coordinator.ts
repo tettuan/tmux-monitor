@@ -330,6 +330,21 @@ export class MonitoringCycleCoordinator
     let clearsExecuted = 0;
     const errors: string[] = [];
 
+    // DEBUG: サイクル開始時の詳細ペイン情報
+    const logLevel = Deno.env.get("LOG_LEVEL");
+    if (logLevel === "DEBUG") {
+      console.log(`🔍 DEBUG Cycle ${plan.cycleNumber}: Current pane states:`);
+      paneCollection.getAllPanes().forEach((pane) => {
+        const roleName = pane.name?.value || "unnamed";
+        const roleType = pane.name?.role || "unknown";
+        const shouldClear = pane.shouldBeClearedWhenIdle();
+        console.log(
+          `  - ${pane.id.value}: ${roleName} (${roleType}) | status: ${pane.status.kind} | ` +
+          `active: ${pane.isActive} | isWorker: ${pane.isWorkerRole()} | shouldClear: ${shouldClear}`
+        );
+      });
+    }
+
     for (const action of plan.scheduledActions) {
       try {
         switch (action) {

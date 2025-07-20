@@ -448,7 +448,7 @@ export class MonitoringApplicationService {
     // デバッグ用：ペインの詳細情報をログ出力（LOG_LEVEL=DEBUG時のみ）
     const logLevel = Deno.env.get("LOG_LEVEL");
     if (logLevel === "DEBUG" && allPanes.length > 0) {
-      console.log(`🔍 DEBUG: Found ${allPanes.length} panes:`);
+      console.log(`🔍 DEBUG: Found ${allPanes.length} panes (complete list):`);
       allPanes.forEach((pane) => {
         const statusStr = pane.status.kind || "unknown";
         const roleName = pane.name?.value || "unnamed";
