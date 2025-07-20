@@ -35,6 +35,7 @@ export interface IPaneCommunicator {
   sendMessage(paneId: string, message: string): Promise<Result<void, Error>>;
   sendCommand(paneId: string, command: string): Promise<Result<void, Error>>;
   sendClearCommand(paneId: string): Promise<Result<void, Error>>;
+  startClaudeIfNotRunning(panes: import("../core/models.ts").PaneDetail[]): Promise<void>;
 }
 
 /**
@@ -72,6 +73,7 @@ export class MonitoringApplicationService {
   private readonly _tmuxRepository: ITmuxSessionRepository;
   private readonly _communicator: IPaneCommunicator;
   private readonly _paneCollection: PaneCollection;
+  private readonly _paneDataProcessor: import("../infrastructure/panes.ts").PaneDataProcessor;
   private readonly _captureDetectionService?:
     import("../domain/capture_detection_service.ts").CaptureDetectionService;
   private readonly _captureOrchestrator?:
@@ -80,6 +82,7 @@ export class MonitoringApplicationService {
   constructor(
     tmuxRepository: ITmuxSessionRepository,
     communicator: IPaneCommunicator,
+    paneDataProcessor: import("../infrastructure/panes.ts").PaneDataProcessor,
     captureDetectionService?:
       import("../domain/capture_detection_service.ts").CaptureDetectionService,
     captureOrchestrator?:
@@ -87,6 +90,7 @@ export class MonitoringApplicationService {
   ) {
     this._tmuxRepository = tmuxRepository;
     this._communicator = communicator;
+    this._paneDataProcessor = paneDataProcessor;
     this._paneCollection = new PaneCollection();
     this._captureDetectionService = captureDetectionService;
     this._captureOrchestrator = captureOrchestrator;
@@ -106,6 +110,7 @@ export class MonitoringApplicationService {
   async startMonitoring(
     sessionName?: string,
     _intervalSeconds: number = 30,
+    shouldStartClaude: boolean = false,
   ): Promise<Result<void, ValidationError & { message: string }>> {
     try {
       // フェーズ1: セッション発見とペイン作成
@@ -118,6 +123,28 @@ export class MonitoringApplicationService {
       const classificationResult = await this.classifyAndNamePanes();
       if (!classificationResult.ok) {
         return classificationResult;
+      }
+
+      // フェーズ2.5: Claude起動チェック（ペイン作成後）
+      if (shouldStartClaude) {
+        const allPanes = this._paneCollection.getAllPanes();
+        if (allPanes.length > 0) {
+          // PaneDetailの完全な情報を取得
+          const paneDetails = [];
+          for (const pane of allPanes) {
+            const detailResult = await this._paneDataProcessor.getPaneDetail(
+              pane.id.value,
+              { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} } // Mock logger
+            );
+            if (detailResult.ok) {
+              paneDetails.push(detailResult.data);
+            }
+          }
+          
+          if (paneDetails.length > 0) {
+            await this._communicator.startClaudeIfNotRunning(paneDetails);
+          }
+        }
       }
 
       // フェーズ3: 監視サイクル開始
@@ -422,17 +449,22 @@ export class MonitoringApplicationService {
     const logLevel = Deno.env.get("LOG_LEVEL");
     if (logLevel === "DEBUG" && allPanes.length > 0) {
       console.log(`🔍 DEBUG: Found ${allPanes.length} panes:`);
-      allPanes.slice(0, 5).forEach((pane) => {
+      allPanes.forEach((pane) => {
         const statusStr = pane.status.kind || "unknown";
+        const roleName = pane.name?.value || "unnamed";
+        const canAssignTask = pane.canAssignTask();
+        const shouldBeCleared = pane.shouldBeCleared();
+        const isWorking = pane.isWorking();
+        const isIdle = pane.isIdle();
+        const isDone = pane.isDone();
+        
         console.log(
-          `  - ${pane.id.value}: ${
-            pane.name?.value || "unnamed"
-          } (active: ${pane.isActive}) status: ${statusStr}`,
+          `  - ${pane.id.value}: ${roleName} | status: ${statusStr} | ` +
+          `active: ${pane.isActive} | working: ${isWorking} | idle: ${isIdle} | ` +
+          `done: ${isDone} | canAssign: ${canAssignTask} | shouldClear: ${shouldBeCleared} | ` +
+          `cmd: ${pane.currentCommand}`
         );
       });
-      if (allPanes.length > 5) {
-        console.log(`  ... and ${allPanes.length - 5} more panes`);
-      }
     }
 
     return {

@@ -389,6 +389,18 @@ export class MonitoringCycleCoordinator
             // worker役割かつアイドル状態ペインのクリア要求
             for (const pane of paneCollection.getAllPanes()) {
               if (pane.shouldBeClearedWhenIdle()) {
+                // DEBUG: clear判定の詳細情報をログ出力
+                const logLevel = Deno.env.get("LOG_LEVEL");
+                if (logLevel === "DEBUG") {
+                  const roleName = pane.name?.value || "unnamed";
+                  const roleType = pane.name?.role || "unknown";
+                  console.log(
+                    `🧹 DEBUG: Clear target - ${pane.id.value}: ${roleName} (${roleType}) | ` +
+                    `status: ${pane.status.kind} | isWorker: ${pane.isWorkerRole()} | ` +
+                    `shouldClear: ${pane.shouldBeClearedWhenIdle()}`
+                  );
+                }
+                
                 const clearEvent = DomainEventFactory
                   .createPaneClearRequestedEvent(
                     pane.id.value,

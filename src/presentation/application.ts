@@ -206,7 +206,7 @@ export class Application {
         // logger.info(
         //   `[DEBUG] Application.run(): Starting one-time monitoring`,
         // );
-        await monitor.oneTimeMonitor();
+        await monitor.oneTimeMonitor(options);
         // logger.info(
         //   `[DEBUG] Application.run(): Single run monitoring completed`,
         // );

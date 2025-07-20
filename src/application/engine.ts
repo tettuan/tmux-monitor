@@ -8,6 +8,8 @@
 import type { PaneCollection } from "../domain/services.ts";
 import { MonitoringApplicationService } from "./monitoring_service.ts";
 import { InfrastructureAdapterFactory } from "../infrastructure/adapters.ts";
+import { PaneDataProcessor } from "../infrastructure/panes.ts";
+import type { MonitoringOptions } from "../core/models.ts";
 import type { CommandExecutor, Logger } from "../infrastructure/services.ts";
 import type { Result, ValidationError } from "../core/types.ts";
 import { createError } from "../core/types.ts";
@@ -48,9 +50,13 @@ export class MonitoringEngine {
       logger,
     );
 
+    // PaneDataProcessorを作成
+    const paneDataProcessor = new PaneDataProcessor(commandExecutor);
+
     this._appService = new MonitoringApplicationService(
       adapters.tmuxRepository,
       adapters.communicator,
+      paneDataProcessor,
       adapters.captureDetectionService,
     );
 
@@ -66,11 +72,15 @@ export class MonitoringEngine {
   /**
    * 監視開始 - イベント駆動アーキテクチャでPaneが自分自身の責務を知る
    */
-  async monitor(): Promise<void> {
+  async monitor(options: MonitoringOptions): Promise<void> {
     this._logger.info("🚀 Starting event-driven monitoring");
 
     try {
-      const startResult = await this._appService.startMonitoring();
+      const startResult = await this._appService.startMonitoring(
+        undefined, // sessionName
+        30, // intervalSeconds
+        options.shouldStartClaude() // shouldStartClaude
+      );
       if (!startResult.ok) {
         this._logger.error(`Failed to start: ${startResult.error.message}`);
         return;
@@ -148,11 +158,29 @@ export class MonitoringEngine {
   /**
    * ワンタイム監視 - イベント駆動アーキテクチャで統一
    */
-  async oneTimeMonitor(): Promise<void> {
+  async oneTimeMonitor(options?: MonitoringOptions): Promise<void> {
     this._logger.info("🔍 One-time monitoring");
 
     try {
-      const startResult = await this._appService.startMonitoring();
+      // optionsが渡されない場合はデフォルトを作成
+      if (!options) {
+        const { MonitoringOptions } = await import("../core/models.ts");
+        options = MonitoringOptions.create(
+          false, // continuous
+          null, // scheduledTime
+          null, // instructionFile
+          false, // killAllPanes
+          false, // clearPanes
+          false, // clearAllPanes
+          false // startClaude
+        );
+      }
+
+      const startResult = await this._appService.startMonitoring(
+        undefined, // sessionName
+        30, // intervalSeconds
+        options.shouldStartClaude() // shouldStartClaude
+      );
       if (!startResult.ok) {
         this._logger.error(
           `Failed to start one-time monitoring: ${startResult.error.message}`,
@@ -231,7 +259,18 @@ export class MonitoringEngine {
    * 互換性メソッド
    */
   async startContinuousMonitoring(): Promise<void> {
-    await this.monitor();
+    // デフォルトのMonitoringOptionsを作成（Claude自動起動なし）
+    const { MonitoringOptions } = await import("../core/models.ts");
+    const defaultOptions = MonitoringOptions.create(
+      true, // continuous
+      null, // scheduledTime
+      null, // instructionFile
+      false, // killAllPanes
+      false, // clearPanes
+      false, // clearAllPanes
+      false // startClaude
+    );
+    await this.monitor(defaultOptions);
   }
 
   /**
