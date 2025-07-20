@@ -385,7 +385,45 @@ export class MonitoringApplicationService {
       `✅ Assigned names to ${successCount}/${sortedPanes.length} panes`,
     );
 
+    // 初回起動時のペイン一覧表示
+    this.displayInitialPaneAssignments(sortedPanes);
+
     return { ok: true, data: undefined };
+  }
+
+  /**
+   * 初回起動時のペイン役割割り当て結果表示
+   */
+  private displayInitialPaneAssignments(sortedPanes: Pane[]): void {
+    console.log('\n📋 Initial Pane Assignments:');
+    console.log('=' .repeat(75));
+    
+    sortedPanes.forEach((pane) => {
+      const roleName = pane.name?.value || 'unnamed';
+      const statusStr = pane.status.kind || 'unknown';
+      const activeMarker = pane.isActive ? '🟢' : '⚪';
+      const commandPreview = pane.currentCommand.length > 25 
+        ? pane.currentCommand.substring(0, 22) + '...'
+        : pane.currentCommand;
+      
+      // Role情報を取得
+      const roleType = pane.name?.role || 'unknown';
+      const isWorker = pane.name?.isWorker() || false;
+      const shouldClear = pane.shouldBeCleared();
+      const clearMarker = shouldClear ? '🧹' : '⛔';
+      const workerMarker = isWorker ? '⚡' : '👑';
+      
+      console.log(
+        `${activeMarker} ${pane.id.value}: ${roleName.padEnd(12)} | ` +
+        `${workerMarker} ${roleType.padEnd(9)} | ` +
+        `status: ${statusStr.padEnd(8)} | ` +
+        `${clearMarker} | cmd: ${commandPreview}`
+      );
+    });
+    
+    console.log('=' .repeat(75));
+    console.log(`Total: ${sortedPanes.length} panes assigned`);
+    console.log(`Legend: 🟢=active ⚪=inactive | ⚡=worker 👑=manager/secretary | 🧹=clearable ⛔=protected\n`);
   }
 
   /**
