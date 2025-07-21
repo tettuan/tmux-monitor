@@ -757,6 +757,127 @@ export class MonitoringApplicationService {
         normalizedCommand.includes(`/${pattern}`);
     });
   }
+
+  // =============================================================================
+  // 30秒毎ステータス報告機能
+  // =============================================================================
+
+  /**
+   * 30秒毎のステータス報告の実行判定と送信
+   * 
+   * 報告トリガー:
+   * 1. IDLEペインへのclear実行
+   * 2. いずれかのペインのステータス変更
+   * 
+   * 報告事項がない場合はSkip
+   */
+  async executePeriodicStatusReport(
+    clearsExecuted: number,
+    statusChanges: number,
+  ): Promise<Result<PeriodicReportResult, ValidationError & { message: string }>> {
+    try {
+      // 報告トリガーの判定
+      const shouldReport = clearsExecuted > 0 || statusChanges > 0;
+      
+      if (!shouldReport) {
+        return {
+          ok: true,
+          data: {
+            executed: false,
+            reason: "No significant changes detected",
+            clearsExecuted: 0,
+            statusChanges: 0,
+            timestamp: new Date(),
+          },
+        };
+      }
+
+      // 報告メッセージの作成
+      const reportMessage = this.createStatusReportMessage(clearsExecuted, statusChanges);
+      
+      // アクティブペインへの報告送信
+      const reportResult = await this.reportToActivePane(reportMessage);
+      
+      if (!reportResult.ok) {
+        return {
+          ok: false,
+          error: createError({
+            kind: "CommunicationFailed",
+            target: "active pane",
+            details: `Failed to send periodic report: ${reportResult.error.message}`,
+          }),
+        };
+      }
+
+      return {
+        ok: true,
+        data: {
+          executed: true,
+          reason: "Status changes or clears detected",
+          clearsExecuted,
+          statusChanges,
+          reportMessage,
+          timestamp: new Date(),
+        },
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "UnexpectedError",
+          operation: "executePeriodicStatusReport",
+          details: `Unexpected error during periodic reporting: ${error}`,
+        }),
+      };
+    }
+  }
+
+  /**
+   * ステータス報告メッセージの作成
+   */
+  private createStatusReportMessage(clearsExecuted: number, statusChanges: number): string {
+    const stats = this.getMonitoringStats();
+    const timestamp = new Date().toLocaleTimeString("ja-JP");
+    
+    let message = `📊 [${timestamp}] tmux-monitor Status Report\n`;
+    
+    // 主要な変更情報
+    if (clearsExecuted > 0) {
+      message += `🧹 Cleared ${clearsExecuted} IDLE panes\n`;
+    }
+    if (statusChanges > 0) {
+      message += `📈 ${statusChanges} pane status changes detected\n`;
+    }
+    
+    // 現在の統計情報
+    message += `\n📋 Current Status:\n`;
+    message += `  Total: ${stats.totalPanes} panes\n`;
+    
+    // ステータス別pane ID羅列
+    const allPanes = this._paneCollection.getAllPanes();
+    const workingPanes = allPanes.filter(p => p.isWorking());
+    const idlePanes = allPanes.filter(p => p.isIdle());
+    const donePanes = allPanes.filter(p => p.isDone());
+    
+    if (workingPanes.length > 0) {
+      const workingIds = workingPanes.map(p => p.id.value).join(', ');
+      message += `  ⚡ Working (${workingPanes.length}): ${workingIds}\n`;
+    }
+    
+    if (idlePanes.length > 0) {
+      const idleIds = idlePanes.map(p => p.id.value).join(', ');
+      message += `  💤 Idle (${idlePanes.length}): ${idleIds}\n`;
+    }
+    
+    if (donePanes.length > 0) {
+      const doneIds = donePanes.map(p => p.id.value).join(', ');
+      message += `  ✅ Done (${donePanes.length}): ${doneIds}\n`;
+    }
+    
+    message += `  🎯 Available for tasks: ${stats.availableForTask}\n`;
+    
+    return message;
+  }
 }
 
 // =============================================================================
@@ -779,6 +900,18 @@ export interface NodeClearResult {
   failedCount: number;
   skippedCount: number;
   results: import("../domain/clear_domain.ts").ClearOperationResult[];
+  timestamp: Date;
+}
+
+/**
+ * 30秒毎の定期報告結果
+ */
+export interface PeriodicReportResult {
+  executed: boolean;
+  reason: string;
+  clearsExecuted: number;
+  statusChanges: number;
+  reportMessage?: string;
   timestamp: Date;
 }
 

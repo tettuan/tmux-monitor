@@ -308,7 +308,13 @@ export class MonitoringCycleCoordinator
       actions.push("UPDATE_PANE_TITLES");
     }
 
-    actions.push("REPORT_STATUS_CHANGES", "VALIDATE_INVARIANTS");
+    // 30秒毎（6サイクル毎）にステータス報告を実行
+    if (cycleNumber % 6 === 0) {
+      this._logger.debug(`📋 Adding REPORT_STATUS_CHANGES to cycle ${cycleNumber} plan`);
+      actions.push("REPORT_STATUS_CHANGES");
+    }
+
+    actions.push("VALIDATE_INVARIANTS");
 
     return {
       cycleNumber,
@@ -325,6 +331,8 @@ export class MonitoringCycleCoordinator
     plan: CyclePlan,
     paneCollection: PaneCollection,
   ): Promise<CycleExecutionResult> {
+    this._logger.info(`🚀 Starting execution of cycle ${plan.cycleNumber} with ${plan.scheduledActions.length} actions: [${plan.scheduledActions.join(', ')}]`);
+    
     let statusChanges = 0;
     let entersSent = 0;
     let clearsExecuted = 0;
@@ -449,10 +457,46 @@ export class MonitoringCycleCoordinator
             break;
 
           case "REPORT_STATUS_CHANGES":
-            // ステータス変更は自動的にイベントで処理される
-            this._logger.debug(
-              `📊 Status change reporting: ${statusChanges} changes detected`,
-            );
+            // 30秒毎の定期ステータス報告
+            this._logger.info(`🔄 REPORT_STATUS_CHANGES: Starting execution (cycle ${plan.cycleNumber})`);
+            if (this._appService) {
+              try {
+                const reportResult = await this._appService.executePeriodicStatusReport(
+                  clearsExecuted,
+                  statusChanges,
+                );
+                
+                if (reportResult.ok) {
+                  if (reportResult.data.executed) {
+                    this._logger.info(
+                      `📊 Status report sent to main pane (clears: ${reportResult.data.clearsExecuted}, changes: ${reportResult.data.statusChanges})`,
+                    );
+                  } else {
+                    this._logger.info(
+                      `📊 Status report skipped - no significant changes detected`,
+                    );
+                  }
+                } else {
+                  this._logger.warn(
+                    `Failed to send periodic report: ${reportResult.error.message}`,
+                  );
+                  errors.push(
+                    `Periodic report failed: ${reportResult.error.message}`,
+                  );
+                }
+              } catch (error) {
+                this._logger.warn(
+                  `Unexpected error during periodic reporting: ${error}`,
+                );
+                errors.push(
+                  `Periodic report error: ${error}`,
+                );
+              }
+            } else {
+              this._logger.warn(
+                `❌ REPORT_STATUS_CHANGES: appService not available! Cannot execute periodic status report.`,
+              );
+            }
             break;
 
           case "VALIDATE_INVARIANTS":
