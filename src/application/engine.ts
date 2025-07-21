@@ -79,7 +79,7 @@ export class MonitoringEngine {
       const startResult = await this._appService.startMonitoring(
         undefined, // sessionName
         30, // intervalSeconds
-        options.shouldStartClaude() // shouldStartClaude
+        options.shouldStartClaude(), // shouldStartClaude
       );
       if (!startResult.ok) {
         this._logger.error(`Failed to start: ${startResult.error.message}`);
@@ -172,14 +172,14 @@ export class MonitoringEngine {
           false, // killAllPanes
           false, // clearPanes
           false, // clearAllPanes
-          false // startClaude
+          false, // startClaude
         );
       }
 
       const startResult = await this._appService.startMonitoring(
         undefined, // sessionName
         30, // intervalSeconds
-        options.shouldStartClaude() // shouldStartClaude
+        options.shouldStartClaude(), // shouldStartClaude
       );
       if (!startResult.ok) {
         this._logger.error(
@@ -268,7 +268,7 @@ export class MonitoringEngine {
       false, // killAllPanes
       false, // clearPanes
       false, // clearAllPanes
-      false // startClaude
+      false, // startClaude
     );
     await this.monitor(defaultOptions);
   }

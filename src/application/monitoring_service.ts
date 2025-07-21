@@ -35,7 +35,9 @@ export interface IPaneCommunicator {
   sendMessage(paneId: string, message: string): Promise<Result<void, Error>>;
   sendCommand(paneId: string, command: string): Promise<Result<void, Error>>;
   sendClearCommand(paneId: string): Promise<Result<void, Error>>;
-  startClaudeIfNotRunning(panes: import("../core/models.ts").PaneDetail[]): Promise<void>;
+  startClaudeIfNotRunning(
+    panes: import("../core/models.ts").PaneDetail[],
+  ): Promise<void>;
 }
 
 /**
@@ -73,7 +75,8 @@ export class MonitoringApplicationService {
   private readonly _tmuxRepository: ITmuxSessionRepository;
   private readonly _communicator: IPaneCommunicator;
   private readonly _paneCollection: PaneCollection;
-  private readonly _paneDataProcessor: import("../infrastructure/panes.ts").PaneDataProcessor;
+  private readonly _paneDataProcessor:
+    import("../infrastructure/panes.ts").PaneDataProcessor;
   private readonly _captureDetectionService?:
     import("../domain/capture_detection_service.ts").CaptureDetectionService;
   private readonly _captureOrchestrator?:
@@ -134,13 +137,18 @@ export class MonitoringApplicationService {
           for (const pane of allPanes) {
             const detailResult = await this._paneDataProcessor.getPaneDetail(
               pane.id.value,
-              { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} } // Mock logger
+              {
+                info: () => {},
+                warn: () => {},
+                error: () => {},
+                debug: () => {},
+              }, // Mock logger
             );
             if (detailResult.ok) {
               paneDetails.push(detailResult.data);
             }
           }
-          
+
           if (paneDetails.length > 0) {
             await this._communicator.startClaudeIfNotRunning(paneDetails);
           }
@@ -395,35 +403,37 @@ export class MonitoringApplicationService {
    * 初回起動時のペイン役割割り当て結果表示
    */
   private displayInitialPaneAssignments(sortedPanes: Pane[]): void {
-    console.log('\n📋 Initial Pane Assignments:');
-    console.log('=' .repeat(75));
-    
+    console.log("\n📋 Initial Pane Assignments:");
+    console.log("=".repeat(75));
+
     sortedPanes.forEach((pane) => {
-      const roleName = pane.name?.value || 'unnamed';
-      const statusStr = pane.status.kind || 'unknown';
-      const activeMarker = pane.isActive ? '🟢' : '⚪';
-      const commandPreview = pane.currentCommand.length > 25 
-        ? pane.currentCommand.substring(0, 22) + '...'
+      const roleName = pane.name?.value || "unnamed";
+      const statusStr = pane.status.kind || "unknown";
+      const activeMarker = pane.isActive ? "🟢" : "⚪";
+      const commandPreview = pane.currentCommand.length > 25
+        ? pane.currentCommand.substring(0, 22) + "..."
         : pane.currentCommand;
-      
+
       // Role情報を取得
-      const roleType = pane.name?.role || 'unknown';
+      const roleType = pane.name?.role || "unknown";
       const isWorker = pane.name?.isWorker() || false;
       const shouldClear = pane.shouldBeCleared();
-      const clearMarker = shouldClear ? '🧹' : '⛔';
-      const workerMarker = isWorker ? '⚡' : '👑';
-      
+      const clearMarker = shouldClear ? "🧹" : "⛔";
+      const workerMarker = isWorker ? "⚡" : "👑";
+
       console.log(
         `${activeMarker} ${pane.id.value}: ${roleName.padEnd(12)} | ` +
-        `${workerMarker} ${roleType.padEnd(9)} | ` +
-        `status: ${statusStr.padEnd(8)} | ` +
-        `${clearMarker} | cmd: ${commandPreview}`
+          `${workerMarker} ${roleType.padEnd(9)} | ` +
+          `status: ${statusStr.padEnd(8)} | ` +
+          `${clearMarker} | cmd: ${commandPreview}`,
       );
     });
-    
-    console.log('=' .repeat(75));
+
+    console.log("=".repeat(75));
     console.log(`Total: ${sortedPanes.length} panes assigned`);
-    console.log(`Legend: 🟢=active ⚪=inactive | ⚡=worker 👑=manager/secretary | 🧹=clearable ⛔=protected\n`);
+    console.log(
+      `Legend: 🟢=active ⚪=inactive | ⚡=worker 👑=manager/secretary | 🧹=clearable ⛔=protected\n`,
+    );
   }
 
   /**
@@ -495,12 +505,12 @@ export class MonitoringApplicationService {
         const isWorking = pane.isWorking();
         const isIdle = pane.isIdle();
         const isDone = pane.isDone();
-        
+
         console.log(
           `  - ${pane.id.value}: ${roleName} | status: ${statusStr} | ` +
-          `active: ${pane.isActive} | working: ${isWorking} | idle: ${isIdle} | ` +
-          `done: ${isDone} | canAssign: ${canAssignTask} | shouldClear: ${shouldBeCleared} | ` +
-          `cmd: ${pane.currentCommand}`
+            `active: ${pane.isActive} | working: ${isWorking} | idle: ${isIdle} | ` +
+            `done: ${isDone} | canAssign: ${canAssignTask} | shouldClear: ${shouldBeCleared} | ` +
+            `cmd: ${pane.currentCommand}`,
         );
       });
     }
@@ -764,21 +774,23 @@ export class MonitoringApplicationService {
 
   /**
    * 30秒毎のステータス報告の実行判定と送信
-   * 
+   *
    * 報告トリガー:
    * 1. IDLEペインへのclear実行
    * 2. いずれかのペインのステータス変更
-   * 
+   *
    * 報告事項がない場合はSkip
    */
   async executePeriodicStatusReport(
     clearsExecuted: number,
     statusChanges: number,
-  ): Promise<Result<PeriodicReportResult, ValidationError & { message: string }>> {
+  ): Promise<
+    Result<PeriodicReportResult, ValidationError & { message: string }>
+  > {
     try {
       // 報告トリガーの判定
       const shouldReport = clearsExecuted > 0 || statusChanges > 0;
-      
+
       if (!shouldReport) {
         return {
           ok: true,
@@ -793,18 +805,22 @@ export class MonitoringApplicationService {
       }
 
       // 報告メッセージの作成
-      const reportMessage = this.createStatusReportMessage(clearsExecuted, statusChanges);
-      
+      const reportMessage = this.createStatusReportMessage(
+        clearsExecuted,
+        statusChanges,
+      );
+
       // アクティブペインへの報告送信
       const reportResult = await this.reportToActivePane(reportMessage);
-      
+
       if (!reportResult.ok) {
         return {
           ok: false,
           error: createError({
             kind: "CommunicationFailed",
             target: "active pane",
-            details: `Failed to send periodic report: ${reportResult.error.message}`,
+            details:
+              `Failed to send periodic report: ${reportResult.error.message}`,
           }),
         };
       }
@@ -835,12 +851,15 @@ export class MonitoringApplicationService {
   /**
    * ステータス報告メッセージの作成
    */
-  private createStatusReportMessage(clearsExecuted: number, statusChanges: number): string {
+  private createStatusReportMessage(
+    clearsExecuted: number,
+    statusChanges: number,
+  ): string {
     const stats = this.getMonitoringStats();
     const timestamp = new Date().toLocaleTimeString("ja-JP");
-    
+
     let message = `📊 [${timestamp}] tmux-monitor Status Report\n`;
-    
+
     // 主要な変更情報
     if (clearsExecuted > 0) {
       message += `🧹 Cleared ${clearsExecuted} IDLE panes\n`;
@@ -848,34 +867,34 @@ export class MonitoringApplicationService {
     if (statusChanges > 0) {
       message += `📈 ${statusChanges} pane status changes detected\n`;
     }
-    
+
     // 現在の統計情報
     message += `\n📋 Current Status:\n`;
     message += `  Total: ${stats.totalPanes} panes\n`;
-    
+
     // ステータス別pane ID羅列
     const allPanes = this._paneCollection.getAllPanes();
-    const workingPanes = allPanes.filter(p => p.isWorking());
-    const idlePanes = allPanes.filter(p => p.isIdle());
-    const donePanes = allPanes.filter(p => p.isDone());
-    
+    const workingPanes = allPanes.filter((p) => p.isWorking());
+    const idlePanes = allPanes.filter((p) => p.isIdle());
+    const donePanes = allPanes.filter((p) => p.isDone());
+
     if (workingPanes.length > 0) {
-      const workingIds = workingPanes.map(p => p.id.value).join(', ');
+      const workingIds = workingPanes.map((p) => p.id.value).join(", ");
       message += `  ⚡ Working (${workingPanes.length}): ${workingIds}\n`;
     }
-    
+
     if (idlePanes.length > 0) {
-      const idleIds = idlePanes.map(p => p.id.value).join(', ');
+      const idleIds = idlePanes.map((p) => p.id.value).join(", ");
       message += `  💤 Idle (${idlePanes.length}): ${idleIds}\n`;
     }
-    
+
     if (donePanes.length > 0) {
-      const doneIds = donePanes.map(p => p.id.value).join(', ');
+      const doneIds = donePanes.map((p) => p.id.value).join(", ");
       message += `  ✅ Done (${donePanes.length}): ${doneIds}\n`;
     }
-    
+
     message += `  🎯 Available for tasks: ${stats.availableForTask}\n`;
-    
+
     return message;
   }
 }

@@ -310,7 +310,9 @@ export class MonitoringCycleCoordinator
 
     // 30秒毎（6サイクル毎）にステータス報告を実行
     if (cycleNumber % 6 === 0) {
-      this._logger.debug(`📋 Adding REPORT_STATUS_CHANGES to cycle ${cycleNumber} plan`);
+      this._logger.debug(
+        `📋 Adding REPORT_STATUS_CHANGES to cycle ${cycleNumber} plan`,
+      );
       actions.push("REPORT_STATUS_CHANGES");
     }
 
@@ -331,8 +333,12 @@ export class MonitoringCycleCoordinator
     plan: CyclePlan,
     paneCollection: PaneCollection,
   ): Promise<CycleExecutionResult> {
-    this._logger.info(`🚀 Starting execution of cycle ${plan.cycleNumber} with ${plan.scheduledActions.length} actions: [${plan.scheduledActions.join(', ')}]`);
-    
+    this._logger.info(
+      `🚀 Starting execution of cycle ${plan.cycleNumber} with ${plan.scheduledActions.length} actions: [${
+        plan.scheduledActions.join(", ")
+      }]`,
+    );
+
     let statusChanges = 0;
     let entersSent = 0;
     let clearsExecuted = 0;
@@ -348,7 +354,7 @@ export class MonitoringCycleCoordinator
         const shouldClear = pane.shouldBeClearedWhenIdle();
         console.log(
           `  - ${pane.id.value}: ${roleName} (${roleType}) | status: ${pane.status.kind} | ` +
-          `active: ${pane.isActive} | isWorker: ${pane.isWorkerRole()} | shouldClear: ${shouldClear}`
+            `active: ${pane.isActive} | isWorker: ${pane.isWorkerRole()} | shouldClear: ${shouldClear}`,
         );
       });
     }
@@ -419,11 +425,11 @@ export class MonitoringCycleCoordinator
                   const roleType = pane.name?.role || "unknown";
                   console.log(
                     `🧹 DEBUG: Clear target - ${pane.id.value}: ${roleName} (${roleType}) | ` +
-                    `status: ${pane.status.kind} | isWorker: ${pane.isWorkerRole()} | ` +
-                    `shouldClear: ${pane.shouldBeClearedWhenIdle()}`
+                      `status: ${pane.status.kind} | isWorker: ${pane.isWorkerRole()} | ` +
+                      `shouldClear: ${pane.shouldBeClearedWhenIdle()}`,
                   );
                 }
-                
+
                 const clearEvent = DomainEventFactory
                   .createPaneClearRequestedEvent(
                     pane.id.value,
@@ -458,14 +464,17 @@ export class MonitoringCycleCoordinator
 
           case "REPORT_STATUS_CHANGES":
             // 30秒毎の定期ステータス報告
-            this._logger.info(`🔄 REPORT_STATUS_CHANGES: Starting execution (cycle ${plan.cycleNumber})`);
+            this._logger.info(
+              `🔄 REPORT_STATUS_CHANGES: Starting execution (cycle ${plan.cycleNumber})`,
+            );
             if (this._appService) {
               try {
-                const reportResult = await this._appService.executePeriodicStatusReport(
-                  clearsExecuted,
-                  statusChanges,
-                );
-                
+                const reportResult = await this._appService
+                  .executePeriodicStatusReport(
+                    clearsExecuted,
+                    statusChanges,
+                  );
+
                 if (reportResult.ok) {
                   if (reportResult.data.executed) {
                     this._logger.info(

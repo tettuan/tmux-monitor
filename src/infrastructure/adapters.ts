@@ -14,6 +14,8 @@ import type {
   RawPaneData,
 } from "../application/monitoring_service.ts";
 import type { CommandExecutor, Logger } from "./services.ts";
+import type { PaneDetail } from "../core/models.ts";
+import { PaneCommunicator } from "./communication.ts";
 import {
   CaptureDetectionService,
   InMemoryCaptureHistory,
@@ -178,10 +180,15 @@ export class TmuxSessionAdapter implements ITmuxSessionRepository {
  * tmuxのsend-keysコマンドを使用してペインにメッセージやコマンドを送信。
  */
 export class PaneCommunicationAdapter implements IPaneCommunicator {
+  private readonly communicator: PaneCommunicator;
+
   constructor(
     private readonly commandExecutor: CommandExecutor,
     private readonly logger: Logger,
-  ) {}
+  ) {
+    // PaneCommunicatorのインスタンスを作成
+    this.communicator = PaneCommunicator.create(commandExecutor, logger);
+  }
 
   /**
    * ペインへのメッセージ送信
@@ -470,6 +477,14 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
         ),
       };
     }
+  }
+
+  /**
+   * Claudeが立ち上がっていない場合、各ペインでcldコマンドを実行
+   */
+  async startClaudeIfNotRunning(panes: PaneDetail[]): Promise<void> {
+    // PaneCommunicatorに委譲
+    return await this.communicator.startClaudeIfNotRunning(panes);
   }
 }
 
