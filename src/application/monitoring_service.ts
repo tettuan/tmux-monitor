@@ -130,7 +130,14 @@ export class MonitoringApplicationService {
 
       // フェーズ2.5: Claude起動チェック（ペイン作成後）
       if (shouldStartClaude) {
+        console.log(
+          `DEBUG: shouldStartClaude is true, proceeding with Claude startup check`,
+        );
         const allPanes = this._paneCollection.getAllPanes();
+        console.log(
+          `DEBUG: Found ${allPanes.length} panes for Claude startup check`,
+        );
+
         if (allPanes.length > 0) {
           // PaneDetailの完全な情報を取得
           const paneDetails = [];
@@ -149,10 +156,20 @@ export class MonitoringApplicationService {
             }
           }
 
+          console.log(
+            `DEBUG: Collected ${paneDetails.length} pane details for Claude startup`,
+          );
           if (paneDetails.length > 0) {
+            console.log(
+              `DEBUG: Calling startClaudeIfNotRunning with ${paneDetails.length} panes`,
+            );
             await this._communicator.startClaudeIfNotRunning(paneDetails);
           }
         }
+      } else {
+        console.log(
+          `DEBUG: shouldStartClaude is false, skipping Claude startup check`,
+        );
       }
 
       // フェーズ3: 監視サイクル開始

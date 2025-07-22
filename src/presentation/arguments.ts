@@ -114,11 +114,11 @@ export class ArgumentParser {
       }
     }
 
-    // Check for one-time mode override (--onetime, --clear, or --clear-all)
+    // Check for one-time mode override (--onetime, --clear, --clear-all, or --start-claude)
     const oneTime = args.includes("--onetime") || args.includes("-o") ||
-      clearPanes || clearAllPanes;
+      clearPanes || clearAllPanes || startClaude;
 
-    // Default to continuous monitoring mode unless --onetime or --clear is specified
+    // Default to continuous monitoring mode unless --onetime, --clear, or --start-claude is specified
     const continuous = !oneTime;
 
     const options = MonitoringOptions.create(

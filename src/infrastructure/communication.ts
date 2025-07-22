@@ -291,12 +291,18 @@ export class PaneCommunicator {
    * Claudeが立ち上がっているかを検出する
    */
   isClaudeRunning(panes: PaneDetail[]): boolean {
+    this.logger.debug(
+      `DEBUG: Checking if Claude is running across ${panes.length} panes`,
+    );
     for (const pane of panes) {
       const command = pane.currentCommand.toLowerCase();
+      this.logger.debug(`DEBUG: Pane ${pane.paneId} command: "${command}"`);
       if (command.includes("claude") || command.includes("cld")) {
+        this.logger.debug(`DEBUG: Found Claude/cld in pane ${pane.paneId}`);
         return true;
       }
     }
+    this.logger.debug(`DEBUG: No Claude/cld processes found`);
     return false;
   }
 
@@ -304,7 +310,12 @@ export class PaneCommunicator {
    * Claudeが立ち上がっていない場合、各ペインでcldコマンドを実行
    */
   async startClaudeIfNotRunning(panes: PaneDetail[]): Promise<void> {
+    this.logger.debug(
+      `DEBUG: startClaudeIfNotRunning called with ${panes.length} panes`,
+    );
+
     const claudeRunning = this.isClaudeRunning(panes);
+    this.logger.debug(`DEBUG: isClaudeRunning result: ${claudeRunning}`);
 
     if (claudeRunning) {
       this.logger.info("Claude is already running, skipping cld command");
