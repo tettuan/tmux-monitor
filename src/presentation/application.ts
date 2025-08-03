@@ -5,6 +5,7 @@ import type {
   RuntimeTracker,
   TimeManager,
 } from "../core/types.ts";
+import { getDefaultMessage } from "../core/types.ts";
 import { DIContainer } from "../core/container.ts";
 import { globalCancellationToken } from "../core/cancellation.ts";
 
@@ -72,7 +73,9 @@ export class Application {
 
     const optionsResult = argumentParser.parse();
     if (!optionsResult.ok) {
-      logger.error(`Failed to parse arguments: ${optionsResult.error.message}`);
+      logger.error(
+        `Failed to parse arguments: ${getDefaultMessage(optionsResult.error)}`,
+      );
       return;
     }
 
@@ -91,7 +94,9 @@ export class Application {
       if (killResult.ok) {
         logger.info(`Pane termination completed: ${killResult.data}`);
       } else {
-        logger.error(`Failed to kill panes: ${killResult.error.message}`);
+        logger.error(
+          `Failed to kill panes: ${getDefaultMessage(killResult.error)}`,
+        );
       }
 
       // Exit early after killing panes
@@ -119,7 +124,9 @@ export class Application {
         logger.info(`Clear-all operation completed: ${clearAllResult.data}`);
       } else {
         logger.error(
-          `Failed to clear all panes: ${clearAllResult.error.message}`,
+          `Failed to clear all panes: ${
+            getDefaultMessage(clearAllResult.error)
+          }`,
         );
       }
 
@@ -191,7 +198,9 @@ export class Application {
           );
         } else {
           logger.error(
-            `Failed to send instruction file path: ${sendResult.error.message}`,
+            `Failed to send instruction file path: ${
+              getDefaultMessage(sendResult.error)
+            }`,
           );
           // 指示ファイル送信失敗は継続（要求事項により監視は継続する）
         }

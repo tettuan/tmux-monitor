@@ -4,7 +4,12 @@ import {
   assertExists,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { ArgumentParser } from "../arguments.ts";
-import { Logger, TimeManager } from "../../infrastructure/services.ts";
+import {
+  Logger,
+  TimeManager,
+  Timestamp,
+} from "../../infrastructure/services.ts";
+import { MockTimeCalculator } from "../../core/test-mocks.ts";
 
 // =============================================================================
 // Mock classes for testing
@@ -16,8 +21,9 @@ class MockTimeManager extends TimeManager {
   }
 
   // Override methods for predictable testing
-  override getCurrentTime(): Date {
-    return new Date("2024-01-01T10:00:00");
+  override getCurrentTime(): Timestamp {
+    const result = Timestamp.create(new Date("2024-01-01T10:00:00").getTime());
+    return result.ok ? result.data : super.getCurrentTime();
   }
 }
 
@@ -59,9 +65,9 @@ function restoreMockArgs(): void {
 Deno.test("ArgumentParser: parse() - no arguments", () => {
   setupMockArgs([]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(undefined, true);
 
   const result = parser.parse();
 
@@ -76,9 +82,10 @@ Deno.test("ArgumentParser: parse() - no arguments", () => {
 Deno.test("ArgumentParser: parse() - time flag --time=HH:MM", () => {
   setupMockArgs(["--time=14:30"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const timeCalculator = new MockTimeCalculator();
+  const parser = new ArgumentParser(timeCalculator, true);
 
   const result = parser.parse();
 
@@ -96,9 +103,10 @@ Deno.test("ArgumentParser: parse() - time flag --time=HH:MM", () => {
 Deno.test("ArgumentParser: parse() - time flag -t HH:MM", () => {
   setupMockArgs(["-t", "04:00"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const timeCalculator = new MockTimeCalculator();
+  const parser = new ArgumentParser(timeCalculator, true);
 
   const result = parser.parse();
 
@@ -115,9 +123,10 @@ Deno.test("ArgumentParser: parse() - time flag -t HH:MM", () => {
 Deno.test("ArgumentParser: parse() - invalid time format", () => {
   setupMockArgs(["--time=invalid"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const timeCalculator = new MockTimeCalculator();
+  const parser = new ArgumentParser(timeCalculator, true);
 
   const result = parser.parse();
 
@@ -130,9 +139,9 @@ Deno.test("ArgumentParser: parse() - invalid time format", () => {
 Deno.test("ArgumentParser: parse() - instruction file --instruction=path", () => {
   setupMockArgs(["--instruction=test/file.md"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(undefined, true);
 
   const result = parser.parse();
 
@@ -145,9 +154,9 @@ Deno.test("ArgumentParser: parse() - instruction file --instruction=path", () =>
 Deno.test("ArgumentParser: parse() - instruction file -i path", () => {
   setupMockArgs(["-i", "draft/file.md"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(undefined, true);
 
   const result = parser.parse();
 
@@ -159,10 +168,10 @@ Deno.test("ArgumentParser: parse() - instruction file -i path", () => {
 
 Deno.test("ArgumentParser: parse() - combined arguments", () => {
   setupMockArgs(["--time=14:30", "--instruction=test.md"]);
-
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const timeCalculator = new MockTimeCalculator();
+  const parser = new ArgumentParser(timeCalculator, true);
 
   const result = parser.parse();
 
@@ -182,9 +191,9 @@ Deno.test("ArgumentParser: parse() - combined arguments", () => {
 Deno.test("ArgumentParser: parse() - missing argument for -t flag", () => {
   setupMockArgs(["-t"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(undefined, true);
 
   const result = parser.parse();
 
@@ -198,9 +207,9 @@ Deno.test("ArgumentParser: parse() - missing argument for -t flag", () => {
 Deno.test("ArgumentParser: parse() - missing argument for -i flag", () => {
   setupMockArgs(["-i"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(undefined, true);
 
   const result = parser.parse();
 
@@ -213,10 +222,10 @@ Deno.test("ArgumentParser: parse() - missing argument for -i flag", () => {
 
 Deno.test("ArgumentParser: parse() - multiple time arguments (last one wins)", () => {
   setupMockArgs(["--time=10:00", "-t", "14:30"]);
-
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const timeCalculator = new MockTimeCalculator();
+  const parser = new ArgumentParser(timeCalculator, true);
 
   const result = parser.parse();
 
@@ -232,10 +241,10 @@ Deno.test("ArgumentParser: parse() - multiple time arguments (last one wins)", (
 
 Deno.test("ArgumentParser: parse() - edge case empty time string", () => {
   setupMockArgs(["--time="]);
-
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const timeCalculator = new MockTimeCalculator();
+  const parser = new ArgumentParser(timeCalculator, true);
 
   const result = parser.parse();
 
@@ -248,9 +257,9 @@ Deno.test("ArgumentParser: parse() - edge case empty time string", () => {
 Deno.test("ArgumentParser: parse() - edge case empty instruction string", () => {
   setupMockArgs(["--instruction="]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(undefined, true);
 
   const result = parser.parse();
 
@@ -263,9 +272,9 @@ Deno.test("ArgumentParser: parse() - edge case empty instruction string", () => 
 Deno.test("ArgumentParser: parse() - onetime flag --onetime", () => {
   setupMockArgs(["--onetime"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(undefined, true);
 
   const result = parser.parse();
 
@@ -280,9 +289,9 @@ Deno.test("ArgumentParser: parse() - onetime flag --onetime", () => {
 Deno.test("ArgumentParser: parse() - onetime flag -o", () => {
   setupMockArgs(["-o"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(undefined, true);
 
   const result = parser.parse();
 
@@ -296,10 +305,10 @@ Deno.test("ArgumentParser: parse() - onetime flag -o", () => {
 
 Deno.test("ArgumentParser: parse() - onetime with time flag", () => {
   setupMockArgs(["--onetime", "--time=15:45"]);
-
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const timeCalculator = new MockTimeCalculator();
+  const parser = new ArgumentParser(timeCalculator, true);
 
   const result = parser.parse();
 
@@ -317,9 +326,9 @@ Deno.test("ArgumentParser: parse() - onetime with time flag", () => {
 Deno.test("ArgumentParser: parse() - clear flag --clear", () => {
   setupMockArgs(["--clear"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(undefined, true);
 
   const result = parser.parse();
 
@@ -335,10 +344,10 @@ Deno.test("ArgumentParser: parse() - clear flag --clear", () => {
 
 Deno.test("ArgumentParser: parse() - clear with other options", () => {
   setupMockArgs(["--clear", "--time=16:30", "--instruction=test.txt"]);
-
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const timeCalculator = new MockTimeCalculator();
+  const parser = new ArgumentParser(timeCalculator, true);
 
   const result = parser.parse();
 
@@ -359,9 +368,9 @@ Deno.test("ArgumentParser: parse() - clear with other options", () => {
 Deno.test("ArgumentParser: parse() - clear and kill-all-panes together", () => {
   setupMockArgs(["--clear", "--kill-all-panes"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(undefined, true);
 
   const result = parser.parse();
 
@@ -376,9 +385,9 @@ Deno.test("ArgumentParser: parse() - clear and kill-all-panes together", () => {
 Deno.test("ArgumentParser: parse() - clear-all flag --clear-all", () => {
   setupMockArgs(["--clear-all"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(undefined, true);
 
   const result = parser.parse();
 
@@ -393,10 +402,10 @@ Deno.test("ArgumentParser: parse() - clear-all flag --clear-all", () => {
 
 Deno.test("ArgumentParser: parse() - clear-all with other options", () => {
   setupMockArgs(["--clear-all", "--time=16:30", "--instruction=test.txt"]);
-
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const timeCalculator = new MockTimeCalculator();
+  const parser = new ArgumentParser(timeCalculator, true);
 
   const result = parser.parse();
 
@@ -417,9 +426,9 @@ Deno.test("ArgumentParser: parse() - clear-all with other options", () => {
 Deno.test("ArgumentParser: parse() - clear-all and clear together", () => {
   setupMockArgs(["--clear-all", "--clear"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(undefined, true);
 
   const result = parser.parse();
 
@@ -435,9 +444,9 @@ Deno.test("ArgumentParser: parse() - clear-all and clear together", () => {
 Deno.test("ArgumentParser: parse() - clear-all and kill-all-panes together", () => {
   setupMockArgs(["--clear-all", "--kill-all-panes"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(undefined, true);
 
   const result = parser.parse();
 
