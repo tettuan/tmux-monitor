@@ -1,0 +1,6 @@
+# Breakdown Configuration
+working_dir: ".agent/climpt"
+app_prompt:
+  base_dir: "prompts/design"
+app_schema:
+  base_dir: "schema/design"
