@@ -1,18 +1,16 @@
 ---
-title: 
+title: ドメイン駆動設計と全域性（Totality）に基づくリファクタリング
 description:
-variables:
-  uv-scope: 対象範囲の単語での指定(CSV取り込み処理、など)。ドメイン領域、サブドメイン領域。
 ---
 
-# プロジェクト: {uv-scope}のドメイン駆動設計と全域性（Totality）の融合完成
+# プロジェクト: ドメイン駆動設計と全域性（Totality）に基づくリファクタリング
 
 実装方針:
-現在の{uv-scope}の実装をドメイン駆動設計と全域性（Totality）による設計で、堅牢になるようリファクタリングする。ドメイン領域の明確な理解に基づき、型安全性を強化して、骨格が通った芯の強いコード実装を実現する。
+現在の実装をドメイン駆動設計と全域性（Totality）による設計で、堅牢になるようリファクタリングする。ドメイン領域の明確な理解に基づき、型安全性を強化して、骨格が通った芯の強いコード実装を実現する。
 
 `Totality` について、必ず `docs/totality.ja.md` を参照すること。
-ドメイン情報は、 `docs/domain/design_domain_boundary-20250802.md` および `docs/domain/**/*.md` を必ず読むこと。
-プロジェクト構造は、 に記載がある。
+ドメイン情報は、 `docs/domain/domain_boundary.md` および `docs/domain/domain_driven_design.md` を必ず読むこと。
+プロジェクト構造は、`docs/domain/architecture.md` に記載がある。
 
 AI実装複雑化防止フレームワーク(`docs/ai-complexity-control_compact.ja.md`)に則り、エントロピー増大を抑制すること。
 
@@ -31,8 +29,6 @@ AI実装複雑化防止フレームワーク(`docs/ai-complexity-control_compact
 5. 変更した実装に合わせてテストファイルを改修する
 6. `deno test <test_file>` で、作成したファイルをテストする
 7. 3で作成したリストの全てが完了するまで、再び4に戻り、実装修正を行う
-
-**スコープのドメイン領域**: {uv-scope}
 
 ### 全ての変更が完了した後
 
@@ -58,7 +54,7 @@ AI実装複雑化防止フレームワーク(`docs/ai-complexity-control_compact
 
 `instructions/team-head.ja.md` に詳細の記載がある。
 チーム立ち上げの指示なので、必ず最初に読むこと。
-各paneの存在を確認し、無ければ起動し、あればClaudeの起動を確認すること。全員を調べ、Claudeが起動していない部下に対し,Claude起動する。
+現在のpaneが所属するwindowにおいて、各paneの存在を確認し、無ければ起動し、あればClaudeの起動を確認すること(別のwindowは無視すること)。全員を調べ、Claudeが起動していない部下に対し,Claude起動する。
 
 
 ## 進捗更新
