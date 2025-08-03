@@ -1,5 +1,6 @@
 import {
   createError,
+  getDefaultMessage,
   type Result,
   type ValidationError,
 } from "../core/types.ts";
@@ -48,12 +49,17 @@ export class TmuxSession {
         error: createError({
           kind: "CommandFailed",
           command: "tmux list-sessions",
-          stderr: sessionsResult.error.message,
+          stderr: getDefaultMessage(sessionsResult.error),
         }),
       };
     }
 
-    const sessions = sessionsResult.data.split("\n").filter((line: string) =>
+    const sessionsOutput = typeof sessionsResult.data === "string"
+      ? sessionsResult.data
+      : sessionsResult.data.kind === "success"
+      ? sessionsResult.data.stdout
+      : "";
+    const sessions = sessionsOutput.split("\n").filter((line: string) =>
       line.trim() !== ""
     );
     if (sessions.length === 0) {
@@ -75,7 +81,12 @@ export class TmuxSession {
       ]);
 
       if (panesResult.ok) {
-        const paneCount = panesResult.data.split("\n").filter((line: string) =>
+        const panesOutput = typeof panesResult.data === "string"
+          ? panesResult.data
+          : panesResult.data.kind === "success"
+          ? panesResult.data.stdout
+          : "";
+        const paneCount = panesOutput.split("\n").filter((line: string) =>
           line.trim() !== ""
         ).length;
         sessionPaneCounts.set(name, paneCount);
@@ -83,7 +94,9 @@ export class TmuxSession {
       } else {
         sessionPaneCounts.set(name, 0);
         this.logger.warn(
-          `Failed to get pane count for session "${name}": ${panesResult.error.message}`,
+          `Failed to get pane count for session "${name}": ${
+            getDefaultMessage(panesResult.error)
+          }`,
         );
       }
     }
@@ -152,7 +165,9 @@ export class TmuxSession {
     } else {
       // Fallback to session-specific if all-sessions fails
       this.logger.warn(
-        `Failed to get all panes, falling back to session-specific: ${result.error.message}`,
+        `Failed to get all panes, falling back to session-specific: ${
+          getDefaultMessage(result.error)
+        }`,
       );
       result = await this.commandExecutor.execute([
         "tmux",
@@ -170,12 +185,17 @@ export class TmuxSession {
         error: createError({
           kind: "CommandFailed",
           command: "tmux list-panes",
-          stderr: result.error.message,
+          stderr: getDefaultMessage(result.error),
         }),
       };
     }
 
-    const lines = result.data.split("\n").filter((line: string) =>
+    const panesOutput = typeof result.data === "string"
+      ? result.data
+      : result.data.kind === "success"
+      ? result.data.stdout
+      : "";
+    const lines = panesOutput.split("\n").filter((line: string) =>
       line.trim() !== ""
     );
     const panes: PaneDetail[] = [];

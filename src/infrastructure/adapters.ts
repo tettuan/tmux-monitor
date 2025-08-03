@@ -8,6 +8,7 @@
  */
 
 import type { Result } from "../core/types.ts";
+import { getDefaultMessage } from "../core/types.ts";
 import type {
   IPaneCommunicator,
   ITmuxSessionRepository,
@@ -56,13 +57,25 @@ export class TmuxSessionAdapter implements ITmuxSessionRepository {
         return {
           ok: false,
           error: new Error(
-            `Failed to list tmux panes: ${result.error.message}`,
+            `Failed to list tmux panes: ${JSON.stringify(result.error)}`,
           ),
         };
       }
 
-      // 出力のパース
-      const lines = result.data.split("\n").filter((line: string) =>
+      // 出力のパース - handle both string and CommandResult
+      let outputStr: string;
+      if (typeof result.data === "string") {
+        outputStr = result.data;
+      } else if (result.data.kind === "success") {
+        outputStr = result.data.stdout;
+      } else {
+        return {
+          ok: false,
+          error: new Error("Command failed to return stdout"),
+        };
+      }
+
+      const lines = outputStr.split("\n").filter((line: string) =>
         line.trim() !== ""
       );
       const panes: RawPaneData[] = [];
@@ -92,17 +105,32 @@ export class TmuxSessionAdapter implements ITmuxSessionRepository {
       const result = await this.commandExecutor.execute(command);
 
       if (!result.ok) {
-        console.log(`❌ Tmux command failed: ${result.error.message}`);
+        console.log(`❌ Tmux command failed: ${JSON.stringify(result.error)}`);
         return {
           ok: false,
-          error: new Error(`tmux command failed: ${result.error.message}`),
+          error: new Error(
+            `tmux command failed: ${JSON.stringify(result.error)}`,
+          ),
+        };
+      }
+
+      // Handle both string and CommandResult
+      let outputStr: string;
+      if (typeof result.data === "string") {
+        outputStr = result.data;
+      } else if (result.data.kind === "success") {
+        outputStr = result.data.stdout;
+      } else {
+        return {
+          ok: false,
+          error: new Error("Command failed to return stdout"),
         };
       }
 
       console.log(
-        `✅ Tmux command successful, output length: ${result.data.length}`,
+        `✅ Tmux command successful, output length: ${outputStr.length}`,
       );
-      return { ok: true, data: result.data };
+      return { ok: true, data: outputStr };
     } catch (error) {
       console.log(`💥 Unexpected error in tmux command: ${error}`);
       return {
@@ -208,7 +236,9 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
         return {
           ok: false,
           error: new Error(
-            `Failed to send message to pane ${paneId}: ${result.error.message}`,
+            `Failed to send message to pane ${paneId}: ${
+              getDefaultMessage(result.error)
+            }`,
           ),
         };
       }
@@ -244,7 +274,9 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
           return {
             ok: false,
             error: new Error(
-              `Failed to send Escape key to pane ${paneId}: ${result.error.message}`,
+              `Failed to send Escape key to pane ${paneId}: ${
+                getDefaultMessage(result.error)
+              }`,
             ),
           };
         }
@@ -262,7 +294,9 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
         return {
           ok: false,
           error: new Error(
-            `Failed to send command to pane ${paneId}: ${result.error.message}`,
+            `Failed to send command to pane ${paneId}: ${
+              getDefaultMessage(result.error)
+            }`,
           ),
         };
       }
@@ -291,7 +325,9 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
         return {
           ok: false,
           error: new Error(
-            `Failed to send Enter to pane ${paneId}: ${result.error.message}`,
+            `Failed to send Enter to pane ${paneId}: ${
+              getDefaultMessage(result.error)
+            }`,
           ),
         };
       }
@@ -389,7 +425,9 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
         return {
           ok: false,
           error: new Error(
-            `Failed to send first Escape key to pane ${paneId}: ${escape1Result.error.message}`,
+            `Failed to send first Escape key to pane ${paneId}: ${
+              getDefaultMessage(escape1Result.error)
+            }`,
           ),
         };
       }
@@ -409,7 +447,9 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
         return {
           ok: false,
           error: new Error(
-            `Failed to send second Escape key to pane ${paneId}: ${escape2Result.error.message}`,
+            `Failed to send second Escape key to pane ${paneId}: ${
+              getDefaultMessage(escape2Result.error)
+            }`,
           ),
         };
       }
@@ -428,7 +468,9 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
         return {
           ok: false,
           error: new Error(
-            `Failed to send Tab key to pane ${paneId}: ${tabResult.error.message}`,
+            `Failed to send Tab key to pane ${paneId}: ${
+              getDefaultMessage(tabResult.error)
+            }`,
           ),
         };
       }
@@ -444,7 +486,9 @@ export class PaneCommunicationAdapter implements IPaneCommunicator {
         return {
           ok: false,
           error: new Error(
-            `Failed to send /clear command to pane ${paneId}: ${clearResult.error.message}`,
+            `Failed to send /clear command to pane ${paneId}: ${
+              getDefaultMessage(clearResult.error)
+            }`,
           ),
         };
       }
@@ -530,9 +574,18 @@ export class InfrastructureAdapterFactory {
       async execute(command: string[]): Promise<Result<string, Error>> {
         const result = await commandExecutor.execute(command);
         if (result.ok) {
-          return { ok: true, data: result.data };
+          // Handle both string and CommandResult types
+          const data = typeof result.data === "string"
+            ? result.data
+            : result.data.kind === "success"
+            ? result.data.stdout
+            : "";
+          return { ok: true, data };
         } else {
-          return { ok: false, error: new Error(result.error.message) };
+          return {
+            ok: false,
+            error: new Error(getDefaultMessage(result.error)),
+          };
         }
       },
     };

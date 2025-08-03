@@ -6,785 +6,1117 @@ import {
 import { globalCancellationToken } from "../core/cancellation.ts";
 
 // =============================================================================
-// Core Infrastructure Services
+// Domain Value Objects with Smart Constructors
 // =============================================================================
 
 /**
- * Executes system commands with proper error handling and result formatting.
- *
- * This class provides a safe interface for executing system commands,
- * particularly tmux commands, with comprehensive error handling and
- * structured result types.
- *
- * @example
- * ```typescript
- * const executor = new CommandExecutor();
- * const result = await executor.executeTmuxCommand("tmux list-sessions");
- * if (result.ok) {
- *   console.log("Sessions:", result.data);
- * } else {
- *   console.error("Error:", result.error.message);
- * }
- * ```
+ * Represents a validated command with arguments.
+ * Uses smart constructor pattern to ensure valid commands.
  */
-export class CommandExecutor {
+export class Command {
+  private constructor(
+    public readonly program: string,
+    public readonly args: readonly string[],
+  ) {}
+
   /**
-   * Executes a command with the given arguments.
-   *
-   * @param args - Array of command arguments, where args[0] is the command name
-   * @returns Promise resolving to a Result containing stdout or error information
-   * @example
-   * ```typescript
-   * const result = await executor.execute(["ls", "-la"]);
-   * ```
+   * Smart constructor that validates command creation.
+   * Ensures non-empty program name and proper argument structure.
    */
-  async execute(
-    args: string[],
-  ): Promise<Result<string, ValidationError & { message: string }>> {
-    if (!args || args.length === 0) {
+  static create(
+    program: string,
+    args: string[] = [],
+  ): Result<Command, ValidationError> {
+    if (!program || program.trim() === "") {
       return { ok: false, error: createError({ kind: "EmptyInput" }) };
     }
 
-    // デバッグ: 実行するコマンドをログ出力
-    // console.log(`🔧 CommandExecutor.execute: [${args.join(", ")}]`);
+    const trimmedProgram = program.trim();
+    const validatedArgs = args.filter((arg) =>
+      arg !== null && arg !== undefined
+    );
 
+    return {
+      ok: true,
+      data: new Command(trimmedProgram, Object.freeze(validatedArgs)),
+    };
+  }
+
+  /**
+   * Creates a tmux-specific command with validation.
+   */
+  static createTmux(
+    subcommand: string,
+    args: string[] = [],
+  ): Result<Command, ValidationError> {
+    if (!subcommand || subcommand.trim() === "") {
+      return { ok: false, error: createError({ kind: "EmptyInput" }) };
+    }
+
+    return Command.create("tmux", [subcommand, ...args]);
+  }
+
+  /**
+   * Converts to array format for execution.
+   */
+  toArray(): string[] {
+    return [this.program, ...this.args];
+  }
+
+  /**
+   * String representation for logging.
+   */
+  toString(): string {
+    return this.toArray().join(" ");
+  }
+}
+
+/**
+ * Represents the result of a command execution.
+ * Discriminated union for type-safe result handling.
+ */
+export type CommandResult =
+  | { kind: "success"; stdout: string }
+  | { kind: "failure"; exitCode: number; stderr: string }
+  | { kind: "error"; error: Error };
+
+/**
+ * Type guard for successful command results.
+ */
+export function isSuccessResult(
+  result: CommandResult,
+): result is { kind: "success"; stdout: string } {
+  return result.kind === "success";
+}
+
+/**
+ * Represents a pane identifier with validation.
+ */
+export class PaneId {
+  private constructor(public readonly value: string) {}
+
+  /**
+   * Smart constructor for pane IDs.
+   * Validates format (e.g., %0, %10, %123).
+   */
+  static create(value: string): Result<PaneId, ValidationError> {
+    if (!value || !value.match(/^%\d+$/)) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "InvalidFormat",
+          input: value,
+          expected: "Pane ID must be in format %<number>",
+        }),
+      };
+    }
+
+    return { ok: true, data: new PaneId(value) };
+  }
+
+  toString(): string {
+    return this.value;
+  }
+}
+
+/**
+ * Represents a pane target in session:window.pane format.
+ */
+export class PaneTarget {
+  private constructor(
+    public readonly session: string,
+    public readonly window: number,
+    public readonly pane: number,
+  ) {}
+
+  /**
+   * Smart constructor for pane targets.
+   * Validates format: session:window.pane
+   */
+  static create(value: string): Result<PaneTarget, ValidationError> {
+    const match = value.match(/^([^:]+):(\d+)\.(\d+)$/);
+    if (!match) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "InvalidFormat",
+          input: value,
+          expected: "Pane target must be in format session:window.pane",
+        }),
+      };
+    }
+
+    const [, session, window, pane] = match;
+    return {
+      ok: true,
+      data: new PaneTarget(session, parseInt(window), parseInt(pane)),
+    };
+  }
+
+  toString(): string {
+    return `${this.session}:${this.window}.${this.pane}`;
+  }
+}
+
+// =============================================================================
+// Command Execution Service with Total Functions
+// =============================================================================
+
+/**
+ * Executes system commands with comprehensive error handling.
+ * All methods return Result types for total function guarantee.
+ */
+export class CommandExecutor {
+  /**
+   * Executes a command with total function guarantee.
+   * Handles all possible error cases and returns typed results.
+   *
+   * @param commandOrArgs - Either a Command object or string array for backward compatibility
+   */
+  async execute(
+    commandOrArgs: Command | string[],
+  ): Promise<Result<CommandResult | string, ValidationError>> {
+    // Handle backward compatibility with string array
+    if (Array.isArray(commandOrArgs)) {
+      if (commandOrArgs.length === 0) {
+        return { ok: false, error: createError({ kind: "EmptyInput" }) };
+      }
+
+      const commandResult = Command.create(
+        commandOrArgs[0],
+        commandOrArgs.slice(1),
+      );
+      if (!commandResult.ok) {
+        return commandResult;
+      }
+
+      // Call the new implementation and convert result for backward compatibility
+      const result = await this.executeCommand(commandResult.data);
+      if (!result.ok) {
+        return result;
+      }
+
+      // Convert CommandResult to string for backward compatibility
+      const cmdResult = result.data;
+      switch (cmdResult.kind) {
+        case "success":
+          return { ok: true, data: cmdResult.stdout };
+        case "failure":
+          return {
+            ok: false,
+            error: createError({
+              kind: "CommandFailed",
+              command: commandOrArgs.join(" "),
+              stderr: cmdResult.stderr,
+            }),
+          };
+        case "error":
+          return {
+            ok: false,
+            error: createError({
+              kind: "CommandFailed",
+              command: commandOrArgs.join(" "),
+              stderr: cmdResult.error.message,
+            }),
+          };
+      }
+    }
+
+    // New Command-based interface
+    return this.executeCommand(commandOrArgs);
+  }
+
+  /**
+   * Internal method that executes a Command object.
+   * This is the new implementation with total function guarantee.
+   */
+  private async executeCommand(
+    command: Command,
+  ): Promise<Result<CommandResult, ValidationError>> {
     try {
+      const args = command.toArray();
       const process = new Deno.Command(args[0], {
         args: args.slice(1),
         stdout: "piped",
         stderr: "piped",
       });
 
-      const result = await process.output();
-
-      if (!result.success) {
-        const stderr = new TextDecoder().decode(result.stderr);
-        // console.log(`❌ Command failed with exit code ${result.code}: ${stderr}`);
-        return {
-          ok: false,
-          error: createError({
-            kind: "CommandFailed",
-            command: args.join(" "),
-            stderr,
-          }),
+      const output = await process.output();
+      const result: CommandResult = output.success
+        ? {
+          kind: "success",
+          stdout: new TextDecoder().decode(output.stdout).trim(),
+        }
+        : {
+          kind: "failure",
+          exitCode: output.code,
+          stderr: new TextDecoder().decode(output.stderr).trim(),
         };
-      }
 
-      const stdout = new TextDecoder().decode(result.stdout).trim();
-      // console.log(`✅ Command successful, output length: ${stdout.length}`);
-      return { ok: true, data: stdout };
+      return { ok: true, data: result };
     } catch (error) {
-      // console.log(`💥 Command execution error: ${error}`);
       return {
-        ok: false,
-        error: createError({
-          kind: "CommandFailed",
-          command: args.join(" "),
-          stderr: String(error),
-        }),
+        ok: true,
+        data: {
+          kind: "error",
+          error: error instanceof Error ? error : new Error(String(error)),
+        },
       };
     }
   }
 
   /**
    * Executes a tmux command through bash shell.
-   *
-   * @param command - The complete tmux command string to execute
-   * @returns Promise resolving to a Result containing command output or error
-   * @example
-   * ```typescript
-   * const result = await executor.executeTmuxCommand("tmux list-sessions");
-   * ```
+   * Total function with comprehensive error handling.
    */
   async executeTmuxCommand(
-    command: string,
-  ): Promise<Result<string, ValidationError & { message: string }>> {
-    if (!command || command.trim() === "") {
-      return { ok: false, error: createError({ kind: "EmptyInput" }) };
+    commandString: string,
+  ): Promise<Result<string, ValidationError>> {
+    const bashCommand = Command.create("bash", ["-c", commandString]);
+    if (!bashCommand.ok) {
+      return bashCommand;
     }
 
-    try {
-      const process = new Deno.Command("bash", {
-        args: ["-c", command],
-        stdout: "piped",
-        stderr: "piped",
-      });
-
-      const result = await process.output();
-
-      if (!result.success) {
-        const stderr = new TextDecoder().decode(result.stderr);
-        return {
-          ok: false,
-          error: createError({ kind: "CommandFailed", command, stderr }),
-        };
-      }
-
-      const stdout = new TextDecoder().decode(result.stdout).trim();
-      return { ok: true, data: stdout };
-    } catch (error) {
-      return {
-        ok: false,
-        error: createError({
-          kind: "CommandFailed",
-          command,
-          stderr: String(error),
-        }),
-      };
+    const result = await this.executeCommand(bashCommand.data);
+    if (!result.ok) {
+      return result;
     }
-  }
 
-  /**
-   * Safely kills all tmux panes by first sending SIGTERM, then SIGKILL if necessary.
-   *
-   * @returns Promise resolving to a Result indicating success or failure
-   * @example
-   * ```typescript
-   * const result = await executor.killAllPanes();
-   * if (result.ok) {
-   *   console.log("All panes killed successfully");
-   * }
-   * ```
-   */
-  async killAllPanes(): Promise<
-    Result<string, ValidationError & { message: string }>
-  > {
-    try {
-      // First, get all pane IDs
-      const listResult = await this.executeTmuxCommand(
-        "tmux list-panes -a -F '#{pane_id}'",
-      );
-      if (!listResult.ok) {
+    const cmdResult = result.data;
+    switch (cmdResult.kind) {
+      case "success":
+        return { ok: true, data: cmdResult.stdout };
+      case "failure":
         return {
           ok: false,
           error: createError({
             kind: "CommandFailed",
-            command: "tmux list-panes",
-            stderr: listResult.error.message,
+            command: commandString,
+            stderr: cmdResult.stderr,
           }),
         };
+      case "error":
+        return {
+          ok: false,
+          error: createError({
+            kind: "CommandFailed",
+            command: commandString,
+            stderr: cmdResult.error.message,
+          }),
+        };
+    }
+  }
+
+  /**
+   * Gets all pane IDs with type-safe parsing.
+   */
+  private async getAllPaneIds(): Promise<Result<PaneId[], ValidationError>> {
+    const result = await this.executeTmuxCommand(
+      "tmux list-panes -a -F '#{pane_id}'",
+    );
+    if (!result.ok) {
+      return result;
+    }
+
+    const paneIds: PaneId[] = [];
+    const lines = result.data.split("\n").filter((line) => line.trim() !== "");
+
+    for (const line of lines) {
+      const paneId = PaneId.create(line.trim());
+      if (!paneId.ok) {
+        return paneId;
       }
+      paneIds.push(paneId.data);
+    }
 
-      const paneIds = listResult.data.split("\n").filter((id) =>
-        id.trim() !== ""
-      );
-      if (paneIds.length === 0) {
-        return { ok: true, data: "No panes to kill" };
+    return { ok: true, data: paneIds };
+  }
+
+  /**
+   * Gets all pane targets with type-safe parsing.
+   */
+  private async getAllPaneTargets(): Promise<
+    Result<PaneTarget[], ValidationError>
+  > {
+    const result = await this.executeTmuxCommand(
+      "tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index}'",
+    );
+    if (!result.ok) {
+      return result;
+    }
+
+    const targets: PaneTarget[] = [];
+    const lines = result.data.split("\n").filter((line) => line.trim() !== "");
+
+    for (const line of lines) {
+      const target = PaneTarget.create(line.trim());
+      if (!target.ok) {
+        return target;
       }
+      targets.push(target.data);
+    }
 
-      console.log(`[INFO] Found ${paneIds.length} panes to terminate`);
+    return { ok: true, data: targets };
+  }
 
-      // Step 1: Send SIGTERM to all panes (graceful termination)
-      console.log(
-        "[INFO] Sending SIGTERM to all panes for graceful termination...",
-      );
-      for (const paneId of paneIds) {
-        const killResult = await this.execute([
-          "tmux",
-          "send-keys",
-          "-t",
-          paneId,
-          "C-c", // Send Ctrl+C
-        ]);
-        if (killResult.ok) {
-          console.log(`[INFO] Sent SIGTERM to pane ${paneId}`);
-        }
-      }
+  /**
+   * Sends a key sequence to a pane.
+   */
+  private async sendKeys(
+    paneId: PaneId | PaneTarget,
+    keys: string,
+  ): Promise<Result<void, ValidationError>> {
+    const cmd = Command.createTmux("send-keys", [
+      "-t",
+      paneId.toString(),
+      keys,
+    ]);
+    if (!cmd.ok) {
+      return cmd;
+    }
 
-      // Wait 3 seconds for graceful termination
-      console.log("[INFO] Waiting 3 seconds for graceful termination...");
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+    const result = await this.executeCommand(cmd.data);
+    if (!result.ok) {
+      return result;
+    }
 
-      // Step 2: Check which panes are still alive
-      const remainingResult = await this.executeTmuxCommand(
-        "tmux list-panes -a -F '#{pane_id}'",
-      );
-      if (remainingResult.ok) {
-        const remainingPanes = remainingResult.data.split("\n").filter((id) =>
-          id.trim() !== ""
-        );
-
-        if (remainingPanes.length === 0) {
-          return { ok: true, data: "All panes terminated gracefully" };
-        }
-
-        // Step 3: Force kill remaining panes
-        console.log(
-          `[INFO] Force killing ${remainingPanes.length} remaining panes...`,
-        );
-        for (const paneId of remainingPanes) {
-          const killResult = await this.execute([
-            "tmux",
-            "kill-pane",
-            "-t",
-            paneId,
-          ]);
-          if (killResult.ok) {
-            console.log(`[INFO] Force killed pane ${paneId}`);
-          } else {
-            console.log(
-              `[WARN] Failed to kill pane ${paneId}: ${killResult.error.message}`,
-            );
-          }
-        }
-      }
-
-      return { ok: true, data: `Terminated ${paneIds.length} panes` };
-    } catch (error) {
+    if (!isSuccessResult(result.data)) {
       return {
         ok: false,
         error: createError({
           kind: "CommandFailed",
-          command: "kill all panes",
-          stderr: String(error),
+          command: cmd.data.toString(),
+          stderr: result.data.kind === "failure"
+            ? result.data.stderr
+            : result.data.error.message,
         }),
       };
     }
+
+    return { ok: true, data: undefined };
+  }
+
+  /**
+   * Kills a single pane.
+   */
+  private async killPane(
+    paneId: PaneId,
+  ): Promise<Result<void, ValidationError>> {
+    const cmd = Command.createTmux("kill-pane", ["-t", paneId.toString()]);
+    if (!cmd.ok) {
+      return cmd;
+    }
+
+    const result = await this.executeCommand(cmd.data);
+    if (!result.ok) {
+      return result;
+    }
+
+    if (!isSuccessResult(result.data)) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "CommandFailed",
+          command: cmd.data.toString(),
+          stderr: result.data.kind === "failure"
+            ? result.data.stderr
+            : result.data.error.message,
+        }),
+      };
+    }
+
+    return { ok: true, data: undefined };
+  }
+
+  /**
+   * Safely terminates all tmux panes with graceful shutdown.
+   * Total function with comprehensive error handling.
+   */
+  async killAllPanes(): Promise<Result<string, ValidationError>> {
+    // Get all pane IDs
+    const paneIdsResult = await this.getAllPaneIds();
+    if (!paneIdsResult.ok) {
+      return paneIdsResult;
+    }
+
+    const paneIds = paneIdsResult.data;
+    if (paneIds.length === 0) {
+      return { ok: true, data: "No panes to kill" };
+    }
+
+    console.log(`[INFO] Found ${paneIds.length} panes to terminate`);
+
+    // Phase 1: Send SIGTERM (Ctrl+C) for graceful termination
+    console.log(
+      "[INFO] Sending SIGTERM to all panes for graceful termination...",
+    );
+    const terminationResults = await Promise.all(
+      paneIds.map((paneId) => this.sendKeys(paneId, "C-c")),
+    );
+
+    // Log any failed termination attempts
+    terminationResults.forEach((result, index) => {
+      if (!result.ok) {
+        console.log(`[WARN] Failed to send SIGTERM to ${paneIds[index]}`);
+      }
+    });
+
+    // Wait for graceful termination
+    console.log("[INFO] Waiting 3 seconds for graceful termination...");
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    // Phase 2: Check remaining panes
+    const remainingResult = await this.getAllPaneIds();
+    if (!remainingResult.ok) {
+      return remainingResult;
+    }
+
+    const remainingPanes = remainingResult.data;
+    if (remainingPanes.length === 0) {
+      return { ok: true, data: "All panes terminated gracefully" };
+    }
+
+    // Phase 3: Force kill remaining panes
+    console.log(
+      `[INFO] Force killing ${remainingPanes.length} remaining panes...`,
+    );
+    const killResults = await Promise.all(
+      remainingPanes.map((paneId) => this.killPane(paneId)),
+    );
+
+    // Count successful kills
+    const successfulKills = killResults.filter((r) => r.ok).length;
+    const failedKills = killResults.filter((r) => !r.ok).length;
+
+    if (failedKills > 0) {
+      console.log(`[WARN] Failed to kill ${failedKills} panes`);
+    }
+
+    return {
+      ok: true,
+      data:
+        `Terminated ${paneIds.length} panes (${successfulKills} force killed)`,
+    };
   }
 
   /**
    * Clears all panes by sending escape sequences and clear commands.
-   *
-   * This method sends a comprehensive clear sequence to all panes:
-   * 1. Send two Escape keypresses (with 0.2s delay)
-   * 2. Send Tab, "/clear", Tab, Enter sequence (with 0.2s delays)
-   *
-   * @returns Promise resolving to a Result indicating success or failure
-   * @example
-   * ```typescript
-   * const result = await executor.clearAllPanes();
-   * if (result.ok) {
-   *   console.log("All panes cleared successfully");
-   * }
-   * ```
+   * Total function with comprehensive error handling.
    */
-  async clearAllPanes(): Promise<
-    Result<string, ValidationError & { message: string }>
-  > {
-    try {
-      // First, get all pane IDs with session:window.pane format
-      const listResult = await this.executeTmuxCommand(
-        "tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index}'",
-      );
-      if (!listResult.ok) {
-        return {
-          ok: false,
-          error: createError({
-            kind: "CommandFailed",
-            command: "tmux list-panes",
-            stderr: listResult.error.message,
-          }),
-        };
-      }
+  async clearAllPanes(): Promise<Result<string, ValidationError>> {
+    // Get all pane targets
+    const targetsResult = await this.getAllPaneTargets();
+    if (!targetsResult.ok) {
+      return targetsResult;
+    }
 
-      const paneTargets = listResult.data.split("\n").filter((target) =>
-        target.trim() !== ""
-      );
-      if (paneTargets.length === 0) {
-        return { ok: true, data: "No panes to clear" };
-      }
+    const paneTargets = targetsResult.data;
+    if (paneTargets.length === 0) {
+      return { ok: true, data: "No panes to clear" };
+    }
 
-      console.log(`[INFO] Found ${paneTargets.length} panes to clear`);
+    console.log(`[INFO] Found ${paneTargets.length} panes to clear`);
 
-      // Step 1: Send two Escape keypresses to all panes
-      console.log("[INFO] Sending Escape keypresses to all panes...");
-      for (const paneTarget of paneTargets) {
-        // First Escape
-        await this.execute([
-          "tmux",
-          "send-keys",
-          "-t",
-          paneTarget,
-          "Escape",
-        ]);
-        // Wait 0.2 seconds
-        await new Promise((resolve) => setTimeout(resolve, 200));
-
-        // Second Escape
-        await this.execute([
-          "tmux",
-          "send-keys",
-          "-t",
-          paneTarget,
-          "Escape",
-        ]);
-      }
-
-      // Small delay between phases
-      console.log("[INFO] Waiting before sending clear commands...");
+    // Phase 1: Send Escape sequences
+    console.log("[INFO] Sending Escape keypresses to all panes...");
+    for (const target of paneTargets) {
+      await this.sendKeys(target, "Escape");
       await new Promise((resolve) => setTimeout(resolve, 200));
+      await this.sendKeys(target, "Escape");
+    }
 
-      // Step 2: Send Tab, "/clear", Tab, Enter sequence to all panes
-      console.log("[INFO] Sending clear commands to all panes...");
-      for (const paneTarget of paneTargets) {
-        // Send Tab
-        await this.execute([
-          "tmux",
-          "send-keys",
-          "-t",
-          paneTarget,
-          "Tab",
-        ]);
-        await new Promise((resolve) => setTimeout(resolve, 200));
+    // Phase 2: Send clear command sequence
+    console.log("[INFO] Sending clear commands to all panes...");
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
-        // Send "/clear"
-        await this.execute([
-          "tmux",
-          "send-keys",
-          "-t",
-          paneTarget,
-          "/clear",
-        ]);
+    for (const target of paneTargets) {
+      await this.sendKeys(target, "Tab");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await this.sendKeys(target, "/clear");
+      await this.sendKeys(target, "Tab");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await this.sendKeys(target, "Enter");
+    }
 
-        // Send Tab (note: there's a typo in the original - "send-kers" should be "send-keys")
-        await this.execute([
-          "tmux",
-          "send-keys",
-          "-t",
-          paneTarget,
-          "Tab",
-        ]);
-        await new Promise((resolve) => setTimeout(resolve, 200));
+    return { ok: true, data: `Cleared ${paneTargets.length} panes` };
+  }
+}
 
-        // Send Enter
-        await this.execute([
-          "tmux",
-          "send-keys",
-          "-t",
-          paneTarget,
-          "Enter",
-        ]);
+// =============================================================================
+// Keyboard Interrupt Handler with State Management
+// =============================================================================
+
+/**
+ * Represents the state of the keyboard handler.
+ * Discriminated union for exhaustive state handling.
+ */
+export type KeyboardHandlerState =
+  | { kind: "uninitialized" }
+  | { kind: "initialized"; listener: Promise<void> | null }
+  | { kind: "cancelled"; reason: string }
+  | { kind: "cleaned" };
+
+/**
+ * Handles keyboard interrupts and signals with type-safe state management.
+ * Implements total functions for all operations.
+ */
+export class KeyboardInterruptHandler {
+  private state: KeyboardHandlerState = { kind: "uninitialized" };
+
+  /**
+   * Gets the current state in a type-safe manner.
+   */
+  getState(): KeyboardHandlerState {
+    return this.state;
+  }
+
+  /**
+   * Sets up keyboard interrupt handling.
+   * Total function that handles all initialization cases.
+   */
+  setup(): Result<void, ValidationError> {
+    // Check if already initialized
+    if (this.state.kind !== "uninitialized") {
+      return {
+        ok: false,
+        error: createError({
+          kind: "InvalidState",
+          current: this.state.kind,
+          expected: "uninitialized",
+        }),
+      };
+    }
+
+    try {
+      // Setup SIGINT handler
+      Deno.addSignalListener("SIGINT", () => {
+        globalCancellationToken.cancel("Ctrl+C signal received");
+        this.state = { kind: "cancelled", reason: "SIGINT" };
+        this.forceExit("[INFO] Monitoring stopped by Ctrl+C. Exiting...");
+      });
+
+      // Setup raw stdin if available
+      let listenerPromise: Promise<void> | null = null;
+      if (Deno.stdin.isTerminal()) {
+        try {
+          Deno.stdin.setRaw(true);
+          listenerPromise = this.startKeyListener();
+        } catch (error) {
+          // Terminal might not support raw mode
+          console.warn("Failed to setup raw terminal mode:", error);
+        }
       }
 
-      return { ok: true, data: `Cleared ${paneTargets.length} panes` };
+      this.state = { kind: "initialized", listener: listenerPromise };
+      return { ok: true, data: undefined };
     } catch (error) {
       return {
         ok: false,
         error: createError({
-          kind: "CommandFailed",
-          command: "clear all panes",
-          stderr: String(error),
+          kind: "UnexpectedError",
+          operation: "setup",
+          details: String(error),
         }),
       };
     }
   }
+
+  /**
+   * Starts listening for keyboard input.
+   * Total function with proper error handling.
+   */
+  private async startKeyListener(): Promise<void> {
+    const buffer = new Uint8Array(1024);
+
+    while (
+      this.state.kind === "initialized" &&
+      !globalCancellationToken.isCancelled()
+    ) {
+      try {
+        const bytesRead = await Deno.stdin.read(buffer);
+
+        // Handle EOF or no data
+        if (bytesRead === null || bytesRead === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          continue;
+        }
+
+        // Any key press triggers cancellation
+        if (bytesRead > 0) {
+          globalCancellationToken.cancel("Key press detected");
+          this.state = { kind: "cancelled", reason: "key_press" };
+          this.forceExit("[INFO] Monitoring stopped by user input. Exiting...");
+          break;
+        }
+      } catch (_error) {
+        // Handle read errors gracefully
+        if (
+          this.state.kind === "initialized" &&
+          !globalCancellationToken.isCancelled()
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        } else {
+          break;
+        }
+      }
+    }
+  }
+
+  /**
+   * Cleans up keyboard handler resources.
+   * Total function that handles all cleanup cases.
+   */
+  cleanup(): Result<void, ValidationError> {
+    switch (this.state.kind) {
+      case "uninitialized":
+      case "cleaned":
+        return { ok: true, data: undefined };
+
+      case "initialized":
+      case "cancelled":
+        // Reset terminal if needed
+        if (Deno.stdin.isTerminal()) {
+          try {
+            Deno.stdin.setRaw(false);
+          } catch (error) {
+            // Ignore errors during cleanup
+            console.warn("Failed to reset terminal:", error);
+          }
+        }
+
+        this.state = { kind: "cleaned" };
+        return { ok: true, data: undefined };
+    }
+  }
+
+  /**
+   * Forces immediate exit with cleanup.
+   */
+  private forceExit(message: string): void {
+    this.cleanup();
+    console.log(message);
+    setTimeout(() => Deno.exit(0), 100);
+  }
+
+  /**
+   * Checks if cancellation has been requested.
+   * Total function returning boolean.
+   */
+  isCancellationRequested(): boolean {
+    return this.state.kind === "cancelled" ||
+      globalCancellationToken.isCancelled();
+  }
+
+  /**
+   * Waits for specified duration or until interrupted.
+   * Returns true if interrupted, false if completed normally.
+   */
+  async waitWithKeyboardInterrupt(ms: number): Promise<boolean> {
+    return await globalCancellationToken.delay(ms);
+  }
+
+  /**
+   * Sleeps with cancellation support.
+   * Total function with Result type.
+   */
+  async sleepWithCancellation(
+    ms: number,
+    _timeManager?: TimeManager,
+  ): Promise<boolean> {
+    return await globalCancellationToken.delay(ms);
+  }
+}
+
+// =============================================================================
+// Logger Service with Type-Safe Log Levels
+// =============================================================================
+
+/**
+ * Represents log levels as a discriminated union.
+ */
+export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
+
+/**
+ * Configuration for logger with validation.
+ */
+export class LoggerConfig {
+  private constructor(public readonly level: LogLevel) {}
+
+  /**
+   * Smart constructor for logger configuration.
+   */
+  static create(level: string = "INFO"): Result<LoggerConfig, ValidationError> {
+    const upperLevel = level.toUpperCase();
+    if (!["DEBUG", "INFO", "WARN", "ERROR"].includes(upperLevel)) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "InvalidFormat",
+          input: level,
+          expected: "DEBUG, INFO, WARN, or ERROR",
+        }),
+      };
+    }
+
+    return { ok: true, data: new LoggerConfig(upperLevel as LogLevel) };
+  }
+
+  /**
+   * Creates config from environment variable.
+   */
+  static fromEnv(): LoggerConfig {
+    const envLevel = Deno.env.get("LOG_LEVEL");
+    const result = envLevel
+      ? LoggerConfig.create(envLevel)
+      : LoggerConfig.create("INFO");
+    return result.ok ? result.data : new LoggerConfig("INFO");
+  }
+
+  /**
+   * Checks if a message at the given level should be logged.
+   */
+  shouldLog(messageLevel: LogLevel): boolean {
+    const levels: LogLevel[] = ["DEBUG", "INFO", "WARN", "ERROR"];
+    const configIndex = levels.indexOf(this.level);
+    const messageIndex = levels.indexOf(messageLevel);
+    return messageIndex >= configIndex;
+  }
 }
 
 /**
- * Provides structured logging with different levels and consistent formatting.
- *
- * The Logger class offers a simple interface for application logging with
- * different severity levels (info, warn, error) and structured output format.
- *
- * @example
- * ```typescript
- * const logger = new Logger();
- * logger.info("Application started");
- * logger.warn("Configuration file not found, using defaults");
- * logger.error("Failed to connect to tmux", error);
- * ```
+ * Type-safe logger with configurable log levels.
+ * All methods are total functions that never throw.
  */
 export class Logger {
+  constructor(private config: LoggerConfig = LoggerConfig.fromEnv()) {}
+
   /**
    * Logs a debug message.
-   * Only outputs when LOG_LEVEL environment variable is set to DEBUG.
-   *
-   * @param message - The debug message to log
+   * Total function that handles all cases.
    */
   debug(message: string): void {
-    const logLevel = Deno.env.get("LOG_LEVEL");
-    if (logLevel === "DEBUG") {
-      console.log(`[DEBUG] ${message}`);
+    if (this.config.shouldLog("DEBUG")) {
+      this.writeLog("DEBUG", message);
     }
   }
 
   /**
    * Logs an informational message.
-   *
-   * @param message - The message to log
+   * Total function that handles all cases.
    */
   info(message: string): void {
-    console.log(`[INFO] ${message}`);
+    if (this.config.shouldLog("INFO")) {
+      this.writeLog("INFO", message);
+    }
   }
 
   /**
    * Logs a warning message.
-   *
-   * @param message - The warning message to log
+   * Total function that handles all cases.
    */
   warn(message: string): void {
-    console.warn(`[WARN] ${message}`);
+    if (this.config.shouldLog("WARN")) {
+      this.writeLog("WARN", message);
+    }
   }
 
   /**
    * Logs an error message with optional error object.
-   *
-   * @param message - The error message to log
-   * @param error - Optional error object for additional context
+   * Total function that safely handles all error types.
    */
   error(message: string, error?: unknown): void {
-    console.error(`[ERROR] ${message}`, error || "");
+    if (this.config.shouldLog("ERROR")) {
+      const errorDetails = this.formatError(error);
+      this.writeLog(
+        "ERROR",
+        `${message}${errorDetails ? ` - ${errorDetails}` : ""}`,
+      );
+    }
+  }
+
+  /**
+   * Writes log message to console.
+   * Handles write errors gracefully.
+   */
+  private writeLog(level: LogLevel, message: string): void {
+    try {
+      const timestamp = new Date().toISOString();
+      const formattedMessage = `[${timestamp}] [${level}] ${message}`;
+
+      switch (level) {
+        case "ERROR":
+          console.error(formattedMessage);
+          break;
+        case "WARN":
+          console.warn(formattedMessage);
+          break;
+        default:
+          console.log(formattedMessage);
+      }
+    } catch {
+      // Silently ignore logging errors to maintain totality
+    }
+  }
+
+  /**
+   * Safely formats error objects for logging.
+   * Total function that handles all error types.
+   */
+  private formatError(error: unknown): string {
+    if (error === null || error === undefined) {
+      return "";
+    }
+
+    if (error instanceof Error) {
+      return `${error.name}: ${error.message}`;
+    }
+
+    if (typeof error === "object") {
+      try {
+        return JSON.stringify(error);
+      } catch {
+        return String(error);
+      }
+    }
+
+    return String(error);
   }
 }
 
+// =============================================================================
+// Runtime Tracker with Type-Safe Duration Handling
+// =============================================================================
+
 /**
- * Manages time-related operations including delays, formatting, and scheduling.
- *
- * The TimeManager class provides utilities for time manipulation, scheduling,
- * and time formatting with proper timezone handling.
- *
- * @example
- * ```typescript
- * const timeManager = new TimeManager();
- * await timeManager.sleep(1000); // Wait 1 second
- * const formatted = timeManager.formatTimeForDisplay(new Date());
- * ```
+ * Represents a time duration with validation.
  */
-export class TimeManager {
-  getCurrentTime(): Date {
-    return new Date();
-  }
+export class Duration {
+  private constructor(public readonly milliseconds: number) {}
 
-  formatTime(date: Date): string {
-    return date.toLocaleString("ja-JP", {
-      timeZone: "Asia/Tokyo",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
-  async sleep(ms: number): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  formatTimeForDisplay(date: Date): string {
-    return date.toLocaleString("ja-JP", {
-      timeZone: "Asia/Tokyo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
-  async waitUntilScheduledTime(
-    scheduledTime: Date,
-    logger: Logger,
-    _keyboardHandler: KeyboardInterruptHandler,
-  ): Promise<Result<void, ValidationError & { message: string }>> {
-    const now = new Date();
-    const msUntilScheduled = scheduledTime.getTime() - now.getTime();
-
-    if (msUntilScheduled <= 0) {
-      logger.info("Scheduled time has already passed. Proceeding immediately.");
-      return { ok: true, data: undefined };
-    }
-
-    const scheduledTimeStr = this.formatTimeForDisplay(scheduledTime);
-    logger.info(
-      `Waiting until scheduled time: ${scheduledTimeStr} (Asia/Tokyo)`,
-    );
-    logger.info(
-      `Time remaining: ${
-        Math.round(msUntilScheduled / 1000 / 60)
-      } minutes. Press any key to cancel and exit.`,
-    );
-
-    // logger.info(
-    //   `[DEBUG] TimeManager.waitUntilScheduledTime: Starting wait for ${msUntilScheduled}ms`,
-    // );
-    // logger.info(
-    //   `[DEBUG] TimeManager.waitUntilScheduledTime: Current cancellation state = ${globalCancellationToken.isCancelled()}`,
-    // );
-
-    const interrupted = await globalCancellationToken.delay(msUntilScheduled);
-
-    // logger.info(
-    //   `[DEBUG] TimeManager.waitUntilScheduledTime: delay completed, interrupted = ${interrupted}`,
-    // );
-    // logger.info(
-    //   `[DEBUG] TimeManager.waitUntilScheduledTime: Post-delay cancellation state = ${globalCancellationToken.isCancelled()}`,
-    // );
-
-    if (interrupted) {
-      // logger.info(
-      //   "[DEBUG] TimeManager.waitUntilScheduledTime: Returning failure due to interruption",
-      // );
+  /**
+   * Smart constructor for duration.
+   * Ensures non-negative values.
+   */
+  static fromMilliseconds(ms: number): Result<Duration, ValidationError> {
+    if (ms < 0) {
       return {
         ok: false,
         error: createError({
-          kind: "CancellationRequested",
-          operation: "scheduled_wait",
+          kind: "InvalidFormat",
+          input: String(ms),
+          expected: "non-negative number",
         }),
       };
     }
 
-    // logger.info(
-    //   "[DEBUG] TimeManager.waitUntilScheduledTime: Returning success",
-    // );
-    return { ok: true, data: undefined };
+    return { ok: true, data: new Duration(Math.floor(ms)) };
+  }
+
+  /**
+   * Creates duration from start and end times.
+   */
+  static between(
+    start: number,
+    end: number,
+  ): Result<Duration, ValidationError> {
+    return Duration.fromMilliseconds(end - start);
+  }
+
+  /**
+   * Formats duration as human-readable string.
+   */
+  format(): string {
+    const seconds = Math.floor(this.milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) {
+      return `${days}d ${hours % 24}h ${minutes % 60}m`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    } else {
+      return `${seconds}s`;
+    }
   }
 }
 
 /**
- * Handles keyboard interrupt detection and cancellation management.
- *
- * This class provides comprehensive keyboard interrupt handling, including
- * both Ctrl+C signal detection and any key press detection. It integrates
- * with the global cancellation system to provide immediate application exit.
- *
- * ## Features
- * - Detects Ctrl+C (SIGINT) signals
- * - Monitors for any key press in raw terminal mode
- * - Integrates with global cancellation token
- * - Provides immediate application exit on interrupt
- * - Handles terminal cleanup properly
- *
- * @example
- * ```typescript
- * const handler = new KeyboardInterruptHandler();
- * handler.setup(); // Start monitoring for interrupts
- *
- * // Later, cleanup
- * handler.cleanup();
- * ```
- */
-export class KeyboardInterruptHandler {
-  private isSetup = false;
-  private keyListenerPromise: Promise<void> | null = null;
-
-  setup(): void {
-    if (this.isSetup) {
-      return;
-    }
-
-    this.isSetup = true;
-
-    try {
-      // Handle Ctrl+C using Deno's signal API
-      Deno.addSignalListener("SIGINT", () => {
-        // console.log(
-        //   `\n[DEBUG] KeyboardInterruptHandler.setup(): Ctrl+C detected - stopping monitoring...`,
-        // );
-        globalCancellationToken.cancel("Ctrl+C signal received");
-
-        // Force immediate exit on Ctrl+C
-        this.cleanup();
-        console.log(`[INFO] Monitoring stopped by Ctrl+C. Exiting...`);
-        Deno.exit(0);
-      });
-
-      // Setup raw stdin for any key press
-      if (Deno.stdin.isTerminal()) {
-        Deno.stdin.setRaw(true);
-        // Start the key listener in the background
-        this.keyListenerPromise = this.startKeyListener();
-      }
-    } catch (_error) {
-      console.error("Failed to setup keyboard handler:", _error);
-    }
-  }
-
-  private async startKeyListener(): Promise<void> {
-    const buffer = new Uint8Array(1024); // Larger buffer for better key detection
-
-    // console.log(
-    //   `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Starting key listener`,
-    // );
-
-    try {
-      while (this.isSetup && !globalCancellationToken.isCancelled()) {
-        try {
-          const bytesRead = await Deno.stdin.read(buffer);
-
-          if (bytesRead === null) {
-            // EOF, wait a bit and continue
-            await new Promise((resolve) => setTimeout(resolve, 50));
-            continue;
-          }
-
-          if (bytesRead === 0) {
-            // No data, wait a bit and continue
-            await new Promise((resolve) => setTimeout(resolve, 50));
-            continue;
-          }
-
-          // Any key press triggers cancellation
-          if (bytesRead > 0) {
-            // console.log(
-            //   `\n[DEBUG] KeyboardInterruptHandler.startKeyListener(): Key press detected (${bytesRead} bytes) - stopping monitoring...`,
-            // );
-            globalCancellationToken.cancel("Key press detected");
-
-            // Force immediate exit
-            // console.log(
-            //   `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Force exiting application...`,
-            // );
-            this.cleanup();
-            console.log(`[INFO] Monitoring stopped by user input. Exiting...`);
-            Deno.exit(0);
-          }
-        } catch (_readError) {
-          // Handle read errors gracefully
-          // console.log(
-          //   `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Read error: ${_readError}`,
-          // );
-          if (this.isSetup && !globalCancellationToken.isCancelled()) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
-          } else {
-            break;
-          }
-        }
-      }
-    } catch (_error) {
-      // Ignore errors during cleanup
-      if (this.isSetup && !globalCancellationToken.isCancelled()) {
-        // console.log(
-        //   `\n[DEBUG] KeyboardInterruptHandler.startKeyListener(): Keyboard input interrupted - stopping monitoring...`,
-        // );
-        globalCancellationToken.cancel("Keyboard input interrupted");
-      }
-    }
-
-    // console.log(
-    //   `[DEBUG] KeyboardInterruptHandler.startKeyListener(): Key listener exited (isSetup: ${this.isSetup}, cancelled: ${globalCancellationToken.isCancelled()})`,
-    // );
-  }
-
-  cleanup(): void {
-    if (!this.isSetup) {
-      return;
-    }
-
-    // console.log(`[DEBUG] KeyboardInterruptHandler.cleanup(): Starting cleanup`);
-    this.isSetup = false;
-
-    // Reset terminal
-    if (Deno.stdin.isTerminal()) {
-      try {
-        Deno.stdin.setRaw(false);
-        // console.log(
-        //   `[DEBUG] KeyboardInterruptHandler.cleanup(): Terminal reset to normal mode`,
-        // );
-      } catch (_error) {
-        // Ignore errors during cleanup
-      }
-    }
-
-    // Wait for key listener to finish
-    if (this.keyListenerPromise) {
-      // console.log(
-      //   `[DEBUG] KeyboardInterruptHandler.cleanup(): Waiting for key listener to finish`,
-      // );
-      // The key listener will exit naturally when isSetup becomes false
-    }
-
-    // console.log(
-    //   `[DEBUG] KeyboardInterruptHandler.cleanup(): Cleanup completed`,
-    // );
-
-    // For onetime mode, force cleanup of any remaining listeners
-    if (globalCancellationToken.isCancelled()) {
-      // console.log(
-      //   `[DEBUG] KeyboardInterruptHandler.cleanup(): Force terminating for immediate exit`,
-      // );
-      // Clear any remaining timers/listeners that might keep the process alive
-      setTimeout(() => {
-        // console.log(`[DEBUG] Final force exit after cleanup delay`);
-        Deno.exit(0);
-      }, 100);
-    }
-  }
-
-  isCancellationRequested(): boolean {
-    return globalCancellationToken.isCancelled();
-  }
-
-  async waitWithKeyboardInterrupt(ms: number): Promise<boolean> {
-    // Use the global cancellation token's delay method
-    return await globalCancellationToken.delay(ms);
-  }
-
-  async sleepWithCancellation(
-    ms: number,
-    _timeManager: TimeManager,
-  ): Promise<boolean> {
-    // console.log(`[DEBUG] sleepWithCancellation: Starting ${ms}ms sleep`);
-    return await globalCancellationToken.delay(ms);
-  }
-}
-
-/**
- * Tracks application runtime and enforces maximum runtime limits.
- *
- * The RuntimeTracker class monitors how long the application has been running
- * and can enforce maximum runtime limits to prevent runaway processes.
- *
- * @example
- * ```typescript
- * const tracker = new RuntimeTracker(3600000); // 1 hour limit
- * const limitCheck = tracker.hasExceededLimit();
- * if (!limitCheck.ok) {
- *   console.log("Runtime limit exceeded!");
- * }
- * ```
+ * Tracks application runtime with type-safe operations.
+ * All methods are total functions.
  */
 export class RuntimeTracker {
-  private startTime: number;
-  private maxRuntime: number;
+  private readonly startTime: number;
 
-  constructor(maxRuntime: number) {
+  constructor() {
     this.startTime = Date.now();
-    this.maxRuntime = maxRuntime;
   }
 
+  /**
+   * Gets the elapsed time since start.
+   * Total function that always returns a valid duration.
+   */
+  getElapsedTime(): Duration {
+    const result = Duration.between(this.startTime, Date.now());
+    // This should never fail since Date.now() >= startTime, but handle it anyway
+    if (!result.ok) {
+      // Create a zero duration as fallback - Duration.fromMilliseconds(0) should always succeed
+      const zeroDuration = Duration.fromMilliseconds(0);
+      if (zeroDuration.ok) {
+        return zeroDuration.data;
+      }
+      // This should never happen, but provide an absolute fallback
+      throw new Error(
+        "Failed to create zero duration - this should never happen",
+      );
+    }
+    return result.data;
+  }
+
+  /**
+   * Formats elapsed time as a string.
+   * Total function that never throws.
+   */
+  formatElapsedTime(): string {
+    return this.getElapsedTime().format();
+  }
+
+  /**
+   * Gets the start time.
+   */
   getStartTime(): number {
     return this.startTime;
   }
+}
 
-  hasExceededLimit(): Result<boolean, ValidationError & { message: string }> {
-    const currentTime = Date.now();
-    const elapsedTime = currentTime - this.startTime;
-    const remainingTime = this.maxRuntime - elapsedTime;
+// =============================================================================
+// Time Manager with Type-Safe Operations
+// =============================================================================
 
-    if (remainingTime <= 0) {
+/**
+ * Represents a timestamp with validation.
+ */
+export class Timestamp {
+  private constructor(public readonly value: number) {}
+
+  /**
+   * Smart constructor for timestamp.
+   * Ensures valid timestamp values.
+   */
+  static create(value: number): Result<Timestamp, ValidationError> {
+    if (!Number.isFinite(value) || value < 0) {
       return {
         ok: false,
         error: createError({
-          kind: "RuntimeLimitExceeded",
-          maxRuntime: this.maxRuntime,
+          kind: "InvalidFormat",
+          input: String(value),
+          expected: "non-negative finite number",
         }),
       };
     }
 
-    return { ok: true, data: false };
+    return { ok: true, data: new Timestamp(value) };
   }
 
-  logStartupInfo(
-    logger: Logger,
-    timeManager: TimeManager,
-    scheduledTime?: Date | null,
-  ): void {
-    const startTimeStr = timeManager.formatTimeForDisplay(
-      new Date(this.startTime),
-    );
-
-    // Calculate auto-stop time from scheduled time if available, otherwise from start time
-    const autoStopBaseTime = scheduledTime
-      ? scheduledTime.getTime()
-      : this.startTime;
-    const autoStopTime = timeManager.formatTimeForDisplay(
-      new Date(autoStopBaseTime + this.maxRuntime),
-    );
-
-    logger.info(`Monitor started at: ${startTimeStr} (Asia/Tokyo)`);
-    logger.info(`Auto-stop scheduled at: ${autoStopTime} (Asia/Tokyo)`);
+  /**
+   * Creates timestamp for current time.
+   */
+  static now(): Timestamp {
+    return new Timestamp(Date.now());
   }
 
-  getRemainingTime(): number {
-    const currentTime = Date.now();
-    const elapsedTime = currentTime - this.startTime;
-    return Math.max(0, this.maxRuntime - elapsedTime);
+  /**
+   * Formats timestamp as ISO string.
+   */
+  toISOString(): string {
+    try {
+      return new Date(this.value).toISOString();
+    } catch {
+      return "Invalid Date";
+    }
+  }
+}
+
+/**
+ * Manages time-related operations with type safety.
+ * All methods are total functions.
+ */
+export class TimeManager {
+  /**
+   * Gets the current timestamp.
+   * Total function that always succeeds.
+   */
+  getCurrentTime(): Timestamp {
+    return Timestamp.now();
+  }
+
+  /**
+   * Formats the current time as ISO string.
+   * Total function with fallback for edge cases.
+   */
+  getCurrentTimeISO(): string {
+    return this.getCurrentTime().toISOString();
+  }
+
+  /**
+   * Sleeps for specified duration.
+   * Total function that handles interruption.
+   */
+  async sleep(milliseconds: number): Promise<Result<void, ValidationError>> {
+    const duration = Duration.fromMilliseconds(milliseconds);
+    if (!duration.ok) {
+      return duration;
+    }
+
+    try {
+      await new Promise((resolve) =>
+        setTimeout(resolve, duration.data.milliseconds)
+      );
+      return { ok: true, data: undefined };
+    } catch (error) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "UnexpectedError",
+          operation: "sleep",
+          details: String(error),
+        }),
+      };
+    }
+  }
+
+  /**
+   * Measures execution time of an async operation.
+   * Total function that captures both success and failure.
+   */
+  async measure<T>(
+    operation: () => Promise<T>,
+  ): Promise<Result<{ result: T; duration: Duration }, ValidationError>> {
+    const start = Date.now();
+
+    try {
+      const result = await operation();
+      const duration = Duration.between(start, Date.now());
+
+      if (!duration.ok) {
+        return duration;
+      }
+
+      return {
+        ok: true,
+        data: { result, duration: duration.data },
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "UnexpectedError",
+          operation: "measure",
+          details: String(error),
+        }),
+      };
+    }
   }
 }

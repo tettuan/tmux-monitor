@@ -13,7 +13,7 @@ import type {
   PaneTitleChangedEvent,
 } from "../domain/events.ts";
 import type { Result, ValidationError } from "../core/types.ts";
-import { createError } from "../core/types.ts";
+import { createError, getDefaultMessage } from "../core/types.ts";
 import { MONITORING_CONFIG } from "../core/constants.ts";
 
 /**
@@ -46,7 +46,9 @@ export class EnterSendEventHandler
         );
       } else {
         this._logger.warn(
-          `❌ Failed to send Enter to pane ${event.paneId}: ${result.error.message}`,
+          `❌ Failed to send Enter to pane ${event.paneId}: ${
+            getDefaultMessage(result.error)
+          }`,
         );
       }
     } catch (error) {
@@ -73,11 +75,16 @@ export class EnterSendEventHandler
       if (!result.ok) {
         return {
           ok: false,
-          error: createError({
-            kind: "CommandFailed",
-            command: command.join(" "),
-            stderr: result.error.message,
-          }, `Failed to send Enter to pane ${paneId}: ${result.error.message}`),
+          error: createError(
+            {
+              kind: "CommandFailed",
+              command: command.join(" "),
+              stderr: getDefaultMessage(result.error),
+            },
+            `Failed to send Enter to pane ${paneId}: ${
+              getDefaultMessage(result.error)
+            }`,
+          ),
         };
       }
 
@@ -128,7 +135,9 @@ export class PaneClearEventHandler
         this._logger.debug(`✅ Pane ${event.paneId} cleared successfully`);
       } else {
         this._logger.warn(
-          `❌ Failed to clear pane ${event.paneId}: ${result.error.message}`,
+          `❌ Failed to clear pane ${event.paneId}: ${
+            getDefaultMessage(result.error)
+          }`,
         );
       }
     } catch (error) {
@@ -179,11 +188,16 @@ export class PaneClearEventHandler
     if (!result.ok) {
       return {
         ok: false,
-        error: createError({
-          kind: "CommandFailed",
-          command: command.join(" "),
-          stderr: result.error.message,
-        }, `Failed to send /clear to pane ${paneId}: ${result.error.message}`),
+        error: createError(
+          {
+            kind: "CommandFailed",
+            command: command.join(" "),
+            stderr: getDefaultMessage(result.error),
+          },
+          `Failed to send /clear to pane ${paneId}: ${
+            getDefaultMessage(result.error)
+          }`,
+        ),
       };
     }
 
@@ -216,9 +230,11 @@ export class PaneClearEventHandler
             {
               kind: "CommandFailed",
               command: command.join(" "),
-              stderr: result.error.message,
+              stderr: getDefaultMessage(result.error),
             },
-            `Failed to execute escape sequence for pane ${paneId}: ${result.error.message}`,
+            `Failed to execute escape sequence for pane ${paneId}: ${
+              getDefaultMessage(result.error)
+            }`,
           ),
         };
       }
@@ -263,7 +279,9 @@ export class PaneTitleUpdateEventHandler
         );
       } else {
         this._logger.warn(
-          `❌ Failed to update title for pane ${event.paneId}: ${result.error.message}`,
+          `❌ Failed to update title for pane ${event.paneId}: ${
+            getDefaultMessage(result.error)
+          }`,
         );
       }
     } catch (error) {
@@ -295,9 +313,11 @@ export class PaneTitleUpdateEventHandler
             {
               kind: "CommandExecutionFailed",
               command: command.join(" "),
-              details: result.error.message,
+              details: getDefaultMessage(result.error),
             },
-            `Failed to update title for pane ${paneId}: ${result.error.message}`,
+            `Failed to update title for pane ${paneId}: ${
+              getDefaultMessage(result.error)
+            }`,
           ),
         };
       }

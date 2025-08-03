@@ -51,7 +51,7 @@ export class MonitoringEngine {
     );
 
     // PaneDataProcessorを作成
-    const paneDataProcessor = new PaneDataProcessor(commandExecutor);
+    const paneDataProcessor = new PaneDataProcessor(commandExecutor, logger);
 
     this._appService = new MonitoringApplicationService(
       adapters.tmuxRepository,

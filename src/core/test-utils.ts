@@ -5,82 +5,130 @@
 
 import { createError, type Result, type ValidationError } from "./types.ts";
 import type { ICommandExecutor, ILogger, ITimeManager } from "./interfaces.ts";
+import { Logger, LoggerConfig } from "../infrastructure/services.ts";
 
 /**
  * MockLogger - 統一されたログ出力Mock
- * 6ファイルで重複していた実装を集約
+ * Refactored Logger classを継承
  */
-export class MockLogger implements ILogger {
-  readonly debug = (msg: string): void => {
-    const logLevel = Deno.env.get("LOG_LEVEL");
-    if (logLevel === "DEBUG") {
-      console.log(`DEBUG: ${msg}`);
-    }
-  };
-  readonly info = (msg: string): void => console.log(`INFO: ${msg}`);
-  readonly error = (msg: string): void => console.error(`ERROR: ${msg}`);
-  readonly warn = (msg: string): void => console.warn(`WARN: ${msg}`);
+export class MockLogger extends Logger {
+  public messages: Array<{ level: string; message: string; error?: Error }> =
+    [];
+
+  constructor() {
+    // Create a default INFO logger config to avoid env access
+    const config = LoggerConfig.create("INFO");
+    super(config.ok ? config.data : LoggerConfig.fromEnv());
+  }
+
+  // Override methods to capture messages for testing
+  override debug(message: string): void {
+    this.messages.push({ level: "DEBUG", message });
+    super.debug(message);
+  }
+
+  override info(message: string): void {
+    this.messages.push({ level: "INFO", message });
+    super.info(message);
+  }
+
+  override warn(message: string): void {
+    this.messages.push({ level: "WARN", message });
+    super.warn(message);
+  }
+
+  override error(message: string, error?: Error): void {
+    this.messages.push({ level: "ERROR", message, error });
+    super.error(message, error);
+  }
+
+  // ILogger compatibility methods
+  readonly ILogger = true; // Type discriminator
 }
 
 /**
  * MockCommandExecutor - tmuxコマンド実行のMock
- * 3ファイルで重複していた実装を統一
+ * Refactored CommandExecutorに対応
  */
 export class MockCommandExecutor implements ICommandExecutor {
-  readonly execute = (
-    command: string[],
-  ): Promise<Result<string, ValidationError & { message: string }>> => {
-    console.log(`Mock execute: ${command.join(" ")}`);
-    return Promise.resolve({
-      ok: true,
-      data: `executed: ${command.join(" ")}`,
-    });
-  };
+  private executeCalls: Array<
+    { command: string[] | unknown; result: unknown }
+  > = [];
 
-  readonly executeTmuxCommand = (
+  execute(
+    command: string[],
+  ): Promise<Result<string, ValidationError & { message: string }>> {
+    console.log(`Mock execute: ${command.join(" ")}`);
+    const result = {
+      ok: true as const,
+      data: `executed: ${command.join(" ")}`,
+    };
+    this.executeCalls.push({ command, result });
+    return Promise.resolve(result);
+  }
+
+  executeTmuxCommand(
     command: string,
-  ): Promise<Result<string, ValidationError & { message: string }>> => {
+  ): Promise<Result<string, ValidationError & { message: string }>> {
     console.log(`Mock tmux: ${command}`);
     return Promise.resolve({ ok: true, data: `tmux output: ${command}` });
-  };
+  }
 
-  readonly killAllPanes = (): Promise<
+  killAllPanes(): Promise<
     Result<string, ValidationError & { message: string }>
-  > => {
+  > {
     console.log("Mock killAllPanes");
     return Promise.resolve({ ok: true, data: "all panes killed" });
-  };
+  }
 
-  readonly clearAllPanes = (): Promise<
+  clearAllPanes(): Promise<
     Result<string, ValidationError & { message: string }>
-  > => {
+  > {
     console.log("Mock clearAllPanes");
     return Promise.resolve({ ok: true, data: "all panes cleared" });
-  };
+  }
+
+  // Helper for tests
+  getExecuteCalls() {
+    return this.executeCalls;
+  }
+}
+
+/**
+ * SimpleCommandExecutor - A minimal CommandExecutor for tests that don't need command functionality
+ */
+import { CommandExecutor } from "../infrastructure/services.ts";
+
+export class SimpleCommandExecutor extends CommandExecutor {
+  // Inherits all methods from CommandExecutor
+  // Can override specific methods if needed for testing
 }
 
 /**
  * MockTimeManager - 時間管理のMock
- * 2ファイルで重複していた実装を統一
+ * Refactored TimeManagerに対応
  */
 export class MockTimeManager implements ITimeManager {
   private currentTime: Date = new Date();
+  private mockTimestamp?: number;
 
-  readonly getCurrentTime = (): Date => this.currentTime;
+  getCurrentTime(): Date {
+    return this.currentTime;
+  }
 
-  readonly setCurrentTime = (time: Date): void => {
+  setCurrentTime(time: Date): void {
     this.currentTime = time;
-  };
+  }
 
-  readonly formatTime = (date: Date): string => {
+  formatTime(date: Date): string {
     return date.toLocaleString("ja-JP", {
       timeZone: "Asia/Tokyo",
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
+  }
 
-  readonly formatTimeForDisplay = (date: Date): string => {
+  formatTimeForDisplay(date: Date): string {
     return date.toLocaleString("ja-JP", {
       timeZone: "Asia/Tokyo",
       year: "numeric",
@@ -89,27 +137,26 @@ export class MockTimeManager implements ITimeManager {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
+  }
 
-  readonly sleep = (ms: number): Promise<void> => {
+  sleep(ms: number): Promise<void> {
     console.log(`Mock sleep: ${ms}ms`);
     return Promise.resolve();
-  };
+  }
 
-  readonly waitUntilScheduledTime = (
+  waitUntilScheduledTime(
     scheduledTime: Date,
-    logger: ILogger,
-    // deno-lint-ignore no-explicit-any
-    _keyboardHandler: any,
-  ): Promise<Result<void, ValidationError & { message: string }>> => {
+    logger: ILogger | Logger,
+    _keyboardHandler: unknown,
+  ): Promise<Result<void, ValidationError & { message: string }>> {
     console.log(`Mock waitUntilScheduledTime: ${scheduledTime.toISOString()}`);
     logger.info(`Mock: Waiting until ${scheduledTime.toISOString()}`);
     return Promise.resolve({ ok: true, data: undefined });
-  };
+  }
 
-  readonly scheduleExecution = (
+  scheduleExecution(
     time: string,
-  ): Result<Date, ValidationError & { message: string }> => {
+  ): Result<Date, ValidationError & { message: string }> {
     try {
       const scheduledTime = new Date(time);
       return { ok: true, data: scheduledTime };
@@ -122,7 +169,17 @@ export class MockTimeManager implements ITimeManager {
         ),
       };
     }
-  };
+  }
+
+  // Additional methods for compatibility with refactored TimeManager
+  getCurrentTimeISO(): string {
+    return this.currentTime.toISOString();
+  }
+
+  setMockTimestamp(timestamp: number): void {
+    this.mockTimestamp = timestamp;
+    this.currentTime = new Date(timestamp);
+  }
 }
 
 /**

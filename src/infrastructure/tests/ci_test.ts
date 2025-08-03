@@ -3,15 +3,21 @@ import {
   assertExists,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { CIManager } from "../ci.ts";
-import { MockCommandExecutor, MockLogger } from "../../core/test-utils.ts";
+import { MockLogger, SimpleCommandExecutor } from "../../core/test-utils.ts";
 
 Deno.test("CIManager - create", () => {
-  const manager = CIManager.create(new MockCommandExecutor(), new MockLogger());
+  const manager = CIManager.create(
+    new SimpleCommandExecutor(),
+    new MockLogger(),
+  );
   assertExists(manager);
 });
 
 Deno.test("CIManager - detectCIEnvironment no CI environment", async () => {
-  const manager = CIManager.create(new MockCommandExecutor(), new MockLogger());
+  const manager = CIManager.create(
+    new SimpleCommandExecutor(),
+    new MockLogger(),
+  );
 
   // Clear and save CI environment variables
   const originalVars = new Map<string, string>();
@@ -51,7 +57,10 @@ Deno.test("CIManager - detectCIEnvironment no CI environment", async () => {
 });
 
 Deno.test("CIManager - detectCIEnvironment CI environment present", async () => {
-  const manager = CIManager.create(new MockCommandExecutor(), new MockLogger());
+  const manager = CIManager.create(
+    new SimpleCommandExecutor(),
+    new MockLogger(),
+  );
 
   // Set CI environment variable
   Deno.env.set("CI", "true");
@@ -68,7 +77,10 @@ Deno.test("CIManager - detectCIEnvironment CI environment present", async () => 
 });
 
 Deno.test("CIManager - detectCIEnvironment GitHub Actions", async () => {
-  const manager = CIManager.create(new MockCommandExecutor(), new MockLogger());
+  const manager = CIManager.create(
+    new SimpleCommandExecutor(),
+    new MockLogger(),
+  );
 
   // Set GitHub Actions environment variable
   Deno.env.set("GITHUB_ACTIONS", "true");
@@ -85,7 +97,10 @@ Deno.test("CIManager - detectCIEnvironment GitHub Actions", async () => {
 });
 
 Deno.test("CIManager - detectCIEnvironment multiple CI environment variables", async () => {
-  const manager = CIManager.create(new MockCommandExecutor(), new MockLogger());
+  const manager = CIManager.create(
+    new SimpleCommandExecutor(),
+    new MockLogger(),
+  );
 
   // Set multiple CI environment variables
   Deno.env.set("CI", "true");
@@ -104,7 +119,10 @@ Deno.test("CIManager - detectCIEnvironment multiple CI environment variables", a
 });
 
 Deno.test("CIManager - handleCIMonitoring", async () => {
-  const manager = CIManager.create(new MockCommandExecutor(), new MockLogger());
+  const manager = CIManager.create(
+    new SimpleCommandExecutor(),
+    new MockLogger(),
+  );
 
   const result = await manager.handleCIMonitoring();
 
@@ -112,7 +130,10 @@ Deno.test("CIManager - handleCIMonitoring", async () => {
 });
 
 Deno.test("CIManager - major CI environment provider detection", async () => {
-  const manager = CIManager.create(new MockCommandExecutor(), new MockLogger());
+  const manager = CIManager.create(
+    new SimpleCommandExecutor(),
+    new MockLogger(),
+  );
 
   const ciProviders = [
     "CI",

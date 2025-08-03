@@ -66,12 +66,13 @@ export class DIContainer {
     this.register("commandExecutor", () => new CommandExecutor());
     this.register("timeManager", () => new TimeManager());
     this.register("keyboardHandler", () => new KeyboardInterruptHandler());
-    this.register("runtimeTracker", () => new RuntimeTracker(14400000));
+    this.register("runtimeTracker", () => new RuntimeTracker());
 
     // Data processing
     this.register(
       "paneDataProcessor",
-      () => new PaneDataProcessor(this.get("commandExecutor")),
+      () =>
+        new PaneDataProcessor(this.get("commandExecutor"), this.get("logger")),
     );
     this.register(
       "statusAnalyzer",
@@ -84,9 +85,7 @@ export class DIContainer {
       "argumentParser",
       () =>
         new ArgumentParser(
-          this.get("timeManager"),
-          this.get("logger"),
-          undefined,
+          this.get("timeCalculator"),
           false, // isTestMode = false for production
         ),
     );

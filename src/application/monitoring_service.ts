@@ -144,12 +144,7 @@ export class MonitoringApplicationService {
           for (const pane of allPanes) {
             const detailResult = await this._paneDataProcessor.getPaneDetail(
               pane.id.value,
-              {
-                info: () => {},
-                warn: () => {},
-                error: () => {},
-                debug: () => {},
-              }, // Mock logger
+              new (await import("../infrastructure/services.ts")).Logger(),
             );
             if (detailResult.ok) {
               paneDetails.push(detailResult.data);
