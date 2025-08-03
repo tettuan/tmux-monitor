@@ -58,9 +58,9 @@ Deno.test("ArgumentParser: time scheduling - future time within same day", () =>
 
   setupMockArgs(["--time=" + timeStr]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser();
 
   const result = parser.parse();
 
@@ -192,9 +192,9 @@ Deno.test("ArgumentParser: time scheduling - comprehensive time patterns", () =>
 
       setupMockArgs(["--time=" + testCase.timeStr]);
 
-      const timeManager = new MockTimeManager();
-      const logger = new MockLogger();
-      const parser = new ArgumentParser(timeManager, logger, timeCalculator);
+      const _timeManager = new MockTimeManager();
+      const _logger = new MockLogger();
+      const parser = new ArgumentParser(timeCalculator, true);
 
       const result = parser.parse();
 
@@ -296,9 +296,9 @@ Deno.test("ArgumentParser: time scheduling - time comparison edge cases", () => 
 
     setupMockArgs(["--time=" + testCase.targetTime]);
 
-    const timeManager = new MockTimeManager();
-    const logger = new MockLogger();
-    const parser = new ArgumentParser(timeManager, logger, timeCalculator);
+    const _timeManager = new MockTimeManager();
+    const _logger = new MockLogger();
+    const parser = new ArgumentParser(timeCalculator, true);
 
     const result = parser.parse();
 
@@ -357,9 +357,9 @@ Deno.test("ArgumentParser: time scheduling - current time scheduling", () => {
 
   setupMockArgs(["--time=" + timeStr]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger, timeCalculator);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(timeCalculator, true);
 
   const result = parser.parse();
 
@@ -411,9 +411,9 @@ Deno.test("ArgumentParser: time scheduling - various time formats", () => {
 
     setupMockArgs(args);
 
-    const timeManager = new MockTimeManager();
-    const logger = new MockLogger();
-    const parser = new ArgumentParser(timeManager, logger, timeCalculator);
+    const _timeManager = new MockTimeManager();
+    const _logger = new MockLogger();
+    const parser = new ArgumentParser(timeCalculator, true);
 
     const result = parser.parse();
 
@@ -459,9 +459,9 @@ Deno.test("ArgumentParser: time scheduling - combined with other options", () =>
 
   setupMockArgs(["--time=15:30", "--onetime", "--instruction=test.md"]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger, timeCalculator);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(timeCalculator, true);
 
   const result = parser.parse();
 
@@ -509,9 +509,9 @@ Deno.test("ArgumentParser: time scheduling - error handling for invalid time", (
 
     setupMockArgs([testCase.input]);
 
-    const timeManager = new MockTimeManager();
-    const logger = new MockLogger();
-    const parser = new ArgumentParser(timeManager, logger, timeCalculator);
+    const _timeManager = new MockTimeManager();
+    const _logger = new MockLogger();
+    const parser = new ArgumentParser(timeCalculator, true);
 
     const result = parser.parse();
 
@@ -544,9 +544,9 @@ Deno.test("ArgumentParser: time scheduling - consistency across multiple parses"
   const timeStr = "16:45";
   setupMockArgs(["--time=" + timeStr]);
 
-  const timeManager = new MockTimeManager();
-  const logger = new MockLogger();
-  const parser = new ArgumentParser(timeManager, logger, timeCalculator);
+  const _timeManager = new MockTimeManager();
+  const _logger = new MockLogger();
+  const parser = new ArgumentParser(timeCalculator, true);
 
   // Parse multiple times
   const result1 = parser.parse();
@@ -620,9 +620,9 @@ Deno.test("ArgumentParser: time scheduling - month and year boundary edge cases"
 
     setupMockArgs(["--time=" + scenario.timeStr]);
 
-    const timeManager = new MockTimeManager();
-    const logger = new MockLogger();
-    const parser = new ArgumentParser(timeManager, logger, timeCalculator);
+    const _timeManager = new MockTimeManager();
+    const _logger = new MockLogger();
+    const parser = new ArgumentParser(timeCalculator, true);
 
     const result = parser.parse();
 
@@ -698,9 +698,9 @@ Deno.test("ArgumentParser: time scheduling - daylight saving time considerations
 
     setupMockArgs(["--time=" + scenario.timeStr]);
 
-    const timeManager = new MockTimeManager();
-    const logger = new MockLogger();
-    const parser = new ArgumentParser(timeManager, logger, timeCalculator);
+    const _timeManager = new MockTimeManager();
+    const _logger = new MockLogger();
+    const parser = new ArgumentParser(timeCalculator, true);
 
     const result = parser.parse();
 
