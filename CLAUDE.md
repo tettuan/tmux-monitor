@@ -3,6 +3,10 @@
 - ドメイン駆動設計
 - テスト駆動開発
 
+# 開発ツール
+- `climpt-*`: 実行後に表示された内容は、指示プロンプトである。従うこと。
+
+
 # Recent Implementation: Pane Monitoring System
 
 ## 実装概要 (Implementation Overview)

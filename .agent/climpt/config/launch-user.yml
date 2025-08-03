@@ -1,0 +1,7 @@
+# Breakdown Configuration
+params:
+  two:
+    directiveType:
+      pattern: "^(claude-company|git-branch)$"
+    layerType:
+      pattern: "^(using-tmux|if-needed)$"

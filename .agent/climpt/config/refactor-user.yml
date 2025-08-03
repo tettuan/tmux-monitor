@@ -1,0 +1,7 @@
+# Breakdown Configuration
+params:
+  two:
+    directiveType:
+      pattern: "^(architecture|basedon)$"
+    layerType:
+      pattern: "^(boundary|ddd)$"
