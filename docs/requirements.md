@@ -4,31 +4,31 @@ tmux の session.window.pane に対し、適切にモニタリングと指示が
 
 1. session の管理
   1-1. 有効なセッションの特定
-  1-2. 無効なセッションの停止、session 指定でのセッション停止
+  1-2. 無効なセッションの停止、session 指定でのセッション停止 `--kill-all-panes`, `--kill-all-panes --session=session_name`
 2. windowに属する pane の管理
   2-1. もっともpane数の多い session.window を特定
   2-2. session.window の pane リストを管理(panes)
   2-3. paneへの役割を認識
-3. panes に対し、稼働状態を管理（連続的な監視ループ）
-  3-1. status を管理し、作業完了paneを把握、title へ反映
-    3-1-1. `/clear` しToken節約
-    3-1-2. IDLE pane を把握し、再稼働して効率UP
-  3-2. status を報告し、作業完了 pane へ新たな指示
+3. panes の、稼働状態を管理（連続的な監視ループ）
+  3-1. status を管理し、作業完了paneを把握、title へ反映  (per 30sec)
+    3-1-1. `/clear` し claude token 節約に貢献する
+    3-1-2. IDLE pane を把握
+  3-2. 最新 IDLE status の pane をmain paneへ報告（新たな作業指示をさせる目的） (per 30sec)
   3-3. 自動終了、4hour 連続稼働で終了
 4. 予約実行により未来時間での起動を容易にする
-  4-1. HH:mm 形式で指定し、24hour 以内のみ予約可能
-  4-2. 指示書(instruction)を指定し、予約時間で開始した直後に読み込ませる
+  4-1. HH:mm 形式で指定し、24hour 以内のみ予約可能 `--time=HH:mm`
+  4-2. 指示書(instruction)を指定し、予約時間で開始した直後に読み込ませる `--instruction=<filepath>`
 5. 便利ツール利用
-  5-1. 全てのnodeなpaneに `/clear` を送信
-  5-2. 全てのnodeではないpaneへ `cld` を送信し Claude起動
+  5-1. 全てのnodeなpaneに `/clear` を送信 --clear-all
+  5-2. 全てのnodeではないpaneへ `cld` を送信し Claude起動 `--start-claude`
+  5-3. 全てのnodeなpaneに コマンド送信の `Enter` を送信 `--enter-all`
+  5-4. 1サイクルだけ 3 の連続処理を実行する（pane 確認とmain報告までが1サイクル）　`--onetime`
 
 ## 利用者の欲求・背景
 
 ### 根源的欲求
 
-根源的欲求:
-
-Claude Code 稼働時間
+根源的欲求: Claude Code 稼働時間の最大化
 
 ### 判別要件
 
@@ -167,4 +167,19 @@ AI開発において、CLIツーによるコーディングを行っているが
 - **初回Enter送信**: 監視開始時に全ペインへの確実な送信処理を実行
 - **ペイン分類**: main pane（最小ID）とtarget pane（その他）への自動分類
 
+# tmux への Enter 送信を確実に行うこと
+tmux pane の入力欄には、改行のEnterと送信のEnterの2種類がある。
+明示的に使い分け、入力を確実にすること。
+
+OK例。以下はコマンドの送信のEnterになる。
+```bash
+tmux send-keys -t %22 "[pane番号] 報告内容" && \
+  sleep 0.1 && \
+  tmux send-keys -t %22 Enter
+```
+
+NG例。以下は入力の改行のEnterになる。
+```bash
+tmux send-keys -t %0 "[pane番号] 報告内容" Enter
+```
 
