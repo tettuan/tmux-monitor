@@ -20,6 +20,7 @@ import { PaneDisplayer } from "../presentation/display.ts";
 import { CIManager } from "../infrastructure/ci.ts";
 import { TmuxSession } from "../infrastructure/session.ts";
 import { MonitoringEngine } from "../application/engine.ts";
+import { TimeCalculator } from "../utils/time_calculator.ts";
 
 /**
  * Dependency injection container for managing application dependencies.
@@ -67,6 +68,7 @@ export class DIContainer {
     this.register("timeManager", () => new TimeManager());
     this.register("keyboardHandler", () => new KeyboardInterruptHandler());
     this.register("runtimeTracker", () => new RuntimeTracker());
+    this.register("timeCalculator", () => new TimeCalculator());
 
     // Data processing
     this.register(

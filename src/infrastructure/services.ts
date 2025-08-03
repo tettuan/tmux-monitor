@@ -989,6 +989,54 @@ export class RuntimeTracker {
   getStartTime(): number {
     return this.startTime;
   }
+
+  /**
+   * Logs startup information.
+   * Total function that handles all logging gracefully.
+   */
+  logStartupInfo(
+    logger: Logger,
+    timeManager: TimeManager,
+    scheduledTime?: Date | null,
+  ): void {
+    try {
+      logger.info("=".repeat(60));
+      logger.info("tmux-monitor started");
+      logger.info(`Current time: ${timeManager.getCurrentTimeISO()}`);
+      
+      if (scheduledTime) {
+        logger.info(`Scheduled to start at: ${scheduledTime.toISOString()}`);
+      }
+      
+      logger.info("=".repeat(60));
+    } catch {
+      // Silently ignore logging errors to maintain totality
+    }
+  }
+
+  /**
+   * Checks if runtime has exceeded the maximum allowed limit.
+   * Total function that returns Result type.
+   */
+  hasExceededLimit(): Result<boolean, ValidationError & { message: string }> {
+    try {
+      const maxRuntimeMs = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
+      const elapsed = this.getElapsedTime();
+      return { ok: true, data: elapsed.milliseconds > maxRuntimeMs };
+    } catch (error) {
+      return {
+        ok: false,
+        error: createError(
+          {
+            kind: "UnexpectedError",
+            operation: "hasExceededLimit",
+            details: String(error),
+          },
+          "Failed to check runtime limit",
+        ),
+      };
+    }
+  }
 }
 
 // =============================================================================
