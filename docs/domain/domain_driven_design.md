@@ -1,189 +1,344 @@
-# tmux-monitor ドメイン駆動設計
+# tmux-monitor ドメイン駆動設計 - 中核駆動型
 
 ## 概要
 
-tmux-monitorは、**Claude Code 稼働時間の最大化**を根源的欲求とする、tmuxターミナルセッションの監視・管理・オーケストレーションシステムです。[`docs/totality.ja.md`](./totality.ja.md)の**全域性原則**と[`docs/requirements.md`](./requirements.md)の要求事項に基づき、型安全で堅牢なドメインモデルを構築しています。
+**Pane**を中核とした**シンプルで強靭な設計**により、Claude Code稼働時間の最大化を実現。Totalityと科学的複雑化制御の原則に基づき、持続可能なドメインモデルを構築。
 
-## ドメインの戦略的分析
+```
+根源的欲求: Claude Code稼働時間の最大化
+    ↓
+中核エンティティ: Pane (作業の最小単位)
+    ↓  
+収束パターン: Smart Constructor + Result型 + Discriminated Union
+```
 
-### 🔍 **コードベース影響度分析**
+## 中核ドメイン分析
 
-現在のコードベースを24回思考パスで分析した結果、以下の要素が最も頻出し、広範囲に影響を与える**ドメインの中核**として特定されました：
+### 🎯 **24回シミュレーション分析結果**
 
 | ドメイン要素 | 影響範囲 | 頻出度 | 結合度 | 戦略的重要度 |
 |-------------|----------|--------|--------|------------|
 | **Pane** | 15クラス | 高 | 高 | ★★★★★ |
 | **WorkerStatus** | 12クラス | 高 | 中 | ★★★★☆ |
-| **PaneCollection管理** | 8クラス | 中 | 高 | ★★★☆☆ |
-| **MonitoringEngine協調** | 16クラス | 高 | 高 | ★★★★☆ |
+| **MonitoringEngine** | 16クラス | 高 | 高 | ★★★★☆ |
 
-### 🎯 **根源的ビジネス価値**
+**結論**: Paneが最も広範囲に影響し、すべての機能の基盤となる**中核**として確定。
 
-```
-Claude Code 稼働時間の最大化
-    ↓
-手続き状態の即座把握（30秒サイクル）
-    ↓
-空きペインへの迅速なタスク割当
-    ↓
-フル稼働状態の維持
-```
+## 中核ドメイン設計
 
-## 中核ドメイン概念
+### 🎯 **Pane（集約ルート・中核）**
 
-### 🎯 **Pane（ペイン）- 集約ルート**
+**設計理由**: tmuxにおける作業の最小単位であり、すべての制御の起点。
 
-**定義理由**: tmuxにおける「作業の最小単位」であり、Claude Codeの稼働状態を観測・制御する**境界**そのものである。
+```typescript
+// 中核エンティティ - 全域性原則適用
+class Pane {
+  private constructor(
+    readonly id: PaneId,           // Smart Constructor
+    readonly name: PaneName,       // Smart Constructor  
+    private status: WorkerStatus,  // Discriminated Union
+    private history: StatusHistory[],  // 最大2件制約
+    private metadata: PaneMetadata
+  ) {}
 
-**なぜPaneが集約ルートなのか**:
-1. **一意性の保証**: tmux内でPaneIDは絶対的に一意であり、他のエンティティの識別基盤となる
-2. **状態の一貫性**: タイトル・ステータス・履歴・名前は、すべて「同一ペインの異なる側面」であり、分離すると整合性が失われる
-3. **ビジネス不変条件**: 「稼働中ペインへのタスク割当禁止」「履歴保持上限」などの制約は、ペイン単位でのみ意味を持つ
-4. **操作の原子性**: ステータス変更→タイトル更新→履歴記録は、途中で分割できない単一の業務操作
+  // Smart Constructor - 制約付き生成
+  static create(
+    id: string, 
+    role: PaneRole, 
+    index?: number
+  ): Result<Pane, ValidationError & { message: string }> {
+    const paneIdResult = PaneId.create(id);
+    if (!paneIdResult.ok) return paneIdResult;
+    
+    const nameResult = PaneName.create(role, index);
+    if (!nameResult.ok) return nameResult;
+    
+    return { 
+      ok: true, 
+      data: new Pane(
+        paneIdResult.data, 
+        nameResult.data, 
+        { kind: 'UNKNOWN', detectedAt: new Date() }, 
+        [], 
+        new PaneMetadata()
+      ) 
+    };
+  }
 
-**ドメイン境界**:
-- **含む**: ID、メタデータ、状態、ステータス、履歴、名前（ペインの本質的属性）
-- **含まない**: tmuxコマンド実行、ネットワーク通信、ファイルI/O（技術的関心事）
+  // 状態更新 - Result型による安全性保証
+  updateStatus(newStatus: WorkerStatus): Result<void, ValidationError & { message: string }> {
+    const transition = StatusTransition.validate(this.status, newStatus);
+    if (!transition.ok) return transition;
+    
+    this.status = newStatus;
+    this.addToHistory(this.status);
+    return { ok: true, data: undefined };
+  }
 
-**不変条件**:
-- PaneIDはtmux形式（%\d+）でなければならない
-- ステータス遷移は定義されたルールに従う
-- 履歴は最大2件まで保持
-- アクティブペインは1セッションに1つのみ
+  // 内容変化に基づく状態判定
+  updateFromContent(content: string, previousContent: string): Result<void, ValidationError & { message: string }> {
+    const newStatus = StatusDetermination.fromContent(content, previousContent, this.status);
+    return this.updateStatus(newStatus);
+  }
 
-#### 🔑 **PaneId（値オブジェクト）**
-
-**定義理由**: tmuxシステムが生成する識別子の制約を型レベルで表現し、不正な値の流入を防ぐため。
-
-**なぜ値オブジェクトなのか**: IDは交換不可能で不変であり、同値性は値そのもので決まる本質的特性を持つ。
-
-**制約の根拠**: tmuxの仕様（%数字形式）に従い、システム間の整合性を保証する。
-
-#### 🏷️ **PaneName（値オブジェクト）**
-
-**定義理由**: ペインの役割（manager、worker、secretary）を表現する業務上の識別子。
-
-**なぜこの制約なのか**: Claude Codeの作業分類に基づく。managerは統制、workerは実行、secretaryは補助という明確な役割分担がある。
-
-**パターンの根拠**: 運用上の命名規則を型で強制し、間違った分類を防ぐ。
-
-### 📊 **WorkerStatus（値オブジェクト）**
-
-**定義理由**: Claude Codeの稼働状況という「観測可能な事実」を表現する。
-
-**なぜこの状態分割なのか**:
-- **IDLE**: タスク割当可能な状態（ビジネス上最重要）
-- **WORKING**: 作業実行中（監視継続が必要）
-- **BLOCKED**: 外部要因による停止（介入判断が必要）
-- **DONE**: 作業完了（クリア処理対象）
-- **TERMINATED**: 異常終了（調査が必要）
-- **UNKNOWN**: 判定不能（デフォルト状態）
-
-**状態遷移の制約**: 業務フローに従った論理的な遷移のみを許可し、不整合を防ぐ。
-
-### 🔄 **MonitoringCycle（値オブジェクト）**
-
-**定義理由**: 監視業務の「周期性」と「段階性」を型で表現する。
-
-**なぜこの設計なのか**: 
-- **依存関係の明示**: 各フェーズの前提条件を型で表現
-- **失敗の分離**: 段階ごとの失敗を独立して処理
-- **並行性の制御**: 同時実行可能な操作を制限
-
-## アーキテクチャ層構造
-
-### 🏛️ **4層アーキテクチャの選択理由**
-
-```
-Presentation Layer  → CLI Interface, Application Controller
-Domain Layer        → Core Models, Smart Constructors, Business Rules
-Application Layer   → MonitoringEngine (orchestration)
-Infrastructure Layer → TmuxSession, CommandExecutor, PaneCommunicator
+  // 不変条件の保護
+  private addToHistory(status: WorkerStatus): void {
+    this.history.push(new StatusHistory(status, new Date()));
+    if (this.history.length > 2) {
+      this.history.shift(); // 最大2件制約
+    }
+  }
+}
 ```
 
-**なぜこの分離なのか**:
-- **関心の分離**: 各層が単一の責任を持つ
-- **依存方向**: 上位層は下位層に依存するが、逆は禁止
-- **テスタビリティ**: ドメイン層は外部依存なしでテスト可能
-- **保守性**: 技術変更がドメインロジックに影響しない
+### 🔑 **PaneId（値オブジェクト）**
 
-## ユビキタス言語辞書
+```typescript
+class PaneId {
+  private constructor(private readonly value: string) {}
+  
+  static create(value: string): Result<PaneId, ValidationError & { message: string }> {
+    const pattern = /^%\d+$/;
+    if (!pattern.test(value)) {
+      return { 
+        ok: false, 
+        error: createError({ 
+          kind: "PatternMismatch", 
+          value, 
+          pattern: pattern.source 
+        }) 
+      };
+    }
+    return { ok: true, data: new PaneId(value) };
+  }
+  
+  toString(): string { return this.value; }
+  equals(other: PaneId): boolean { return this.value === other.value; }
+}
+```
 
-### 📚 **中核概念**
+### 🏷️ **PaneName（値オブジェクト）**
 
-| 用語 | 定義 | なぜこの用語なのか |
-|------|------|-------------------|
-| **Pane** | tmuxの作業ペイン（%1, %2...形式ID） | tmux標準用語との一致、技術者の直感的理解 |
-| **Main Pane** | アクティブな操作対象ペイン | 「メイン」は操作者視点の自然な表現 |
-| **Target Panes** | 監視対象の非アクティブペイン群 | 「ターゲット」は監視対象を示す明確な表現 |
-| **Session Discovery** | 最適tmuxセッションの自動発見 | 「ディスカバリー」は自動検出の意味を含む |
-| **Status Tracking** | ペイン状況の継続的追跡 | 「トラッキング」は継続性を含意する |
-| **Monitoring Cycle** | 監視の1周期（発見→分類→追跡→報告） | 「サイクル」は周期性と段階性を表現 |
+```typescript
+type PaneRole = 'main' | 'manager' | 'secretary' | 'worker';
 
-### ⚙️ **技術用語**
+class PaneName {
+  private constructor(
+    private readonly role: PaneRole,
+    private readonly index?: number
+  ) {}
+  
+  static create(role: PaneRole, index?: number): Result<PaneName, ValidationError & { message: string }> {
+    if (role === 'worker' && index === undefined) {
+      return { 
+        ok: false, 
+        error: createError({ kind: "MissingIndex", role }) 
+      };
+    }
+    return { ok: true, data: new PaneName(role, index) };
+  }
+  
+  toString(): string {
+    return this.role === 'worker' ? `${this.role}${this.index}` : this.role;
+  }
+  
+  isMainPane(): boolean { return this.role === 'main'; }
+  isWorkerPane(): boolean { return this.role === 'worker'; }
+}
+```
 
-| 用語 | 設計原則 | なぜこの用語なのか |
-|------|----------|-------------------|
-| **Smart Constructor** | 制約付きオブジェクト生成 | 「スマート」は制約の存在を示唆 |
-| **Result Type** | 型安全なエラーハンドリング | 関数型プログラミングの標準用語 |
-| **Discriminated Union** | 状態の型安全表現 | TypeScriptの公式用語 |
+### 📊 **WorkerStatus（値オブジェクト・中心線通貫）**
 
-## 論理的全域性の設計原則
+```typescript
+// Discriminated Union - 網羅的状態表現
+type WorkerStatus = 
+  | { kind: 'IDLE'; reason: 'ready' | 'cleared' }
+  | { kind: 'WORKING'; startTime: Date }
+  | { kind: 'BLOCKED'; errorType: string; retryCount: number }
+  | { kind: 'DONE'; completedAt: Date }
+  | { kind: 'TERMINATED'; cause: string }
+  | { kind: 'UNKNOWN'; detectedAt: Date };
 
-### 🧠 **核心理念**
+// 状態判定ロジック
+class StatusDetermination {
+  static fromContent(
+    content: string, 
+    previousContent: string, 
+    currentStatus: WorkerStatus
+  ): WorkerStatus {
+    // 初回キャプチャ
+    if (!previousContent) {
+      return { kind: 'IDLE', reason: 'ready' };
+    }
+    
+    // /clear完了パターン
+    if (this.isClearCompleted(content)) {
+      return { kind: 'DONE', completedAt: new Date() };
+    }
+    
+    // エラーパターン
+    if (this.isBlocked(content)) {
+      const retryCount = currentStatus.kind === 'BLOCKED' ? currentStatus.retryCount + 1 : 0;
+      return { kind: 'BLOCKED', errorType: 'hook_blocked', retryCount };
+    }
+    
+    // 内容変化
+    if (content !== previousContent) {
+      return { kind: 'WORKING', startTime: new Date() };
+    }
+    
+    // 変化なし
+    return { kind: 'IDLE', reason: 'ready' };
+  }
+  
+  private static isClearCompleted(content: string): boolean {
+    const normalized = content.replace(/\s+/g, ' ').trim();
+    return normalized === '> /clear ⎿ (no content)';
+  }
+  
+  private static isBlocked(content: string): boolean {
+    return content.includes('hook blocked') || content.includes('error occurred');
+  }
+}
+```
 
-**部分関数を全域関数に変換**し、型システムで「ありえない状態」を排除。
+### 🔄 **StatusTransition（状態遷移制御）**
 
-**なぜ全域性が重要なのか**:
-1. **予測可能性**: すべての入力に対して定義された出力がある
-2. **堅牢性**: 例外的状況も型レベルで表現される
-3. **保守性**: 新しい状態追加時にコンパイラが網羅性をチェック
-4. **テスタビリティ**: すべてのパスが明示的にテスト可能
+```typescript
+class StatusTransition {
+  static validate(
+    from: WorkerStatus, 
+    to: WorkerStatus
+  ): Result<void, ValidationError & { message: string }> {
+    // architecture.mdの遷移ルールを実装
+    const validTransitions: Record<WorkerStatus['kind'], WorkerStatus['kind'][]> = {
+      'IDLE': ['WORKING', 'DONE', 'BLOCKED'],
+      'WORKING': ['IDLE', 'DONE', 'BLOCKED', 'TERMINATED'],
+      'BLOCKED': ['IDLE', 'WORKING', 'TERMINATED'],
+      'DONE': ['IDLE', 'WORKING'],
+      'TERMINATED': ['UNKNOWN'],
+      'UNKNOWN': ['IDLE', 'WORKING', 'BLOCKED', 'DONE', 'TERMINATED']
+    };
+    
+    if (!validTransitions[from.kind].includes(to.kind)) {
+      return { 
+        ok: false, 
+        error: createError({ 
+          kind: "InvalidTransition", 
+          from: from.kind, 
+          to: to.kind 
+        }) 
+      };
+    }
+    
+    return { ok: true, data: undefined };
+  }
+}
+```
 
-### 🛡️ **実践パターンの選択理由**
+## ユビキタス言語（シンプル化）
 
-#### **パターン1: Discriminated Union**
-**なぜこのパターンなのか**: 
-- オプショナル型では「なぜその状態なのか」が不明
-- switch文でコンパイラが網羅性を保証
-- 新しい状態追加時に既存コードの修正箇所が明確
+### 📚 **中核概念のみ**
 
-#### **パターン2: Smart Constructor**
-**なぜこのパターンなのか**:
-- 不正値の作成を型レベルで防止
-- ビジネスルールがオブジェクト作成時に強制される
-- Result型により失敗理由が明示的
+| 用語 | 定義 | 役割 |
+|------|------|------|
+| **Pane** | tmuxの作業ペイン（%数字） | 中核・すべての起点 |
+| **WorkerStatus** | ペインの稼働状態 | 状態の統一表現 |
+| **StatusTransition** | 状態遷移の制御 | 不変条件の保護 |
+| **MonitoringCycle** | 30秒監視サイクル | 周期的実行の管理 |
 
-#### **パターン3: Result型**
-**なぜこのパターンなのか**:
-- 例外は呼び出し側が予期しづらい
-- エラー処理の網羅性をコンパイラが保証
-- 失敗の型情報により適切な対処が可能
+## エラーハンドリング（中核集約）
 
-## 設計品質指標
+```typescript
+// エラー型定義（シンプル化）
+type PaneError = 
+  | { kind: 'CaptureTimeout'; paneId: PaneId }
+  | { kind: 'InvalidContent'; paneId: PaneId; content: string }
+  | { kind: 'TmuxDisconnect'; sessionId: string }
+  | { kind: 'UnrecoverableError'; message: string };
 
-### 📊 **全域性メトリクス**
+// リカバリアクション
+type RecoveryAction =
+  | { type: 'RetryCapture'; paneId: PaneId; delay: number }
+  | { type: 'ResetPane'; paneId: PaneId }
+  | { type: 'RecoverSession' }
+  | { type: 'Terminate' };
 
-| 指標 | 目標値 | 測定理由 |
-|------|-------|----------|
-| **型カバレッジ** | any型使用率 < 1% | 型安全性の定量化 |
-| **パターン網羅** | switch文default不要率 100% | 状態網羅性の保証 |
-| **エラー型化** | 例外使用率 < 5% | エラーハンドリングの明示性 |
-| **制約型化** | ビジネスルール型表現率 95% | 不変条件の強制度 |
+// 中核エラーハンドラ
+class PaneErrorHandler {
+  static handle(error: PaneError): Result<RecoveryAction, FatalError> {
+    switch (error.kind) {
+      case 'CaptureTimeout':
+        return { ok: true, data: { type: 'RetryCapture', paneId: error.paneId, delay: 1000 } };
+      case 'InvalidContent':
+        return { ok: true, data: { type: 'ResetPane', paneId: error.paneId } };
+      case 'TmuxDisconnect':
+        return { ok: true, data: { type: 'RecoverSession' } };
+      case 'UnrecoverableError':
+        return { ok: false, error: new FatalError(error.message) };
+    }
+  }
+}
+```
+
+## 全域性原則の適用
+
+### 🧠 **Result型による完全性**
+
+```typescript
+// すべての操作はResult型で統一
+type Result<T, E> = 
+  | { ok: true; data: T }
+  | { ok: false; error: E };
+
+// 共通エラー型（最小限）
+type ValidationError = 
+  | { kind: "PatternMismatch"; value: string; pattern: string }
+  | { kind: "InvalidTransition"; from: string; to: string }
+  | { kind: "MissingIndex"; role: string }
+  | { kind: "InvariantViolation"; message: string };
+
+// エラー生成ヘルパー
+const createError = (
+  error: ValidationError
+): ValidationError & { message: string } => ({
+  ...error,
+  message: getErrorMessage(error)
+});
+```
+
+## 品質メトリクス（定量的管理）
+
+### 📊 **複雑性エントロピー監視**
+
+```typescript
+interface QualityMetrics {
+  // 中核設計の維持
+  coreClasses: 3;           // Pane, PaneId, PaneName
+  valueObjects: 5;          // 上記 + WorkerStatus, StatusHistory
+  services: 3;              // StatusTransition, StatusDetermination, PaneErrorHandler
+  totalComplexity: 11;      // 合計（15以下を維持）
+  
+  // パターン適用率
+  smartConstructorUsage: 100;  // %
+  resultTypeUsage: 100;        // %
+  discriminatedUnionUsage: 100; // %
+}
+```
 
 ## まとめ
 
-### 🎯 **設計原則の統合**
+### 🎯 **中核駆動設計の効果**
 
-tmux-monitorのドメインモデルは以下の理念で統合されています：
+1. **単純性**: Pane中心の明確な構造
+2. **堅牢性**: 全域性原則による型安全性
+3. **保守性**: 3つの成功パターンに収束
+4. **拡張性**: 中核を変更せずに周辺拡張可能
 
-1. **Pane中心設計**: 業務の最小単位を型で表現
-2. **状態の明示性**: すべての状態遷移が予測可能
-3. **制約の型化**: ビジネスルールをコンパイル時に強制
-4. **失敗の型安全性**: エラーも型システムの一部として扱う
+### 🏗️ **設計整合性**
 
-### 🏗️ **型システムによるビジネス論理保証**
+- **architecture.md**: 中核駆動の全体設計
+- **domain_boundary.md**: 3ドメインの境界定義
+- **domain_driven_design.md**: Pane中心の詳細設計
 
-**論理的全域性**により、従来の手続き型では困難だった**ビジネスロジックの完全性**を型レベルで保証。tmux環境での複雑なペイン管理を**予測可能で保守しやすい**コードベースで実現します。
-
-**なぜこの設計なのか**: Claude Code稼働時間の最大化という目標を、技術的負債を生まずに持続可能な形で実現するため。
+すべてが**Pane**を中核とした一貫した設計思想で統一され、Claude Code稼働時間の最大化という根源的欲求を実現。

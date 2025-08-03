@@ -1,691 +1,406 @@
-# tmux-monitor アーキテクチャ設計図
+# tmux-monitor アーキテクチャ設計図 - 中核駆動設計
 
-## 1. システム概要
+## 1. 中核設計理念
 
-### 1.1 アーキテクチャ概観
+### 1.1 骨格の中心線
 
-```mermaid
-graph TB
-    subgraph "Presentation Layer"
-        CLI[CLI Interface]
-        App[Application Controller]
-    end
-    
-    subgraph "Application Layer"
-        ME[MonitoringEngine]
-        CO[CaptureOrchestrator]
-    end
-    
-    subgraph "Domain Layer"
-        subgraph "Monitoring Domain"
-            P[Pane]
-            PC[PaneCollection]
-            STS[StatusTransitionService]
-            PNS[PaneNamingService]
-        end
-        
-        subgraph "Orchestration Domain"
-            MC[MonitoringCycle]
-            MCS[MonitoringCycleService]
-            MCC[MonitoringCycleCoordinator]
-        end
-    end
-    
-    subgraph "Infrastructure Layer"
-        TS[TmuxSession]
-        CE[CommandExecutor]
-        PCC[PaneCommunicator]
-        UCA[UnifiedCaptureAdapter]
-    end
-    
-    subgraph "Core Domain"
-        DI[DIContainer]
-        CFG[Configuration]
-        CT[CancellationToken]
-        LOG[Logger]
-        TM[TimeManager]
-    end
-    
-    CLI --> App
-    App --> ME
-    ME --> PC
-    ME --> MCS
-    PC --> P
-    MCS --> MC
-    ME --> CO
-    CO --> UCA
-    UCA --> TS
-    TS --> CE
-    DI -.-> ME
-    DI -.-> PC
-    DI -.-> TS
+**Pane**が全システムの**中核**として、すべての機能の中心線を通す設計。Totalityと複雑化制御原則により、シンプルで堅牢な骨格を構築。
+
+```
+根源的欲求: Claude Code稼働時間の最大化
+    ↓
+中核エンティティ: Pane (作業の最小単位)
+    ↓
+周辺ドメイン: MonitoringCycle, TmuxSession, Configuration
 ```
 
-## 2. シーケンス図
+### 1.2 エントロピー制御設計
 
-### 2.1 監視サイクル実行シーケンス
+**複雑性エントロピー指標**:
+- クラス数上限: 15クラス以下
+- 抽象化層: 3層以下  
+- 依存深度: 4階層以下
+- 循環複雑度: 10以下
 
-```mermaid
-sequenceDiagram
-    participant CLI as CLI Interface
-    participant App as Application
-    participant ME as MonitoringEngine
-    participant MCS as MonitoringCycleService
-    participant PC as PaneCollection
-    participant UCA as UnifiedCaptureAdapter
-    participant TS as TmuxSession
-    participant P as Pane
+## 2. 中核ドメイン設計
+
+### 2.1 Pane（集約ルート・中核）
+
+**設計根拠**: 24回シミュレーション分析で最高頻出度（15クラス影響、★★★★★）
+
+```typescript
+// 中核エンティティ - 全域性原則適用
+class Pane {
+  private constructor(
+    readonly id: PaneId,           // Smart Constructor
+    readonly name: PaneName,       // Smart Constructor  
+    private status: WorkerStatus,  // Discriminated Union
+    private history: StatusHistory[],  // 最大2件制約
+    private metadata: PaneMetadata
+  ) {}
+
+  // Smart Constructor - 制約付き生成
+  static create(
+    id: string, 
+    role: PaneRole, 
+    index?: number
+  ): Result<Pane, ValidationError & { message: string }> {
+    const paneIdResult = PaneId.create(id);
+    if (!paneIdResult.ok) return paneIdResult;
     
-    Note over CLI, P: 30秒監視サイクルの実行フロー
+    const nameResult = PaneName.create(role, index);
+    if (!nameResult.ok) return nameResult;
     
-    CLI->>App: startMonitoring()
-    App->>ME: monitor()
+    return { 
+      ok: true, 
+      data: new Pane(
+        paneIdResult.data, 
+        nameResult.data, 
+        WorkerStatus.UNKNOWN, 
+        [], 
+        new PaneMetadata()
+      ) 
+    };
+  }
+
+  // 状態更新 - Result型による安全性保証
+  updateStatus(newStatus: WorkerStatus): Result<void, ValidationError & { message: string }> {
+    const transition = StatusTransition.validate(this.status, newStatus);
+    if (!transition.ok) return transition;
     
-    loop 30秒サイクル (4時間継続)
-        ME->>MCS: startCycle()
-        MCS->>PC: refreshPanes()
-        PC->>UCA: captureAllPanes()
-        
-        loop 各ペインに対して
-            UCA->>TS: executeCapture(paneId)
-            TS-->>UCA: paneContent
-            UCA->>P: updateContent(content)
-            P->>P: detectStatusChange()
-            
-            alt ステータス変更あり
-                P->>PC: notifyStatusChange()
-                PC->>ME: reportStatusChange()
-            end
-        end
-        
-        MCS->>ME: cycleCompleted()
-        
-        alt DONE/IDLEペインあり
-            ME->>TS: sendClearCommand(paneId)
-            Note over TS: /clear 送信 → 0.2秒待機 → Enter送信
-        end
-        
-        Note over ME: 30秒待機
-    end
-    
-    ME->>App: monitoringCompleted()
+    this.status = newStatus;
+    this.addToHistory(this.status);
+    return { ok: true, data: undefined };
+  }
+
+  // 不変条件の保護
+  private addToHistory(status: WorkerStatus): void {
+    this.history.push(new StatusHistory(status, new Date()));
+    if (this.history.length > 2) {
+      this.history.shift(); // 最大2件制約
+    }
+  }
+}
 ```
 
-### 2.2 ペイン状態更新シーケンス
+### 2.2 WorkerStatus（値オブジェクト・中心線通貫）
 
-```mermaid
-sequenceDiagram
-    participant UCA as UnifiedCaptureAdapter
-    participant P as Pane
-    participant STS as StatusTransitionService
-    participant PNS as PaneNamingService
-    participant TS as TmuxSession
-    
-    Note over UCA, TS: ペイン内容取得から状態更新まで
-    
-    UCA->>TS: capturePane(paneId)
-    TS-->>UCA: content
-    UCA->>P: updateContent(content)
-    
-    P->>STS: determineStatus(content, previousContent)
-    
-    alt 内容に変化あり
-        STS-->>P: WORKING
-    else 内容に変化なし
-        STS-->>P: IDLE
-    else `/clear ⎿ (no content)` パターン
-        STS-->>P: DONE
-    else エラーパターン検出
-        STS-->>P: BLOCKED
-    end
-    
-    P->>P: updateStatus(newStatus)
-    
-    alt ステータス変更あり
-        P->>PNS: updatePaneTitle(paneId, status)
-        PNS->>TS: setTitle(paneId, "[STATUS] originalTitle")
-    end
-    
-    P->>P: addToHistory(statusChange)
+**設計根拠**: 全ペインの状態を統一的に表現する中心概念
+
+```typescript
+// Discriminated Union - 網羅的状態表現
+type WorkerStatus = 
+  | { kind: 'IDLE'; reason: 'ready' | 'cleared' }
+  | { kind: 'WORKING'; startTime: Date }
+  | { kind: 'BLOCKED'; errorType: string; retryCount: number }
+  | { kind: 'DONE'; completedAt: Date }
+  | { kind: 'TERMINATED'; cause: string }
+  | { kind: 'UNKNOWN'; detectedAt: Date };
+
+// 状態遷移 - 全域関数化
+class StatusTransition {
+  static validate(
+    from: WorkerStatus, 
+    to: WorkerStatus
+  ): Result<void, ValidationError & { message: string }> {
+    switch (from.kind) {
+      case 'IDLE':
+        switch (to.kind) {
+          case 'WORKING':
+          case 'DONE':
+          case 'BLOCKED':
+            return { ok: true, data: undefined };
+          default:
+            return { ok: false, error: createError({ 
+              kind: "InvalidTransition", 
+              from: from.kind, 
+              to: to.kind 
+            }) };
+        }
+      case 'WORKING':
+        switch (to.kind) {
+          case 'IDLE':
+          case 'DONE':
+          case 'BLOCKED':
+          case 'TERMINATED':
+            return { ok: true, data: undefined };
+          default:
+            return { ok: false, error: createError({ 
+              kind: "InvalidTransition", 
+              from: from.kind, 
+              to: to.kind 
+            }) };
+        }
+      case 'BLOCKED':
+        switch (to.kind) {
+          case 'IDLE':
+          case 'WORKING':
+          case 'TERMINATED':
+            return { ok: true, data: undefined };
+          default:
+            return { ok: false, error: createError({ 
+              kind: "InvalidTransition", 
+              from: from.kind, 
+              to: to.kind 
+            }) };
+        }
+      case 'DONE':
+        switch (to.kind) {
+          case 'IDLE':
+          case 'WORKING':
+            return { ok: true, data: undefined };
+          default:
+            return { ok: false, error: createError({ 
+              kind: "InvalidTransition", 
+              from: from.kind, 
+              to: to.kind 
+            }) };
+        }
+      case 'TERMINATED':
+        switch (to.kind) {
+          case 'UNKNOWN':
+            return { ok: true, data: undefined };
+          default:
+            return { ok: false, error: createError({ 
+              kind: "InvalidTransition", 
+              from: from.kind, 
+              to: to.kind 
+            }) };
+        }
+      case 'UNKNOWN':
+        return { ok: true, data: undefined }; // 任意の状態へ遷移可能
+    }
+  }
+}
 ```
 
-### 2.3 予約実行・指示書送信シーケンス
+## 3. シンプル境界設計
 
-```mermaid
-sequenceDiagram
-    participant CLI as CLI Interface
-    participant App as Application
-    participant ME as MonitoringEngine
-    participant TM as TimeManager
-    participant TS as TmuxSession
-    participant FS as FileSystem
-    
-    Note over CLI, FS: 予約実行と指示書送信フロー
-    
-    CLI->>App: startWithSchedule(time, instructionFile)
-    App->>TM: calculateDelay(targetTime)
-    TM-->>App: delayMs
-    
-    App->>App: setTimeout(delayMs)
-    Note over App: 指定時刻まで待機
-    
-    App->>ME: startContinuousMonitoring()
-    
-    alt 指示書ファイル指定あり
-        ME->>FS: readInstructionFile(path)
-        FS-->>ME: instructions
-        ME->>TS: sendToMainPane(instructions)
-        Note over TS: 指示書内容をmain paneに送信
-        TS->>TS: sendEnter()
-    end
-    
-    ME->>ME: beginMonitoringLoop()
+### 3.1 機能重力による3ドメイン構造
+
+**重力の法則適用**: 強引力機能を統合、弱引力機能を分離
+
+```
+Core Domain (中核・重力中心)
+├── Pane集約ルート
+├── WorkerStatus状態管理  
+└── StatusTransition制御
+
+Orchestration Domain (周辺・制御層)
+├── MonitoringEngine協調
+└── 30秒サイクル管理
+
+Infrastructure Domain (外周・技術層)
+├── TmuxSession操作
+└── CommandExecutor実行
 ```
 
-## 3. クラス図
+### 3.2 境界線の明確化
 
-### 3.1 Monitoring Domain クラス構造
+```typescript
+// ドメイン境界線 - インターフェース定義
+interface MonitoringDomainPort {
+  updatePaneStatus(id: PaneId, status: WorkerStatus): Result<void, Error>;
+  getPaneCollection(): Result<Pane[], Error>;
+  validateInvariants(): Result<void, Error>;
+}
 
-```mermaid
-classDiagram
-    class Pane {
-        <<AggregateRoot>>
-        -id: PaneId
-        -name: PaneName
-        -status: WorkerStatus
-        -title: string
-        -history: StatusHistory[]
-        -metadata: PaneMetadata
-        +updateStatus(status: WorkerStatus): Result~void~
-        +updateContent(content: string): Result~void~
-        +getStatusTransitions(): StatusHistory[]
-        +validateInvariants(): Result~void~
-    }
-    
-    class PaneId {
-        <<ValueObject>>
-        -value: string
-        +create(value: string): Result~PaneId~
-        +toString(): string
-        +validate(): boolean
-    }
-    
-    class PaneName {
-        <<ValueObject>>
-        -role: PaneRole
-        -index: number
-        +create(role: PaneRole, index?: number): Result~PaneName~
-        +toString(): string
-        +isMainPane(): boolean
-        +isWorkerPane(): boolean
-    }
-    
-    class WorkerStatus {
-        <<ValueObject>>
-        <<enumeration>>
-        IDLE
-        WORKING
-        BLOCKED
-        DONE
-        TERMINATED
-        UNKNOWN
-    }
-    
-    class PaneCollection {
-        -panes: Map~PaneId, Pane~
-        -mainPane: PaneId
-        +addPane(pane: Pane): Result~void~
-        +updatePaneStatus(id: PaneId, status: WorkerStatus): Result~void~
-        +getMainPane(): Result~Pane~
-        +getWorkerPanes(): Pane[]
-        +refreshFromSession(): Result~void~
-    }
-    
-    class StatusTransitionService {
-        +determineStatus(content: string, previous: string): WorkerStatus
-        +validateTransition(from: WorkerStatus, to: WorkerStatus): Result~void~
-        +isValidTransition(from: WorkerStatus, to: WorkerStatus): boolean
-    }
-    
-    class PaneNamingService {
-        -roleAssignments: PaneRole[]
-        +assignRole(paneId: PaneId, index: number): Result~PaneName~
-        +generateWorkerName(index: number): PaneName
-        +validateNamingRules(): Result~void~
-    }
-    
-    Pane --> PaneId : contains
-    Pane --> PaneName : contains
-    Pane --> WorkerStatus : contains
-    PaneCollection --> Pane : manages
-    StatusTransitionService --> WorkerStatus : determines
-    PaneNamingService --> PaneName : creates
+interface OrchestrationDomainPort {
+  startMonitoringCycle(): Result<void, Error>;
+  executeOneTimeCycle(): Result<void, Error>;
+  terminateMonitoring(): Result<void, Error>;
+}
+
+interface InfrastructureDomainPort {
+  capturePane(id: PaneId): Result<string, Error>;
+  sendCommand(id: PaneId, command: string): Result<void, Error>;
+  discoverSession(): Result<TmuxSession, Error>;
+}
 ```
 
-### 3.2 Orchestration Domain クラス構造
+## 4. 中核駆動シーケンス
 
-```mermaid
-classDiagram
-    class MonitoringEngine {
-        <<AggregateRoot>>
-        -appService: MonitoringService
-        -cycleCoordinator: MonitoringCycleCoordinator
-        -eventDispatcher: EventDispatcher
-        +monitor(): Result~void~
-        +oneTimeMonitor(): Result~void~
-        +startContinuousMonitoring(): Result~void~
-        +refreshPaneList(): Result~void~
-        +sendInstructionFileToMainPane(path: string): Result~void~
-    }
-    
-    class MonitoringCycle {
-        <<ValueObject>>
-        -id: string
-        -phase: CyclePhase
-        -startTime: Date
-        -targetPanes: PaneId[]
-        -config: MonitoringConfig
-        +create(config: MonitoringConfig): Result~MonitoringCycle~
-        +advance(): Result~MonitoringCycle~
-        +isCompleted(): boolean
-        +getDuration(): number
-    }
-    
-    class MonitoringCycleService {
-        -currentCycle: MonitoringCycle | null
-        -cycleHistory: MonitoringCycle[]
-        +startNewCycle(config: MonitoringConfig): Result~MonitoringCycle~
-        +completeCycle(): Result~void~
-        +getCurrentCycle(): MonitoringCycle | null
-        +validateCycleConstraints(): Result~void~
-    }
-    
-    class MonitoringCycleCoordinator {
-        -paneCollection: PaneCollection
-        -captureOrchestrator: CaptureOrchestrator
-        +coordinateCycle(cycle: MonitoringCycle): Result~void~
-        +handleCycleCompletion(cycle: MonitoringCycle): Result~void~
-        +manageFailureRecovery(error: Error): Result~void~
-    }
-    
-    class CaptureOrchestrator {
-        -unifiedAdapter: UnifiedCaptureAdapter
-        +orchestrateCapture(panes: PaneId[]): Result~CaptureResult[]~
-        +handleCaptureFailure(paneId: PaneId, error: Error): Result~void~
-        +validateCaptureResults(results: CaptureResult[]): Result~void~
-    }
-    
-    MonitoringEngine --> MonitoringCycleService : uses
-    MonitoringEngine --> MonitoringCycleCoordinator : uses
-    MonitoringCycleService --> MonitoringCycle : manages
-    MonitoringCycleCoordinator --> CaptureOrchestrator : coordinates
-```
-
-### 3.3 Infrastructure Domain クラス構造
-
-```mermaid
-classDiagram
-    class TmuxSession {
-        <<AggregateRoot>>
-        -sessionId: string
-        -windowId: string
-        -executor: CommandExecutor
-        +discoverOptimalSession(): Result~TmuxSession~
-        +listPanes(): Result~PaneId[]~
-        +capturePane(id: PaneId): Result~string~
-        +sendCommand(id: PaneId, command: string): Result~void~
-        +setTitle(id: PaneId, title: string): Result~void~
-    }
-    
-    class CommandExecutor {
-        +execute(command: string): Result~string~
-        +executeWithTimeout(command: string, timeout: number): Result~string~
-        +validateCommand(command: string): Result~void~
-        +escapeArguments(args: string[]): string[]
-    }
-    
-    class PaneCommunicator {
-        -session: TmuxSession
-        +sendToPane(id: PaneId, content: string): Result~void~
-        +sendEnter(id: PaneId): Result~void~
-        +sendClearCommand(id: PaneId): Result~void~
-        +verifyClearSuccess(id: PaneId): Result~boolean~
-    }
-    
-    class UnifiedCaptureAdapter {
-        -session: TmuxSession
-        -captureCache: Map~PaneId, CaptureResult~
-        +captureAllPanes(panes: PaneId[]): Result~CaptureResult[]~
-        +capturePane(id: PaneId): Result~CaptureResult~
-        +invalidateCache(id: PaneId): void
-        +getCachedResult(id: PaneId): CaptureResult | null
-    }
-    
-    class Logger {
-        +info(message: string, context?: object): void
-        +error(message: string, error?: Error): void
-        +debug(message: string, context?: object): void
-        +warn(message: string, context?: object): void
-    }
-    
-    class TimeManager {
-        +getCurrentTime(): Date
-        +calculateDelay(targetTime: string): number
-        +createTimeout(delay: number): Promise~void~
-        +validateTimeFormat(time: string): Result~void~
-    }
-    
-    TmuxSession --> CommandExecutor : uses
-    PaneCommunicator --> TmuxSession : uses
-    UnifiedCaptureAdapter --> TmuxSession : uses
-```
-
-## 4. 状態図
-
-### 4.1 WorkerStatus 状態遷移図
-
-```mermaid
-stateDiagram-v2
-    [*] --> UNKNOWN : 初期状態
-    
-    UNKNOWN --> IDLE : 内容安定
-    UNKNOWN --> WORKING : 作業開始
-    UNKNOWN --> BLOCKED : エラー検出
-    
-    IDLE --> WORKING : 内容変化検出
-    IDLE --> DONE : /clear完了
-    IDLE --> BLOCKED : エラー発生
-    
-    WORKING --> IDLE : 内容変化停止
-    WORKING --> DONE : 作業完了
-    WORKING --> BLOCKED : エラー発生
-    WORKING --> TERMINATED : 異常終了
-    
-    BLOCKED --> IDLE : 復旧確認
-    BLOCKED --> WORKING : 作業再開
-    BLOCKED --> TERMINATED : 復旧不可
-    
-    DONE --> IDLE : /clear後
-    DONE --> WORKING : 新規作業開始
-    
-    TERMINATED --> UNKNOWN : 再初期化
-    TERMINATED --> [*] : ペイン除外
-    
-    note right of IDLE : タスク割当可能
-    note right of WORKING : 監視継続必要
-    note right of BLOCKED : 介入判断必要
-    note right of DONE : クリア処理対象
-    note right of TERMINATED : 調査必要
-```
-
-### 4.2 監視サイクル状態遷移図
-
-```mermaid
-stateDiagram-v2
-    [*] --> Initializing : 監視開始
-    
-    Initializing --> Discovering : 初期化完了
-    Discovering --> Classifying : セッション発見
-    Classifying --> Monitoring : ペイン分類完了
-    
-    state Monitoring {
-        [*] --> Capturing
-        Capturing --> Analyzing : キャプチャ完了
-        Analyzing --> Updating : 分析完了
-        Updating --> Reporting : 更新完了
-        Reporting --> Waiting : 報告完了
-        Waiting --> Capturing : 30秒経過
-    }
-    
-    Monitoring --> Terminating : 終了条件
-    Monitoring --> Error : エラー発生
-    
-    Error --> Recovering : 復旧処理
-    Recovering --> Monitoring : 復旧成功
-    Recovering --> Terminating : 復旧失敗
-    
-    Terminating --> [*] : 監視終了
-    
-    note right of Discovering : セッション自動発見
-    note right of Classifying : ペイン役割割当
-    note right of Capturing : 内容キャプチャ
-    note right of Analyzing : ステータス判定
-    note right of Updating : タイトル更新
-    note right of Reporting : 変更報告
-```
-
-### 4.3 ペインライフサイクル状態図
-
-```mermaid
-stateDiagram-v2
-    [*] --> Created : ペイン発見
-    
-    Created --> Classified : 役割割当
-    Classified --> Monitoring : 監視開始
-    
-    state Monitoring {
-        [*] --> Active
-        Active --> Captured : 内容取得
-        Captured --> Analyzed : ステータス判定
-        Analyzed --> Updated : 情報更新
-        Updated --> Active : 次回まで待機
-        
-        Updated --> Clearing : DONE判定時
-        Clearing --> Cleared : クリア完了
-        Cleared --> Active : 監視再開
-    }
-    
-    Monitoring --> Excluded : 監視除外
-    Monitoring --> Failed : 異常検出
-    
-    Failed --> Recovering : 復旧試行
-    Recovering --> Monitoring : 復旧成功
-    Recovering --> Excluded : 復旧失敗
-    
-    Excluded --> [*] : ペイン除去
-    
-    note right of Classified : main/manager/worker/secretary
-    note right of Clearing : /clear コマンド送信
-    note right of Failed : 通信エラー・応答なし
-```
-
-## 5. コンポーネント図
-
-### 5.1 ドメイン境界コンポーネント図
-
-```mermaid
-graph TB
-    subgraph "Monitoring Domain"
-        subgraph "Entities"
-            P[Pane]
-        end
-        subgraph "Value Objects"
-            PID[PaneId]
-            PN[PaneName] 
-            WS[WorkerStatus]
-        end
-        subgraph "Services"
-            PC[PaneCollection]
-            STS[StatusTransitionService]
-            PNS[PaneNamingService]
-        end
-    end
-    
-    subgraph "Orchestration Domain"
-        subgraph "Entities"
-            MC[MonitoringCycle]
-        end
-        subgraph "Services"
-            ME[MonitoringEngine]
-            MCS[MonitoringCycleService]
-            MCC[MonitoringCycleCoordinator]
-            CO[CaptureOrchestrator]
-        end
-    end
-    
-    subgraph "Infrastructure Domain"
-        subgraph "Entities"
-            TS[TmuxSession]
-        end
-        subgraph "Services"
-            CE[CommandExecutor]
-            PCC[PaneCommunicator]
-            UCA[UnifiedCaptureAdapter]
-            LOG[Logger]
-            TM[TimeManager]
-        end
-    end
-    
-    subgraph "Core Domain"
-        DI[DIContainer]
-        CFG[Configuration]
-        CT[CancellationToken]
-        RT[Result<T>]
-        VE[ValidationError]
-    end
-    
-    %% Domain Dependencies
-    ME --> PC
-    ME --> MCS
-    MCS --> MC
-    ME --> CO
-    CO --> UCA
-    
-    PC --> P
-    P --> PID
-    P --> PN
-    P --> WS
-    PC --> STS
-    PC --> PNS
-    
-    UCA --> TS
-    TS --> CE
-    TS --> PCC
-    
-    %% Core Dependencies
-    DI -.-> ME
-    DI -.-> PC
-    DI -.-> TS
-    CFG -.-> ME
-    CT -.-> ME
-    LOG -.-> ME
-    TM -.-> ME
-```
-
-## 6. デプロイメント図
-
-### 6.1 実行環境構成図
-
-```mermaid
-graph TB
-    subgraph "Development Environment"
-        subgraph "Local Machine"
-            subgraph "Deno Runtime"
-                APP[tmux-monitor CLI]
-            end
-            subgraph "tmux Session"
-                MAIN[Main Pane]
-                MGR1[Manager1 Pane]
-                MGR2[Manager2 Pane]
-                SEC[Secretary Pane]
-                WK1[Worker1 Pane]
-                WK2[Worker2 Pane]
-                WKN[Worker N Panes...]
-            end
-            subgraph "File System"
-                INST[Instruction Files]
-                LOG_FILE[Log Files]
-                CONFIG[Config Files]
-            end
-        end
-    end
-    
-    subgraph "CI/CD Environment"
-        subgraph "GitHub Actions"
-            TEST[Test Runner]
-            BUILD[Build Process]
-            DEPLOY[JSR Deploy]
-        end
-    end
-    
-    subgraph "Distribution"
-        JSR[JSR Registry]
-        NPM[npm Registry]
-    end
-    
-    APP --> MAIN : 指示送信
-    APP --> MGR1 : 状態報告
-    APP --> MGR2 : 状態報告  
-    APP --> SEC : 補助作業
-    APP --> WK1 : /clear送信
-    APP --> WK2 : /clear送信
-    APP --> WKN : /clear送信
-    
-    APP --> INST : 読み込み
-    APP --> LOG_FILE : 出力
-    APP --> CONFIG : 読み込み
-    
-    TEST --> APP : テスト実行
-    BUILD --> JSR : パッケージ公開
-    DEPLOY --> NPM : 配布
-```
-
-## 7. 通信プロトコル詳細
-
-### 7.1 イベント駆動通信フロー
+### 4.1 中核中心監視フロー
 
 ```mermaid
 sequenceDiagram
-    participant MD as Monitoring Domain
-    participant OD as Orchestration Domain  
-    participant ID as Infrastructure Domain
-    participant CD as Core Domain
+    participant Engine as MonitoringEngine
+    participant Core as Pane(中核)
+    participant Tmux as TmuxSession
     
-    Note over MD, CD: ドメイン間イベント通信
+    Note over Engine, Tmux: 中核駆動30秒サイクル
     
-    OD->>MD: StartMonitoringCycle
-    Note right of MD: {targetPanes, config}
+    Engine->>Core: refreshStatus()
+    Core->>Tmux: captureContent()
+    Tmux-->>Core: content
+    Core->>Core: updateStatus(content)
     
-    MD->>OD: MonitoringCycleCompleted
-    Note left of OD: {cycleId, changes, timestamp}
+    alt ステータス変更検出
+        Core->>Engine: notifyStatusChange()
+        Engine->>Tmux: updateTitle()
+        
+        alt DONE状態の場合
+            Engine->>Tmux: sendClearCommand()
+        end
+    end
     
-    ID->>MD: PaneContentChanged
-    Note right of MD: {paneId, content, timestamp}
-    
-    OD->>ID: ExecuteCapture
-    Note left of ID: {paneId, captureType}
-    
-    CD->>MD: DependencyInjection
-    CD->>OD: DependencyInjection
-    CD->>ID: DependencyInjection
-    Note over CD: {logger, timeManager, cancellationToken}
+    Note over Core: 中核が全制御を統括
 ```
 
-### 7.2 エラーハンドリングフロー
+### 4.2 エラー処理の中核集約
 
-```mermaid
-graph TB
-    START[処理開始] --> VALIDATE[入力検証]
-    VALIDATE --> |検証成功| EXECUTE[処理実行]
-    VALIDATE --> |検証失敗| ERR_VALIDATION[ValidationError]
-    
-    EXECUTE --> |成功| SUCCESS[Result.success]
-    EXECUTE --> |失敗| ERR_EXECUTION[ExecutionError]
-    
-    ERR_VALIDATION --> LOG_ERROR[エラーログ]
-    ERR_EXECUTION --> LOG_ERROR
-    
-    LOG_ERROR --> RECOVERY[復旧処理]
-    RECOVERY --> |復旧成功| EXECUTE
-    RECOVERY --> |復旧失敗| ERR_FATAL[FatalError]
-    
-    SUCCESS --> END[処理完了]
-    ERR_FATAL --> END
-    
-    style ERR_VALIDATION fill:#ffcccc
-    style ERR_EXECUTION fill:#ffcccc  
-    style ERR_FATAL fill:#ff9999
-    style SUCCESS fill:#ccffcc
+```typescript
+// 中核集約エラーハンドリング
+class PaneErrorHandler {
+  static handle(error: PaneError): Result<RecoveryAction, FatalError> {
+    switch (error.kind) {
+      case 'CaptureTimeout':
+        return { ok: true, data: new RetryCapture(error.paneId) };
+      case 'InvalidContent':
+        return { ok: true, data: new ResetPane(error.paneId) };
+      case 'TmuxDisconnect':
+        return { ok: true, data: new RecoverSession() };
+      case 'UnrecoverableError':
+        return { ok: false, error: new FatalError(error.message) };
+    }
+  }
+}
 ```
 
-この設計図により、tmux-monitorのアーキテクチャ全体が可視化され、要求事項とドメイン境界設計が統合された包括的な設計仕様として活用できます。
+## 5. 収束パターン最適化
+
+### 5.1 既存成功パターン活用
+
+**統計分析結果**:
+- **Pane中心設計**: 頻度45、成功率85%、評価18.1（最優位）
+- **Result型活用**: 頻度38、成功率92%、評価16.8
+- **Smart Constructor**: 頻度23、成功率89%、評価12.4
+
+**設計決定**: 上記3パターンを核として収束
+
+### 5.2 発散防止制御
+
+```typescript
+// パターン収束チェック
+class ArchitectureValidator {
+  static validateComplexity(metrics: ComplexityMetrics): boolean {
+    const entropy = calculateEntropy(metrics);
+    const maxEntropy = 50; // 閾値設定
+    
+    if (entropy > maxEntropy) {
+      console.warn(`複雑性エントロピー超過: ${entropy} > ${maxEntropy}`);
+      return false;
+    }
+    
+    return true;
+  }
+  
+  static validateGravity(components: Component[]): boolean {
+    const coreGravity = calculateCoreGravity(components);
+    const minGravity = 0.8; // 中核への引力閾値
+    
+    if (coreGravity < minGravity) {
+      console.warn(`中核引力不足: ${coreGravity} < ${minGravity}`);
+      return false;
+    }
+    
+    return true;
+  }
+}
+```
+
+## 6. 実装統制ルール
+
+### 6.1 中核保護原則
+
+1. **Pane変更は必ずSmart Constructorを経由**
+2. **状態遷移は必ずStatusTransition.validateを使用**  
+3. **エラーはすべてResult型で表現**
+4. **新機能追加前に複雑性エントロピー測定必須**
+
+### 6.2 品質ゲート
+
+```bash
+# 中核設計維持チェック
+check_core_integrity() {
+  # Paneクラス数制限
+  find src/ -name "*pane*.ts" -type f | wc -l | grep -q "^[1-3]$" || exit 1
+  
+  # Result型使用率確認  
+  grep -r "Result<" src/ | wc -l
+  grep -r "throw new" src/ | wc -l | grep -q "^[0-2]$" || exit 1
+  
+  # switch文default不要率確認
+  grep -r "switch.*{" src/ -A 20 | grep "default:" | wc -l | grep -q "^0$" || exit 1
+}
+```
+
+## 7. 継続的シンプル化
+
+### 7.1 定期健全化
+
+```typescript
+class ArchitectureMaintenance {
+  // 日次: エントロピー削減
+  static dailyEntropyReduction(): void {
+    const unusedInterfaces = findUnusedInterfaces();
+    const redundantClasses = findRedundantClasses();
+    
+    unusedInterfaces.forEach(i => this.removeInterface(i));
+    redundantClasses.forEach(c => this.mergeOrRemoveClass(c));
+  }
+  
+  // 週次: 中核引力再調整
+  static weeklyGravityRebalancing(): void {
+    const components = analyzeComponentGravity();
+    const weakGravityComponents = components.filter(c => c.gravity < 0.3);
+    
+    weakGravityComponents.forEach(c => this.strengthenCoreConnection(c));
+  }
+}
+```
+
+### 7.2 アーキテクチャ収束監視
+
+```typescript
+interface ArchitectureMetrics {
+  coreStability: number;      // 中核安定性
+  boundaryClarity: number;    // 境界明確性
+  patternConsistency: number; // パターン一貫性
+  complexityEntropy: number;  // 複雑性エントロピー
+}
+
+class ArchitectureMonitor {
+  static assessHealth(): ArchitectureMetrics {
+    return {
+      coreStability: measureCoreStability(),
+      boundaryClarity: measureBoundaryClarity(), 
+      patternConsistency: measurePatternConsistency(),
+      complexityEntropy: calculateSystemEntropy()
+    };
+  }
+  
+  static reportDeviations(metrics: ArchitectureMetrics): Warning[] {
+    const warnings: Warning[] = [];
+    
+    if (metrics.coreStability < 0.8) {
+      warnings.push(new CoreStabilityWarning());
+    }
+    if (metrics.complexityEntropy > 50) {
+      warnings.push(new ComplexityWarning());
+    }
+    
+    return warnings;
+  }
+}
+```
+
+## 結論
+
+**中核駆動設計**により、Paneを中心とした**シンプルで強靭な骨格**を構築。Totalityと科学的複雑化制御により、持続可能で保守しやすいアーキテクチャを実現。
+
+### 核心効果
+1. **中核統一性**: Paneによる一元的状態管理
+2. **境界明確性**: 3ドメインの明確な責任分離  
+3. **複雑性制御**: エントロピー・重力・収束による定量的品質保証
+4. **予測可能性**: 全域性原則による完全な型安全性
