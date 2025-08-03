@@ -2,6 +2,6 @@
 params:
   two:
     directiveType:
-      pattern: "^(architecture|basedon)$"
+      pattern: "^(architecture|basedon|ddd)$"
     layerType:
-      pattern: "^(boundary|ddd)$"
+      pattern: "^(boundary|ddd|architecture)$"
