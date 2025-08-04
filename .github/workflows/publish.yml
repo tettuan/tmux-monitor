@@ -101,7 +101,10 @@ jobs:
 
       - name: Start tmux server
         run: |
-          tmux new-session -d -s test-session
+          # Kill any existing tmux server
+          tmux kill-server 2>/dev/null || true
+          # Start fresh tmux server with test session
+          tmux new-session -d -s test-session -c /tmp
           tmux list-sessions
 
       - name: Validate TypeScript
