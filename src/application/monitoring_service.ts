@@ -116,6 +116,7 @@ export class MonitoringApplicationService {
     shouldStartClaude: boolean = false,
   ): Promise<Result<void, ValidationError & { message: string }>> {
     try {
+      console.log("startMonitoring: beginning phase 1");
       // フェーズ1: セッション発見とペイン作成
       const discoveryResult = await this.discoverAndCreatePanes(sessionName);
       if (!discoveryResult.ok) {
@@ -324,16 +325,68 @@ export class MonitoringApplicationService {
       };
     }
 
+    // ウィンドウごとにペインをグループ化
+    const windowGroups = new Map<string, RawPaneData[]>();
+    for (const pane of panesResult.data) {
+      const windowKey = `${pane.sessionName}:${pane.windowIndex}`;
+      if (!windowGroups.has(windowKey)) {
+        windowGroups.set(windowKey, []);
+      }
+      windowGroups.get(windowKey)!.push(pane);
+    }
+
+    // 最もペイン数が多いウィンドウを選択
+    let targetWindow: { key: string; panes: RawPaneData[] } | null = null;
+    let maxPaneCount = 0;
+    let maxPaneId = "";
+
+    for (const [windowKey, panes] of windowGroups) {
+      // ペイン数が多い、または同数の場合は最大のペインIDを持つウィンドウを選択
+      const windowMaxPaneId = panes.reduce(
+        (max, pane) => pane.paneId > max ? pane.paneId : max,
+        "",
+      );
+
+      if (
+        panes.length > maxPaneCount ||
+        (panes.length === maxPaneCount && windowMaxPaneId > maxPaneId)
+      ) {
+        targetWindow = { key: windowKey, panes };
+        maxPaneCount = panes.length;
+        maxPaneId = windowMaxPaneId;
+      }
+    }
+
+    if (!targetWindow) {
+      return {
+        ok: false,
+        error: createError({
+          kind: "BusinessRuleViolation",
+          rule: "NoWindowFound",
+          context: "No windows found to monitor",
+        }),
+      };
+    }
+
+    console.log(
+      `Selected window ${targetWindow.key} with ${targetWindow.panes.length} panes`,
+    );
+    
+    // アクティブペインの数を確認
+    const activePanes = targetWindow.panes.filter(p => p.active === "1");
+    console.log(`Active panes in selected window: ${activePanes.length}`);
+
     // 既存ペインをクリア
+    console.log(`Clearing existing ${this._paneCollection.getAllPanes().length} panes`);
     this._paneCollection.getAllPanes().forEach((pane) => {
       this._paneCollection.removePane(pane.id);
     });
 
-    // 新しいペインを作成・追加
-    for (const rawPane of panesResult.data) {
+    // 選択されたウィンドウのペインのみを作成・追加
+    for (const rawPane of targetWindow.panes) {
       const paneResult = Pane.fromTmuxData(
         rawPane.paneId,
-        rawPane.active === "1",
+        false, // 一旦全てのペインを非アクティブとして作成
         rawPane.currentCommand,
         rawPane.title,
       );
@@ -343,6 +396,31 @@ export class MonitoringApplicationService {
         if (!addResult.ok) {
           return addResult;
         }
+      }
+    }
+
+    // 選択されたウィンドウ内のアクティブペインのみをアクティブに設定
+    console.log(`Looking for active panes in window ${targetWindow.key}`);
+    for (const rawPane of targetWindow.panes) {
+      if (rawPane.active === "1") {
+        const paneId = PaneId.create(rawPane.paneId);
+        if (paneId.ok) {
+          const pane = this._paneCollection.getPane(paneId.data);
+          if (pane) {
+            // アクティブペインとして設定
+            const updatedPane = Pane.fromTmuxData(
+              rawPane.paneId,
+              true, // アクティブとして再作成
+              rawPane.currentCommand,
+              rawPane.title,
+            );
+            if (updatedPane.ok) {
+              this._paneCollection.removePane(paneId.data);
+              this._paneCollection.addPane(updatedPane.data);
+            }
+          }
+        }
+        break; // 最初のアクティブペインのみを処理
       }
     }
 
