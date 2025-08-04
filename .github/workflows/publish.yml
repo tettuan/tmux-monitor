@@ -115,6 +115,15 @@ jobs:
       - name: Run tests (if any exist in src/)
         run: |
           cd publish
+          # Verify tmux is accessible
+          echo "Checking tmux status..."
+          tmux list-sessions || echo "No tmux sessions found"
+          which tmux || echo "tmux not in PATH"
+          
+          # Create a tmux session in detached mode for testing
+          tmux new-session -d -s test-pane-1 -c $(pwd)
+          tmux new-session -d -s test-pane-2 -c $(pwd)
+          
           # Only run tests if they exist and are not excluded
           if find src/ -name "*_test.ts" -type f | head -1 | grep -q .; then
             echo "Found test files in src/, running tests..."
