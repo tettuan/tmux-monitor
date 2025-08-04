@@ -49,4 +49,4 @@ jobs:
           EOF
 
       - name: Publish to JSR
-        run: deno publish
+        run: deno publish --allow-dirty
