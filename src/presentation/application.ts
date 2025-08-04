@@ -59,6 +59,7 @@ export class Application {
    * ```
    */
   async run(): Promise<void> {
+    console.log("DEBUG: Application.run() started");
     const logger = this.container.get<Logger>("logger");
     // logger.info(
     //   `[DEBUG] Application.run(): Started, cancellation state = ${globalCancellationToken.isCancelled()}`,
@@ -184,7 +185,9 @@ export class Application {
 
       // 指示ファイルが指定されている場合は、メインペインに送信
       const instructionFile = options.getInstructionFile();
+      console.log(`DEBUG: instructionFile = ${instructionFile}`);
       if (instructionFile) {
+        console.log(`DEBUG: Will send instruction file`);
         logger.info(
           `Sending instruction file path to main pane: ${instructionFile}`,
         );
@@ -207,6 +210,7 @@ export class Application {
       }
 
       if (options.isContinuous()) {
+        console.log(`DEBUG: Starting continuous monitoring`);
         // logger.info(
         //   `[DEBUG] Application.run(): Starting continuous monitoring`,
         // );

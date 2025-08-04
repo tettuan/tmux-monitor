@@ -124,6 +124,7 @@ export class DIContainer {
   }
 
   createMonitoringEngine(_options: MonitoringOptions): MonitoringEngine {
+    console.log("DEBUG: Creating MonitoringEngine");
     // Use DDD-based monitoring engine (now unified as MonitoringEngine)
     const engine = new MonitoringEngine(
       this.get("commandExecutor"),
