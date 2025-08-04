@@ -37,6 +37,7 @@ export class PaneCollection {
     // ビジネスルール: アクティブペインは1つのみ
     if (pane.isActive) {
       if (this._activePane && !this._activePane.equals(pane)) {
+        console.log(`SingleActivePane violation: trying to add active pane ${pane.id.value}, but ${this._activePane.id.value} is already active`);
         return {
           ok: false,
           error: createError({
