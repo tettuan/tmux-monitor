@@ -3,15 +3,17 @@
  */
 
 import type { Result, ValidationError } from "../core/types.ts";
+import { TimeCalculator } from "../utils/time_calculator.ts";
 
-export class MockTimeCalculator {
-  private mockCurrentTime?: Date;
+export class MockTimeCalculator extends TimeCalculator {
+  private mockCurrentTimeOverride?: Date;
 
-  setMockCurrentTime(date: Date | null): void {
-    this.mockCurrentTime = date || undefined;
+  override setMockCurrentTime(date: Date | null): void {
+    this.mockCurrentTimeOverride = date || undefined;
+    super.setMockCurrentTime(date || new Date());
   }
 
-  parseTimeString(
+  override parseTimeString(
     timeStr: string,
     baseDate?: Date,
   ): Result<Date, ValidationError & { message: string }> {
@@ -53,7 +55,7 @@ export class MockTimeCalculator {
       };
     }
 
-    const base = baseDate || this.mockCurrentTime || new Date();
+    const base = baseDate || this.mockCurrentTimeOverride || new Date();
     const result = new Date(base);
     result.setHours(hour, minute, 0, 0);
 
@@ -63,55 +65,5 @@ export class MockTimeCalculator {
     }
 
     return { ok: true, data: result };
-  }
-
-  createScheduledTime(
-    baseTime: Date,
-    targetHour: number,
-    targetMinute: number,
-  ): Date {
-    const scheduled = new Date(baseTime);
-    scheduled.setHours(targetHour, targetMinute, 0, 0);
-
-    // If scheduled time is in the past, move to next day
-    if (scheduled.getTime() <= baseTime.getTime()) {
-      scheduled.setDate(scheduled.getDate() + 1);
-    }
-
-    return scheduled;
-  }
-
-  getTimeDifference(target: Date, from?: Date): number {
-    const fromTime = from || this.mockCurrentTime || new Date();
-    return target.getTime() - fromTime.getTime();
-  }
-
-  formatRelativeTime(ms: number): string {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
-    } else {
-      return `${seconds}s`;
-    }
-  }
-
-  isInFuture(date: Date): boolean {
-    const now = this.mockCurrentTime || new Date();
-    return date.getTime() > now.getTime();
-  }
-
-  formatTime(date: Date): string {
-    const hours = date.getHours().toString().padStart(2, "0");
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-    return `${hours}:${minutes}`;
-  }
-
-  getCurrentTime(): Date {
-    return this.mockCurrentTime || new Date();
   }
 }

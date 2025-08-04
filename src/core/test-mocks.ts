@@ -8,7 +8,6 @@ import {
   TimeManager,
   Timestamp,
 } from "../infrastructure/services.ts";
-import type { Result, ValidationError } from "./types.ts";
 
 /**
  * Mock Logger that implements the refactored Logger interface
@@ -86,4 +85,3 @@ export class MockTimeManager extends TimeManager {
       : super.getCurrentTimeISO();
   }
 }
-
