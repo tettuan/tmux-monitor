@@ -96,6 +96,9 @@ jobs:
           }
           EOF
 
+      - name: Install tmux for testing
+        run: sudo apt-get update && sudo apt-get install -y tmux
+
       - name: Validate TypeScript
         run: |
           cd publish
