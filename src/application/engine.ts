@@ -37,6 +37,7 @@ export class MonitoringEngine {
     commandExecutor: CommandExecutor,
     logger: Logger,
   ) {
+    console.log("DEBUG: MonitoringEngine constructor started");
     this._logger = logger;
 
     // イベント駆動アーキテクチャのセットアップ
@@ -77,6 +78,7 @@ export class MonitoringEngine {
     this._logger.info("🚀 Starting event-driven monitoring");
 
     try {
+      console.log("DEBUG: monitor() calling startMonitoring");
       const startResult = await this._appService.startMonitoring(
         undefined, // sessionName
         30, // intervalSeconds
@@ -200,6 +202,7 @@ export class MonitoringEngine {
     this._logger.info("🔍 One-time monitoring");
 
     try {
+      console.log("DEBUG: oneTimeMonitor() calling startMonitoring");
       // optionsが渡されない場合はデフォルトを作成
       if (!options) {
         const { MonitoringOptions } = await import("../core/models.ts");
@@ -226,16 +229,30 @@ export class MonitoringEngine {
         return;
       }
 
+      // 30秒サイクルを開始
+      const cycleResult = await this._cycleCoordinator.startCycle();
+      if (!cycleResult.ok) {
+        this._logger.error(
+          `Failed to start cycle: ${cycleResult.error.message}`,
+        );
+        return;
+      }
+
+      // 1回の完全なサイクルを実行（Enter送信、クリア処理、ペイン監視を含む）
       const paneCollection = this._appService.getPaneCollection();
-      const cycleResult = await this._cycleCoordinator.executeSingleCycle(
+      const singleCycleResult = await this._cycleCoordinator.executeSingleCycle(
         paneCollection,
       );
-      if (cycleResult.ok) {
-        const result = cycleResult.data;
+
+      if (singleCycleResult.ok) {
+        const result = singleCycleResult.data;
         this._logger.info(
-          `✅ One-time monitoring completed: ${result.totalProcessed} panes, ${result.statusChanges} changes`,
+          `✅ One-time monitoring completed: ${result.totalProcessed} panes, ${result.statusChanges} changes, ${result.entersSent} enters, ${result.clearsExecuted} clears`,
         );
       }
+
+      // サイクルを停止
+      this._cycleCoordinator.stopCycle();
     } catch (error) {
       this._logger.error(`One-time monitoring error: ${error}`);
       throw error;
@@ -325,26 +342,29 @@ export class MonitoringEngine {
     );
 
     try {
-      // セッション開始（ペイン情報を取得するため）
-      const startResult = await this._appService.startMonitoring();
-      if (!startResult.ok) {
-        return {
-          ok: false,
-          error: createError(
-            {
-              kind: "BusinessRuleViolation",
-              rule: "MonitoringRequired",
-              context:
-                "Cannot send instruction without active monitoring session",
-            },
-            `Failed to start monitoring for instruction sending: ${startResult.error.message}`,
-          ),
-        };
-      }
-
-      // アクティブペインの取得
+      // ペインが既に存在するか確認
       const collection = this._appService.getPaneCollection();
-      const activePane = collection.getActivePane();
+      let activePane = collection.getActivePane();
+      
+      // ペインが存在しない場合のみセッション開始
+      if (collection.count === 0) {
+        const startResult = await this._appService.startMonitoring();
+      if (!startResult.ok) {
+          return {
+            ok: false,
+            error: createError(
+              {
+                kind: "BusinessRuleViolation",
+                rule: "MonitoringRequired",
+                context:
+                  "Cannot send instruction without active monitoring session",
+              },
+              `Failed to start monitoring for instruction sending: ${startResult.error.message}`,
+            ),
+          };
+        }
+        activePane = collection.getActivePane();
+      }
 
       if (!activePane) {
         return {
