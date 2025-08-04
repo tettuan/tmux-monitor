@@ -3,7 +3,7 @@ import {
   assertExists,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { TmuxSession } from "../session.ts";
-import { MockLogger, MockCommandExecutor } from "../../core/test-utils.ts";
+import { MockLogger, SimpleCommandExecutor } from "../../core/test-utils.ts";
 
 Deno.test("TmuxSession - create", () => {
   const session = TmuxSession.create(
