@@ -166,7 +166,7 @@ export class MonitoringCycleCoordinator
   > {
     const cycleNumber = ++this._currentCycleNumber;
     const startTime = Date.now();
-    
+
     if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
       console.log(`[DEBUG] CycleCoordinator: Starting cycle ${cycleNumber}`);
     }
@@ -185,7 +185,9 @@ export class MonitoringCycleCoordinator
       // Check cancellation before executing plan
       if (globalCancellationToken.isCancelled()) {
         if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
-          console.log(`[DEBUG] CycleCoordinator: Cycle ${cycleNumber} cancelled before execution`);
+          console.log(
+            `[DEBUG] CycleCoordinator: Cycle ${cycleNumber} cancelled before execution`,
+          );
         }
         return {
           ok: false,
@@ -196,7 +198,7 @@ export class MonitoringCycleCoordinator
           }),
         };
       }
-      
+
       // アクション実行
       const result = await this.executeCyclePlan(plan, paneCollection);
 
@@ -383,16 +385,18 @@ export class MonitoringCycleCoordinator
       // Check cancellation before each action
       if (globalCancellationToken.isCancelled()) {
         if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
-          console.log(`[DEBUG] CycleCoordinator: Cycle ${plan.cycleNumber} cancelled before action ${action}`);
+          console.log(
+            `[DEBUG] CycleCoordinator: Cycle ${plan.cycleNumber} cancelled before action ${action}`,
+          );
         }
         errors.push(`Action ${action} cancelled by user`);
         break;
       }
-      
+
       if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
         console.log(`[DEBUG] CycleCoordinator: Executing action ${action}`);
       }
-      
+
       try {
         switch (action) {
           case "CAPTURE_PANE_STATES":

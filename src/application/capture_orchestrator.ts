@@ -135,7 +135,7 @@ export class CaptureOrchestrator {
           }),
         };
       }
-      
+
       await Promise.all(promises);
 
       const processingTimeMs = Date.now() - startTime;

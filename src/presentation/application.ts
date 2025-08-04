@@ -249,7 +249,9 @@ export class Application {
       } else if (globalCancellationToken.isCancelled()) {
         // For continuous mode, exit if cancelled
         if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
-          console.log("[DEBUG] Application.run(): Continuous mode cancelled - forcing exit");
+          console.log(
+            "[DEBUG] Application.run(): Continuous mode cancelled - forcing exit",
+          );
         }
         setTimeout(() => {
           Deno.exit(0);

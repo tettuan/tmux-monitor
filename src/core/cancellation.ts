@@ -51,7 +51,9 @@ export class CancellationToken {
   cancel(reason: string): void {
     if (this.cancelled) {
       if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
-        console.log(`[DEBUG] CancellationToken.cancel(): Already cancelled (reason: ${this.reason}), ignoring new reason: ${reason}`);
+        console.log(
+          `[DEBUG] CancellationToken.cancel(): Already cancelled (reason: ${this.reason}), ignoring new reason: ${reason}`,
+        );
       }
       return;
     }
@@ -61,7 +63,9 @@ export class CancellationToken {
     this.timestamp = Date.now();
 
     if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
-      console.log(`[DEBUG] CancellationToken.cancel(): Cancellation requested - reason: ${reason}, timestamp: ${this.timestamp}`);
+      console.log(
+        `[DEBUG] CancellationToken.cancel(): Cancellation requested - reason: ${reason}, timestamp: ${this.timestamp}`,
+      );
     }
   }
 
@@ -129,7 +133,9 @@ export class CancellationToken {
    */
   async delay(ms: number): Promise<boolean> {
     if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
-      console.log(`[DEBUG] CancellationToken.delay(): Starting ${ms}ms delay, Already cancelled: ${this.isCancelled()}`);
+      console.log(
+        `[DEBUG] CancellationToken.delay(): Starting ${ms}ms delay, Already cancelled: ${this.isCancelled()}`,
+      );
     }
     const startTime = Date.now();
     const checkInterval = 200; // Check every 200ms
@@ -139,7 +145,11 @@ export class CancellationToken {
       checkCount++;
       if (this.isCancelled()) {
         if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
-          console.log(`[DEBUG] CancellationToken.delay(): Cancelled after ${Date.now() - startTime}ms (${checkCount} checks)`);
+          console.log(
+            `[DEBUG] CancellationToken.delay(): Cancelled after ${
+              Date.now() - startTime
+            }ms (${checkCount} checks)`,
+          );
         }
         // console.log(
         //   `[DEBUG] CancellationToken.delay(): Cancelled after ${
@@ -158,7 +168,9 @@ export class CancellationToken {
     }
 
     if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
-      console.log(`[DEBUG] CancellationToken.delay(): Completed ${ms}ms delay without cancellation (${checkCount} checks), final state = ${this.cancelled}`);
+      console.log(
+        `[DEBUG] CancellationToken.delay(): Completed ${ms}ms delay without cancellation (${checkCount} checks), final state = ${this.cancelled}`,
+      );
     }
     return false; // Not cancelled
   }
