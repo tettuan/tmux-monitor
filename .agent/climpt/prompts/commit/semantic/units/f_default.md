@@ -32,3 +32,5 @@ Gitコミットを、ファイルの変更内容の近さ単位でグループ�
 - git commit 2 
 
 
+# 言語
+commit message 作成は、英語で行う。
