@@ -371,13 +371,15 @@ export class MonitoringApplicationService {
     console.log(
       `Selected window ${targetWindow.key} with ${targetWindow.panes.length} panes`,
     );
-    
+
     // アクティブペインの数を確認
-    const activePanes = targetWindow.panes.filter(p => p.active === "1");
+    const activePanes = targetWindow.panes.filter((p) => p.active === "1");
     console.log(`Active panes in selected window: ${activePanes.length}`);
 
     // 既存ペインをクリア
-    console.log(`Clearing existing ${this._paneCollection.getAllPanes().length} panes`);
+    console.log(
+      `Clearing existing ${this._paneCollection.getAllPanes().length} panes`,
+    );
     this._paneCollection.getAllPanes().forEach((pane) => {
       this._paneCollection.removePane(pane.id);
     });

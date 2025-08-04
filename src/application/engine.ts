@@ -345,11 +345,11 @@ export class MonitoringEngine {
       // ペインが既に存在するか確認
       const collection = this._appService.getPaneCollection();
       let activePane = collection.getActivePane();
-      
+
       // ペインが存在しない場合のみセッション開始
       if (collection.count === 0) {
         const startResult = await this._appService.startMonitoring();
-      if (!startResult.ok) {
+        if (!startResult.ok) {
           return {
             ok: false,
             error: createError(
