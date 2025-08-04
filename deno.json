@@ -1,6 +1,6 @@
 {
   "name": "@aidevtool/tmux-monitor",
-  "version": "1.3.17",
+  "version": "1.3.18",
   "description": "A comprehensive tmux monitoring tool with totality principles, real-time monitoring, and keyboard interrupt handling",
   "license": "MIT",
   "author": "tettuan",
