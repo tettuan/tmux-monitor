@@ -8,7 +8,6 @@ import {
   TimeManager,
   Timestamp,
 } from "../infrastructure/services.ts";
-import { TimeCalculator } from "../utils/time_calculator.ts";
 import type { Result, ValidationError } from "./types.ts";
 
 /**
@@ -88,41 +87,3 @@ export class MockTimeManager extends TimeManager {
   }
 }
 
-/**
- * Mock TimeCalculator for argument parsing tests
- */
-export class MockTimeCalculator extends TimeCalculator {
-  override setMockCurrentTime(date: Date): void {
-    super.setMockCurrentTime(date);
-  }
-
-  override parseTimeString(
-    timeStr: string,
-    baseDate?: Date,
-  ): Result<Date, ValidationError & { message: string }> {
-    const [hourStr, minuteStr] = timeStr.split(":");
-    const hour = parseInt(hourStr, 10);
-    const minute = parseInt(minuteStr, 10);
-
-    if (
-      isNaN(hour) || isNaN(minute) || hour < 0 || hour > 23 || minute < 0 ||
-      minute > 59
-    ) {
-      return {
-        ok: false,
-        error: {
-          kind: "InvalidTimeFormat",
-          input: timeStr,
-          message: `Invalid time format: ${timeStr}`,
-        },
-      };
-    }
-
-    const now = baseDate || this.getCurrentTime();
-    const result = new Date(now);
-    result.setHours(hour, minute, 0, 0);
-    return { ok: true, data: result };
-  }
-
-  // All other methods are inherited from TimeCalculator
-}

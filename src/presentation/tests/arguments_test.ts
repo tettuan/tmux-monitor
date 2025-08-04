@@ -9,7 +9,7 @@ import {
   TimeManager,
   Timestamp,
 } from "../../infrastructure/services.ts";
-import { MockTimeCalculator } from "../../core/test-mocks.ts";
+import { MockTimeCalculator } from "../../core/test-time-calculator.ts";
 
 // =============================================================================
 // Mock classes for testing

@@ -99,6 +99,11 @@ jobs:
       - name: Install tmux for testing
         run: sudo apt-get update && sudo apt-get install -y tmux
 
+      - name: Start tmux server
+        run: |
+          tmux new-session -d -s test-session
+          tmux list-sessions
+
       - name: Validate TypeScript
         run: |
           cd publish
