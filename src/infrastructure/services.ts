@@ -241,19 +241,66 @@ export class CommandExecutor {
         stderr: "piped",
       });
 
-      const output = await process.output();
-      const result: CommandResult = output.success
-        ? {
-          kind: "success",
-          stdout: new TextDecoder().decode(output.stdout).trim(),
+      // Use spawn() instead of output() to allow cancellation
+      const child = process.spawn();
+      
+      // Set up cancellation handling
+      const abortController = new AbortController();
+      let checkCount = 0;
+      const cancellationCheck = setInterval(() => {
+        checkCount++;
+        const isCancelled = globalCancellationToken.isCancelled();
+        if (Deno.env.get("LOG_LEVEL") === "DEBUG" && checkCount % 10 === 0) { // Log every 1 second
+          console.log(`[DEBUG] CommandExecutor: Check ${checkCount}, Command: ${args.join(" ")}, Cancelled: ${isCancelled}`);
         }
-        : {
-          kind: "failure",
-          exitCode: output.code,
-          stderr: new TextDecoder().decode(output.stderr).trim(),
-        };
+        if (isCancelled) {
+          if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+            console.log(`[DEBUG] CommandExecutor: Killing child process for command: ${args.join(" ")}`);
+          }
+          abortController.abort();
+          child.kill();
+        }
+      }, 100); // Check every 100ms
 
-      return { ok: true, data: result };
+      try {
+        const output = await child.output();
+        clearInterval(cancellationCheck);
+        
+        const result: CommandResult = output.success
+          ? {
+            kind: "success",
+            stdout: new TextDecoder().decode(output.stdout).trim(),
+          }
+          : {
+            kind: "failure",
+            exitCode: output.code,
+            stderr: new TextDecoder().decode(output.stderr).trim(),
+          };
+
+        return { ok: true, data: result };
+      } catch (error) {
+        clearInterval(cancellationCheck);
+        
+        // Check if cancelled
+        if (globalCancellationToken.isCancelled()) {
+          return {
+            ok: false,
+            error: createError({
+              kind: "InvalidState",
+              current: "cancelled",
+              expected: "running",
+            }),
+          };
+        }
+        
+        return {
+          ok: true,
+          data: {
+            kind: "error",
+            error: error instanceof Error ? error : new Error(String(error)),
+          },
+        };
+      }
     } catch (error) {
       return {
         ok: true,
@@ -588,26 +635,70 @@ export class KeyboardInterruptHandler {
     }
 
     try {
-      // Setup SIGINT handler
+      // Setup signal handlers
+      if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+        console.log("[DEBUG] Registering signal handlers (SIGINT, SIGTERM)");
+      }
+      
+      // SIGINT handler (Ctrl+C)
       Deno.addSignalListener("SIGINT", () => {
+        if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+          console.log("[DEBUG] SIGINT received, cancelling globalCancellationToken");
+        }
         globalCancellationToken.cancel("Ctrl+C signal received");
         this.state = { kind: "cancelled", reason: "SIGINT" };
         this.forceExit("[INFO] Monitoring stopped by Ctrl+C. Exiting...");
       });
+      
+      // SIGTERM handler (kill command)
+      try {
+        Deno.addSignalListener("SIGTERM", () => {
+          if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+            console.log("[DEBUG] SIGTERM received, cancelling globalCancellationToken");
+          }
+          globalCancellationToken.cancel("SIGTERM signal received");
+          this.state = { kind: "cancelled", reason: "SIGTERM" };
+          this.forceExit("[INFO] Monitoring stopped by SIGTERM. Exiting...");
+        });
+      } catch (error) {
+        // SIGTERM might not be available on all platforms
+        if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+          console.log("[DEBUG] Failed to register SIGTERM handler:", error);
+        }
+      }
 
+      // First update state to initialized
+      this.state = { kind: "initialized", listener: null };
+      
       // Setup raw stdin if available
       let listenerPromise: Promise<void> | null = null;
       if (Deno.stdin.isTerminal()) {
         try {
+          if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+            console.log("[DEBUG] Setting up raw terminal mode for key listener");
+          }
           Deno.stdin.setRaw(true);
+          // Now start the listener after state is updated
           listenerPromise = this.startKeyListener();
+          // Update state with the listener promise
+          this.state = { kind: "initialized", listener: listenerPromise };
+          if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+            console.log("[DEBUG] Key listener started");
+          }
         } catch (error) {
           // Terminal might not support raw mode
           console.warn("Failed to setup raw terminal mode:", error);
         }
+      } else {
+        if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+          console.log("[DEBUG] stdin is not a terminal, key listener not started");
+        }
       }
-
-      this.state = { kind: "initialized", listener: listenerPromise };
+      
+      // Ensure listener is actually running
+      if (listenerPromise && Deno.env.get("LOG_LEVEL") === "DEBUG") {
+        console.log("[DEBUG] Key listener promise created");
+      }
       return { ok: true, data: undefined };
     } catch (error) {
       return {
@@ -626,14 +717,41 @@ export class KeyboardInterruptHandler {
    * Total function with proper error handling.
    */
   private async startKeyListener(): Promise<void> {
+    if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+      console.log("[DEBUG] startKeyListener: Starting key listener loop");
+      console.log(`[DEBUG] startKeyListener: Initial state=${JSON.stringify(this.state)}`);
+      console.log(`[DEBUG] startKeyListener: Initial cancelled=${globalCancellationToken.isCancelled()}`);
+    }
+    
+    // Check if stdin is available
+    if (!Deno.stdin.isTerminal()) {
+      if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+        console.log("[DEBUG] startKeyListener: stdin is not a terminal, exiting");
+      }
+      return;
+    }
+    
     const buffer = new Uint8Array(1024);
+    
+    if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+      console.log(`[DEBUG] startKeyListener: Entering loop, state=${JSON.stringify(this.state)}, cancelled=${globalCancellationToken.isCancelled()}`);
+    }
 
     while (
       this.state.kind === "initialized" &&
       !globalCancellationToken.isCancelled()
     ) {
+      if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+        console.log("[DEBUG] startKeyListener: Waiting for key input...");
+      }
       try {
+        if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+          console.log("[DEBUG] startKeyListener: About to read from stdin");
+        }
         const bytesRead = await Deno.stdin.read(buffer);
+        if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+          console.log(`[DEBUG] startKeyListener: Read ${bytesRead} bytes`);
+        }
 
         // Handle EOF or no data
         if (bytesRead === null || bytesRead === 0) {
@@ -643,6 +761,9 @@ export class KeyboardInterruptHandler {
 
         // Any key press triggers cancellation
         if (bytesRead > 0) {
+          if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+            console.log(`[DEBUG] Key press detected: ${String.fromCharCode(...buffer.subarray(0, bytesRead))}, cancelling globalCancellationToken`);
+          }
           globalCancellationToken.cancel("Key press detected");
           this.state = { kind: "cancelled", reason: "key_press" };
           this.forceExit("[INFO] Monitoring stopped by user input. Exiting...");
@@ -659,6 +780,10 @@ export class KeyboardInterruptHandler {
           break;
         }
       }
+    }
+    
+    if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+      console.log(`[DEBUG] startKeyListener: Loop exited, state=${JSON.stringify(this.state)}, cancelled=${globalCancellationToken.isCancelled()}`);
     }
   }
 
@@ -693,9 +818,13 @@ export class KeyboardInterruptHandler {
    * Forces immediate exit with cleanup.
    */
   private forceExit(message: string): void {
+    if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+      console.log("[DEBUG] forceExit called, cleaning up and exiting immediately");
+    }
     this.cleanup();
     console.log(message);
-    setTimeout(() => Deno.exit(0), 100);
+    // Exit immediately, don't wait
+    Deno.exit(0);
   }
 
   /**

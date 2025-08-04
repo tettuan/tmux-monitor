@@ -246,6 +246,14 @@ export class Application {
           // console.log(`[DEBUG] Application.run(): Final exit timeout triggered`);
           Deno.exit(0);
         }, 200);
+      } else if (globalCancellationToken.isCancelled()) {
+        // For continuous mode, exit if cancelled
+        if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+          console.log("[DEBUG] Application.run(): Continuous mode cancelled - forcing exit");
+        }
+        setTimeout(() => {
+          Deno.exit(0);
+        }, 200);
       }
     }
   }

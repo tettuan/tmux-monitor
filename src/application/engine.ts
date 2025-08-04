@@ -17,6 +17,7 @@ import { createError } from "../core/types.ts";
 // イベント駆動アーキテクチャのインポート
 import { SimpleDomainEventDispatcher } from "../domain/event_dispatcher.ts";
 import { MonitoringCycleCoordinator } from "../domain/monitoring_cycle_coordinator.ts";
+import { globalCancellationToken } from "../core/cancellation.ts";
 import {
   EnterSendEventHandler,
   PaneClearEventHandler,
@@ -113,7 +114,11 @@ export class MonitoringEngine {
       `🎯 Initial: ${initialStats.totalPanes} panes, ${initialStats.workingPanes} working, ${initialStats.idlePanes} idle`,
     );
 
-    while (cycleCount < maxCycles) {
+    while (cycleCount < maxCycles && !globalCancellationToken.isCancelled()) {
+      // Debug: Check cancellation state at loop start
+      if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+        console.log(`[DEBUG] MonitoringLoop: Cycle ${cycleCount + 1}, Cancelled: ${globalCancellationToken.isCancelled()}`);
+      }
       try {
         const paneCollection = this._appService.getPaneCollection();
         const cycleResult = await this._cycleCoordinator.executeSingleCycle(
@@ -142,9 +147,21 @@ export class MonitoringEngine {
         }
 
         cycleCount++;
-        await new Promise((resolve) =>
-          setTimeout(resolve, result.nextCycleDelay)
-        );
+        
+        // Use cancellable delay instead of setTimeout
+        if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+          console.log(`[DEBUG] MonitoringLoop: Starting delay of ${result.nextCycleDelay}ms, Current cancellation: ${globalCancellationToken.isCancelled()}`);
+        }
+        
+        const interrupted = await globalCancellationToken.delay(result.nextCycleDelay);
+        
+        if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+          console.log(`[DEBUG] MonitoringLoop: Delay completed, Interrupted: ${interrupted}, Cancellation: ${globalCancellationToken.isCancelled()}`);
+        }
+        if (interrupted) {
+          this._logger.info("🛑 Monitoring interrupted by user");
+          break;
+        }
       } catch (error) {
         this._logger.error(`Unexpected error: ${error}`);
         break;
@@ -153,6 +170,17 @@ export class MonitoringEngine {
 
     this._cycleCoordinator.stopCycle();
     this._logger.info(`Monitoring completed after ${cycleCount} cycles`);
+    
+    // If cancelled, ensure we exit
+    if (globalCancellationToken.isCancelled()) {
+      if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+        console.log("[DEBUG] MonitoringLoop: Exiting due to cancellation");
+      }
+      // Give a small delay for cleanup then exit
+      setTimeout(() => {
+        Deno.exit(0);
+      }, 100);
+    }
   }
 
   /**

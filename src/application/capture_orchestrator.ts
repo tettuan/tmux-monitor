@@ -68,6 +68,8 @@ export interface CaptureProcessResult {
  * console.log(`Processed ${result.processedPanes} panes`);
  * ```
  */
+import { globalCancellationToken } from "../core/cancellation.ts";
+
 export class CaptureOrchestrator {
   private readonly captureDetectionService: CaptureDetectionService;
 
@@ -103,6 +105,10 @@ export class CaptureOrchestrator {
     try {
       // 並列処理でパフォーマンス向上
       const promises = panes.map(async (pane) => {
+        // Check cancellation before processing each pane
+        if (globalCancellationToken.isCancelled()) {
+          return;
+        }
         const result = await this.processSinglePane(pane);
         if (result.ok) {
           successfulPanes++;
@@ -118,6 +124,18 @@ export class CaptureOrchestrator {
         return result;
       });
 
+      // Check for cancellation before waiting for all promises
+      if (globalCancellationToken.isCancelled()) {
+        return {
+          ok: false,
+          error: createError({
+            kind: "InvalidState",
+            current: "cancelled",
+            expected: "running",
+          }),
+        };
+      }
+      
       await Promise.all(promises);
 
       const processingTimeMs = Date.now() - startTime;

@@ -8,6 +8,7 @@
 
 import type { Result, ValidationError } from "../core/types.ts";
 import { createError } from "../core/types.ts";
+import { globalCancellationToken } from "../core/cancellation.ts";
 import type { Logger } from "../infrastructure/services.ts";
 import { TIMING } from "../core/config.ts";
 import type {
@@ -165,6 +166,10 @@ export class MonitoringCycleCoordinator
   > {
     const cycleNumber = ++this._currentCycleNumber;
     const startTime = Date.now();
+    
+    if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+      console.log(`[DEBUG] CycleCoordinator: Starting cycle ${cycleNumber}`);
+    }
 
     try {
       // サイクル計画の作成
@@ -177,6 +182,21 @@ export class MonitoringCycleCoordinator
       );
       await this._eventDispatcher.dispatch(startEvent);
 
+      // Check cancellation before executing plan
+      if (globalCancellationToken.isCancelled()) {
+        if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+          console.log(`[DEBUG] CycleCoordinator: Cycle ${cycleNumber} cancelled before execution`);
+        }
+        return {
+          ok: false,
+          error: createError({
+            kind: "InvalidState",
+            current: "cancelled",
+            expected: "running",
+          }),
+        };
+      }
+      
       // アクション実行
       const result = await this.executeCyclePlan(plan, paneCollection);
 
@@ -360,6 +380,19 @@ export class MonitoringCycleCoordinator
     }
 
     for (const action of plan.scheduledActions) {
+      // Check cancellation before each action
+      if (globalCancellationToken.isCancelled()) {
+        if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+          console.log(`[DEBUG] CycleCoordinator: Cycle ${plan.cycleNumber} cancelled before action ${action}`);
+        }
+        errors.push(`Action ${action} cancelled by user`);
+        break;
+      }
+      
+      if (Deno.env.get("LOG_LEVEL") === "DEBUG") {
+        console.log(`[DEBUG] CycleCoordinator: Executing action ${action}`);
+      }
+      
       try {
         switch (action) {
           case "CAPTURE_PANE_STATES":
