@@ -34,19 +34,5 @@ jobs:
         with:
           deno-version: v2.4.0
 
-      - name: Create deno.json for JSR
-        run: |
-          # Extract version from tag (remove 'v' prefix if present)
-          VERSION="${{ github.event.inputs.version || github.ref_name }}"
-          VERSION=${VERSION#v}
-          
-          cat > deno.json << EOF
-          {
-            "name": "@aidevtool/tmux-monitor",
-            "version": "$VERSION",
-            "exports": "./mod.ts"
-          }
-          EOF
-
       - name: Publish to JSR
-        run: deno publish --allow-dirty
+        run: deno publish
